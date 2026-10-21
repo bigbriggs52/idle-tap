@@ -2,6 +2,15 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.3.0 (2026-10-21)
+
+Fixes from playing v0.2.0 on a phone.
+
+- Fixed "Tap to build", "Tap to ship" and the other tap prompts staying on screen after you tap. A tapped floor or hub now shows a countdown ("Building… 4s"), and managed ones show "Auto".
+- New lighter look: bright sky above ground, light lab floors, white cards, and a light map.
+- Every floor now shows a clear "📦 For lift" box with the money waiting there for the lift.
+- The Freight & Data Hub now shows the total money waiting on all floors and how much the lift carries per trip.
+
 ## v0.2.0 (2026-10-21)
 
 First playable build.
