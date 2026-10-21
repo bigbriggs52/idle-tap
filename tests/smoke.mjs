@@ -32,11 +32,14 @@ await page.evaluate(() => SVT.setBuy(10));
 await page.click(".floor .lvl-btn >> nth=0");
 for (let i = 0; i < 3; i++) await page.click("#sheet .btn.up");
 await page.click('#sheet [aria-label="Close"]');
-// tap the empty manager seat -> hire (top of the list) -> Use here, for each role
+// tap the empty manager seat -> Hire (pinned at the bottom) -> Assign, for each role; the panel stays open
 for (const q of [".floor-scene .seat >> nth=0", ".lift-tower .seat", ".wh-tower .seat"]) {
   await page.click(q);
   await page.click("#sheet .btn.fund-cta");
   await page.click("#sheet .btn.use");
+  if (!(await page.locator("#sheet .mcard.assigned").count())) errors.push("Assign did not show the assigned manager on top");
+  if (q.startsWith(".lift")) await page.screenshot({ path: out + "/02b-mgr-panel.png" });
+  await page.click('#sheet [aria-label="Close"]');
 }
 // hire a spare Floor Lead from the 👔 sheet; it should sit unassigned in Owned
 await page.click('button[aria-label="Owned managers"]');
@@ -58,7 +61,7 @@ await page.waitForTimeout(1500);
 await page.click(".floor .lvl-btn >> nth=0");
 const title = () => page.locator("#sheet h2").innerText();
 const t1 = await title();
-const statRows = await page.locator("#sheet table.stats tbody tr").count();
+const statRows = await page.locator("#sheet .stat-list:not(.live) .stat-row").count();
 if (!t1.startsWith("Floor 1") || statRows < 4) errors.push("Floor detail sheet missing: " + t1 + " rows " + statRows);
 await page.screenshot({ path: out + "/03a-detail.png" });
 await page.click('#sheet [aria-label="Next"]');
@@ -79,14 +82,16 @@ const lv0 = await page.evaluate(() => SVT.lab().floors[2].lvl);
 await page.click("#sheet .btn.up");
 const lv1 = await page.evaluate(() => SVT.lab().floors[2].lvl);
 if (lv1 <= lv0) errors.push("Upgrade in detail sheet did nothing");
-await page.click("#sheet .mgr-hire");
+await page.click("#sheet .node-card");
+await page.click("#sheet .btn.fund-cta");
 await page.click("#sheet .btn.use");
-if (!(await title()).startsWith("Floor 3")) errors.push("Use here did not return to the floor sheet: " + (await title()));
+if (!(await title()).startsWith("Floor 3 Manager")) errors.push("Assign did not stay in the manager panel: " + (await title()));
+if (!(await page.evaluate(() => SVT.mgrOf(SVT.lab(), "floor", 3)))) errors.push("Floor 3 manager not assigned");
 await page.screenshot({ path: out + "/03b-detail-mgr.png" });
 await page.click('#sheet [aria-label="Close"]');
 // busy managers sit at the bottom of a slot's list and can't be assigned there
 await page.click(".floor-scene .seat >> nth=1");
-const busy = await page.evaluate(() => [...document.querySelectorAll("#sheet .owned")].map((li) => ({ busy: li.classList.contains("busy"), use: !!li.querySelector(".use") })));
+const busy = await page.evaluate(() => [...document.querySelectorAll("#sheet .mcard:not(.assigned):not(.empty-slot)")].map((li) => ({ busy: li.classList.contains("busy"), use: !!li.querySelector(".use") })));
 console.log("floor 2 list", JSON.stringify(busy));
 if (busy.some((b) => b.busy && b.use)) errors.push("A busy manager can be assigned");
 if (busy.findIndex((b) => b.busy) !== -1 && busy.slice(busy.findIndex((b) => b.busy)).some((b) => !b.busy)) errors.push("Busy managers are not at the bottom");
@@ -136,12 +141,13 @@ const liftRun = await page.evaluate(() => {
   L.freight.workUntil = SVT.now() + 60; // a tap starts a trip...
   SVT.tick(0.05);
   L.freight.workUntil = 0; // ...which finishes on its own; no new trip starts after
-  let maxY = 0;
-  for (let i = 0; i < 200; i++) { SVT.tick(0.05); maxY = Math.max(maxY, L.lift.y); }
-  return { cap, maxY, f1: L.floors[0].stock / cap, f2: L.floors[1].stock / cap, lobby: L.lobby / cap, phase: L.lift.phase };
+  let maxY = 0, partial = 0;
+  for (let i = 0; i < 200; i++) { SVT.tick(0.05); maxY = Math.max(maxY, L.lift.y); if (L.lift.phase === "load" && L.lift.load > 0 && L.lift.load < cap * 0.9) partial++; }
+  return { cap, maxY, partial, f1: L.floors[0].stock / cap, f2: L.floors[1].stock / cap, lobby: L.lobby / cap, phase: L.lift.phase };
 });
 console.log("lift trip", JSON.stringify(liftRun));
 if (liftRun.maxY > 1.001 || Math.abs(liftRun.f1 - 1) > 1e-6 || Math.abs(liftRun.f2 - 1) > 1e-6 || Math.abs(liftRun.lobby - 1) > 1e-6) errors.push("Lift did not stop at the first full floor");
+if (liftRun.partial < 3) errors.push("Lift loaded instantly instead of filling up");
 // save + reload restores
 await page.evaluate(() => SVT.save());
 await page.reload(); await page.waitForTimeout(400);

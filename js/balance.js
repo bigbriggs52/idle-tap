@@ -19,7 +19,7 @@ window.SVT = window.SVT || {};
   }
 
   const B = {
-    VERSION: "0.9.0",
+    VERSION: "0.10.0",
     FLOORS: 30,
     FLOOR_MAX: 800,
     HUB_MAX: 2400,
@@ -86,7 +86,11 @@ window.SVT = window.SVT || {};
   B.floorOutput = (n, L) => (L > 0 ? B.floorValue(n) * L * B.floorMult(L) : 0);
   B.freightLoad = (L) => 8 * Math.pow(1.11, L - 1) * B.hubMult(L);
   B.freightSpeed = (L) => 1 + 0.02 * (L - 1);
-  B.freightTrip = (L, depth) => (2 * depth) / B.freightSpeed(L) + 0.4 * depth + 1;
+  // The car stops briefly at each floor and pours money in at the loading speed: a full car fills in liftFillTime.
+  B.LIFT_STOP = 0.15;
+  B.LIFT_UNLOAD = 1;
+  B.liftFillTime = (L) => 1.5 / B.freightSpeed(L);
+  B.freightTrip = (L, depth) => (2 * depth) / B.freightSpeed(L) + B.LIFT_STOP * depth + B.liftFillTime(L) + B.LIFT_UNLOAD;
   B.freightCap = (L, depth) => B.freightLoad(L) / B.freightTrip(L, depth);
   B.commercialCap = (L) => 2 * Math.pow(1.11, L - 1) * B.hubMult(L);
 
