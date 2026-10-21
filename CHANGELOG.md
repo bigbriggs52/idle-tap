@@ -2,6 +2,24 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.10.0 (2026-10-21)
+
+- Idle Miner-style panels: a blue panel with a chunky border, a red ✕, and big ‹ › arrows on the sides. Swipes and arrow keys still work.
+- Level panel:
+  - The header reads "Floor 3 Level 31" (or Lift / Warehouse).
+  - The manager portrait sits beside a yellow progress bar with an arrow, showing the next unlock or "Max level reached."
+  - Each stat is a row with an icon and a blue value pill, showing what the next level gives in green.
+  - The x1 / x10 / x50 / Max toggle sits bottom left, beside a big green "Level Up xN" button with the cost (hold it to keep buying).
+- Manager panel:
+  - "Assigned manager" sits on top with a portrait, rarity, boost, timer, a red Unassign and ⚡ Use.
+  - Your other managers appear below as cards with a blue Assign button. Busy managers stay greyed at the bottom.
+  - A big Hire manager button with the cost is pinned at the bottom. Hiring and assigning keep the panel open.
+  - The roster from the bottom bar has filter tabs for Floors, Lift and Warehouse.
+- The lift car is bigger and fills with gold as it loads, showing the amount and how full it is (%). A tag above the shaft shows "Lift $load / $capacity · % full".
+- Loading takes time now: money pours in at the lift's Loading speed, a new stat in the Lift panel that goes up with lift levels. Unloading at the top drains it the same way.
+- Numbered yellow tags on the shaft beside each floor.
+- New bottom bar: blue, with a big green Funding button in the middle and an Update button.
+
 ## v0.9.0 (2026-10-21)
 
 - Managers look different by rarity, in their seats and in the managers list. Hair and skin vary by name.

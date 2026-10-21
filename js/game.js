@@ -130,10 +130,12 @@ window.SVT = window.SVT || {};
 
   // ---------- lift ----------
   // Like Idle Miner's elevator: a trip only starts while the lift is worked (tap or manager), then always finishes.
-  // Down one floor every 1/speed s, stop LOAD_TIME at each floor with stock, take what fits, turn back once full
-  // or past the last floor, then UNLOAD_TIME at the top. Average throughput matches B.freightCap.
-  const LOAD_TIME = 0.4, UNLOAD_TIME = 1;
+  // Down one floor every 1/speed s, stop at each floor with stock and pour it in at the loading speed until the floor
+  // is empty or the car is full, turn back once full or past the last floor, then empty it over UNLOAD_TIME at the top.
+  // Average throughput matches B.freightCap.
+  const STOP_TIME = B.LIFT_STOP, UNLOAD_TIME = B.LIFT_UNLOAD;
   SVT.liftCapacity = (lab, t) => B.freightLoad(lab.freight.lvl) * SVT.prestigeMult(lab) * SVT.nodeMult(lab, "freight", 0, t);
+  SVT.liftLoadRate = (lab, t) => SVT.liftCapacity(lab, t) / B.liftFillTime(lab.freight.lvl);
   function nextStop(lab, from) {
     for (let k = Math.floor(from + 1e-9) + 1; k <= lab.floors.length; k++) if (lab.floors[k - 1].stock > 0) return k;
     return 0;
@@ -151,21 +153,23 @@ window.SVT = window.SVT || {};
         if (!k) { L.phase = "up"; continue; }
         const need = (k - L.y) / speed;
         if (need > dt) { L.y += speed * dt; return; }
-        dt -= need; L.y = k; L.at = k; L.phase = "load"; L.timer = LOAD_TIME;
+        dt -= need; L.y = k; L.at = k; L.phase = "load"; L.timer = STOP_TIME;
       } else if (L.phase === "load") {
-        if (L.timer > dt) { L.timer -= dt; return; }
-        dt -= L.timer;
-        const f = lab.floors[L.at - 1], room = SVT.liftCapacity(lab, t) - L.load;
-        const take = Math.min(room, f ? f.stock : 0);
-        if (f) f.stock -= take;
-        L.load += take;
-        L.phase = L.load >= SVT.liftCapacity(lab, t) - 1e-9 ? "up" : "down";
+        if (L.timer > 0) { if (L.timer > dt) { L.timer -= dt; return; } dt -= L.timer; L.timer = 0; }
+        const f = lab.floors[L.at - 1], cap = SVT.liftCapacity(lab, t), rate = SVT.liftLoadRate(lab, t);
+        const want = Math.min(cap - L.load, f ? f.stock : 0);
+        if (want > 1e-9) {
+          const used = Math.min(dt, want / rate), take = Math.min(want, rate * used);
+          f.stock -= take; L.load += take; dt -= used;
+          if (take < want - 1e-9) return;
+        }
+        L.phase = L.load >= cap - 1e-9 ? "up" : "down";
       } else if (L.phase === "up") {
         const need = L.y / speed;
         if (need > dt) { L.y -= speed * dt; return; }
         dt -= need; L.y = 0; L.phase = "unload"; L.timer = UNLOAD_TIME;
       } else if (L.phase === "unload") {
-        if (L.timer > dt) { L.timer -= dt; return; }
+        if (L.timer > dt) { const out = L.load * dt / L.timer; lab.lobby += out; L.load -= out; L.timer -= dt; return; }
         dt -= L.timer;
         lab.lobby += L.load; L.load = 0; L.phase = "idle";
       }
