@@ -205,9 +205,9 @@ window.SVT = window.SVT || {};
     sheet(here ? "Managers for " + SVT.slotName(here) : "Owned managers", h("div", { class: "sheet-body" },
       back ? h("button", { class: "btn small ghost back", onclick: back, text: "‹ Back to " + SVT.slotName(here) }) : null,
       tabs,
+      hire,
       h("p", { class: "muted small", text: "Best first. Each hire rolls: Super 0.5%, Legendary 1%, Epic 3%, Rare 10%, Uncommon 30%, Common 55.5%. Floor Leads can work any floor. Funding rounds send every manager away." }),
-      h("ul", { class: "owned-list" }, rows),
-      hire));
+      h("ul", { class: "owned-list" }, rows)));
     update();
   }
   SVT.openManagers = openManagers;

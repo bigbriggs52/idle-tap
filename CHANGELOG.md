@@ -2,6 +2,10 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.6.2 (2026-10-21)
+
+- The Hire button on the managers screen sits at the top, right under the tabs, so you can hire several in a row without scrolling.
+
 ## v0.6.1 (2026-10-21)
 
 - Updates now apply on their own. The app skips the browser's 10-minute cache for its own files, checks for a new version whenever you come back to it, and reloads once when one is ready (your progress is saved first).
