@@ -388,6 +388,7 @@ window.SVT = window.SVT || {};
         else if (d && d.v === 3 && d.labs && d.labs.garage) S = d;
       } catch (e) {}
     }
+    if (S.buy === 100) S.buy = 50; // v0.6 buy chips are ×1, ×10, ×50, Max
     return applyOffline();
   };
 

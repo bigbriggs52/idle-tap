@@ -2,6 +2,16 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.6.0 (2026-10-21)
+
+Idle Miner Tycoon-style upgrade panel and navigation.
+
+- Tap a floor's number, name or "Lv N ›" button (or the Lift or Warehouse "Lv N ›") to open its stats sheet: level out of max, next unlock, a Now vs next-level table with gains in green, the upgrade button with its own ×1/×10/×50/Max chips, live numbers (waiting stock, share of lab output, manager and prestige bonus, lab income and what limits it) and the manager slot.
+- Swipe left or right on the sheet, or use the ‹ › arrows or the keyboard arrow keys, to move through Lift, Warehouse and every floor.
+- Choosing or hiring a manager from the sheet brings you back to the same floor.
+- New bottom bar with Map, Managers, Funding and Settings, like Idle Miner Tycoon's. Funding glows when a round is ready.
+- Buy amounts are now ×1, ×10, ×50 and Max (old ×100 saves switch to ×50).
+
 ## v0.5.0 (2026-10-21)
 
 Managers rework.
