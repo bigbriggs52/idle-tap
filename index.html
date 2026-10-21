@@ -27,7 +27,14 @@
 <script>
   SVT.boot();
   if ("serviceWorker" in navigator && location.protocol === "https:") {
-    navigator.serviceWorker.register("sw.js").catch(function () {});
+    // When a new version's worker takes over, reload once so the new files are used right away.
+    var hadWorker = !!navigator.serviceWorker.controller, reloaded = false;
+    navigator.serviceWorker.addEventListener("controllerchange", function () {
+      if (hadWorker && !reloaded) { reloaded = true; SVT.save(); location.reload(); }
+    });
+    navigator.serviceWorker.register("sw.js", { updateViaCache: "none" }).then(function (reg) {
+      document.addEventListener("visibilitychange", function () { if (document.visibilityState === "visible") reg.update().catch(function () {}); });
+    }).catch(function () {});
   }
 </script>
 </body>
