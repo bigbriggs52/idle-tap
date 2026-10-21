@@ -104,9 +104,23 @@ window.SVT = window.SVT || {};
         (e) => toggle(e, "on", SVT.state().buy === b))));
     return h("header", { class: "top" },
       h("div", { class: "top-row" },
-        h("div", { class: "lab-title" }, h("span", { class: "lab-icon", text: d.icon }), h("div", null, h("b", { text: d.name }), roundBadge))),
+        h("div", { class: "lab-title" }, h("span", { class: "lab-icon", text: d.icon }), h("div", null, h("b", { text: d.name }), roundBadge)),
+        h("button", { class: "btn small ghost refresh", "aria-label": "Check for update", onclick: checkUpdate, text: "🔄 Update" })),
       h("div", { class: "top-row money" }, h("div", null, cash, rate), chips));
   }
+
+  // Saves, asks for a new service worker, then reloads. If a new version is installing, index.html reloads when it takes over.
+  async function checkUpdate() {
+    toast("Checking for updates…");
+    SVT.save();
+    let waiting = false;
+    try {
+      const reg = navigator.serviceWorker && await navigator.serviceWorker.getRegistration();
+      if (reg) { await reg.update(); waiting = !!(reg.installing || reg.waiting); }
+    } catch (e) {}
+    setTimeout(() => location.reload(), waiting ? 3000 : 300);
+  }
+  SVT.checkUpdate = checkUpdate;
 
   // Bottom bar, like Idle Miner Tycoon's: the screens you jump to most.
   function bottomNav() {
@@ -594,6 +608,7 @@ window.SVT = window.SVT || {};
     });
     sheet("Settings", h("div", { class: "sheet-body" },
       h("p", null, h("b", { text: "Silicon Valley Tycoon v" + B.VERSION })),
+      h("button", { class: "btn", onclick: checkUpdate, text: "🔄 Check for update" }),
       h("p", { class: "muted", text: "Tap floors and hubs to work them. Hire a manager on each one to automate it and keep earning while you're away (up to 2 hours). Income is limited by the slowest of build, freight and commercial, marked Bottleneck." }),
       h("p", { class: "muted", text: "Every 5 levels unlocks new tech (+10% on floors, +2% on hubs). Levels 10, 25, 50, 100 and beyond are big milestones." }),
       h("p", null, h("a", { href: "https://github.com/bigbriggs52/idle-tap/blob/main/CHANGELOG.md", target: "_blank", rel: "noopener", text: "Changelog" })),

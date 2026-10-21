@@ -288,3 +288,4 @@ table.stats td.next.up { color: var(--good); font-weight: 700; }
 .nav-btn .nav-ic { font-size: 1.3rem; line-height: 1.1; }
 .nav-btn:active { background: var(--surface-2); }
 .nav-btn.fund.ready { color: var(--good); animation: glow 1.6s ease-in-out infinite; }
+.btn.refresh { font-size: .8rem; padding: 6px 10px; }
