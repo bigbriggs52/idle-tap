@@ -165,7 +165,7 @@ window.SVT = window.SVT || {};
     });
     const swap = h("button", { class: "btn small ghost", title: "Choose a different manager", onclick: () => openManagers(role, kind, n, back), text: "Swap" });
     return h("div", { class: "mgr r-" + m.rank },
-      h("div", { class: "mgr-face", "aria-hidden": "true", text: m.name[0] }),
+      h("div", { class: "mgr-face" }, avatar(m)),
       h("div", { class: "mgr-info" }, h("b", { text: m.name + " · " + r.name + " " + title }), h("span", { text: effectText(m) })),
       act, swap);
   }
@@ -191,7 +191,7 @@ window.SVT = window.SVT || {};
       if (slot) btns.push(h("button", { class: "btn small ghost", onclick: () => { SVT.unassign(m.id); openManagers(role, kind, n, back); }, text: "Unassign" }));
       else btns.push(h("button", { class: "btn small ghost", onclick: () => { SVT.sell(m.id); openManagers(role, kind, n, back); }, text: "Sell $" + fmt(m.paid * B.SELL_REFUND) }));
       return h("li", { class: "owned r-" + m.rank + (slot && slot !== here ? " busy" : "") },
-        h("div", { class: "mgr-face", "aria-hidden": "true", text: m.name[0] }),
+        h("div", { class: "mgr-face" }, avatar(m)),
         h("div", { class: "owned-info" },
           h("b", { text: m.name }), h("span", { class: "rarity", text: r.name }),
           h("span", { class: "muted", text: effectText(m) }),
@@ -380,6 +380,18 @@ window.SVT = window.SVT || {};
   }
   function totalWaiting(L) { return L.floors.reduce((a, f) => a + f.stock, 0); }
 
+  // ---------- manager avatars ----------
+  // A little character whose outfit and effects get fancier with rarity (see .av.r-* in style.css).
+  // Hair and skin vary by name so two managers of the same rarity still look different.
+  const HAIR = ["#3b2a20", "#6b4226", "#c98b3c", "#1c1c1c", "#a0522d", "#d8b25a", "#7a3b2e", "#4a4a4a"];
+  const SKIN = ["#f3d2b3", "#e8b98f", "#c98e63", "#9c6b45", "#f0c9a4", "#7a5134"];
+  function avatar(m) {
+    let hsh = 0;
+    for (const ch of m.name) hsh = (hsh * 31 + ch.charCodeAt(0)) >>> 0;
+    return h("span", { class: "av r-" + m.rank, style: "--hair:" + HAIR[hsh % HAIR.length] + ";--skin:" + SKIN[(hsh >> 3) % SKIN.length], "aria-hidden": "true" },
+      h("span", { class: "fx" }), h("span", { class: "body" }), h("span", { class: "tie" }), h("span", { class: "head" }), h("span", { class: "hat" }));
+  }
+
   // ---------- shared Idle Miner-style pieces ----------
   // Manager seat: the manager's face (rarity ring) or an empty dashed seat. Tap to hire, pick or swap.
   function seat(kind, n) {
@@ -392,7 +404,7 @@ window.SVT = window.SVT || {};
       shown = key;
       el.className = "seat" + (m ? " r-" + m.rank : " empty");
       el.setAttribute("aria-label", m ? m.name + ", " + SVT.rank(m.rank).name + " " + B.ROLE_NAMES[kind] : "Manager: hire or choose a " + B.ROLE_NAMES[kind]);
-      el.replaceChildren(m ? h("span", { class: "face", text: m.name[0] }) : h("span", { class: "plus", text: "+" }));
+      el.replaceChildren(m ? avatar(m) : h("span", { class: "plus", text: "+" }));
     });
     return el;
   }
@@ -434,7 +446,7 @@ window.SVT = window.SVT || {};
 
   // ---------- surface: lift tower (left) and warehouse (right) ----------
   function surface() {
-    const lift = runBind(h("div", { class: "tower lift-tower lift-scene", onclick: () => SVT.tap("freight", 0) },
+    const lift = (h("div", { class: "tower lift-tower lift-scene", onclick: () => SVT.tap("freight", 0) },
       h("div", { class: "roof" }),
       coinTag("over", "Waiting on the floors for the lift", () => totalWaiting(lab())),
       bottleneckPill("freight"),
@@ -443,7 +455,8 @@ window.SVT = window.SVT || {};
         h("div", { class: "lift-shaft", "aria-hidden": "true" }, h("div", { class: "lift-car" }, h("span", { class: "lbox ride" })))),
       workTimer("freight", 0, "Lifting"),
       h("div", { class: "tower-foot" }, h("div", { class: "door" }, seat("freight", 0), boostBtn("freight", 0)), levelBtn("freight", 0)),
-      bind(h("div", { class: "tap-hint", text: "Tap" }), (e) => { e.hidden = SVT.running(lab(), "freight", 0); })), "freight", 0);
+      bind(h("div", { class: "tap-hint", text: "Tap" }), (e) => { e.hidden = SVT.running(lab(), "freight", 0) || (lab().lift && lab().lift.phase !== "idle"); })));
+    bind(lift, (e) => toggle(e, "run", SVT.running(lab(), "freight", 0) || (lab().lift && lab().lift.phase !== "idle")));
     const wh = runBind(h("div", { class: "tower wh-tower hub-scene", onclick: () => SVT.tap("commercial", 0) },
       h("div", { class: "roof" }),
       coinTag("over", "Ready to ship", () => lab().lobby),
@@ -496,6 +509,7 @@ window.SVT = window.SVT || {};
       const f = lab().floors[n - 1]; if (!f) return;
       setText(amount, fmt(f.stock));
       toggle(box, "full", f.stock > 0 && f.stock > SVT.rates(lab()).floors[n - 1] * 20);
+
     });
     return box;
   }
@@ -511,7 +525,16 @@ window.SVT = window.SVT || {};
       workTimer("floor", n, "Building"),
       levelBtn("floor", n),
       bind(h("div", { class: "tap-hint", text: "Tap to build" }), (e) => { e.hidden = SVT.running(lab(), "floor", n); })), "floor", n);
-    return h("div", { class: "floor tier" + tier, "data-floor": n }, scene);
+    // While the lift loads here, coins fly from the crate across into the shaft.
+    const fly = h("span", { class: "fly", "aria-hidden": "true" }, [0, 1, 2].map((i) => h("span", { class: "coin", style: "--i:" + i, text: "$" })));
+    const row = h("div", { class: "floor tier" + tier, "data-floor": n }, scene, fly);
+    let seen = 0; // keep the coins flying a moment after a short stop so it stays visible
+    bind(row, () => {
+      const lift = lab().lift, t = performance.now();
+      if (lift && lift.phase === "load" && lift.at === n) seen = t;
+      toggle(row, "loading", t - seen < 700);
+    });
+    return row;
   }
 
   function lockedRow() {
@@ -538,17 +561,21 @@ window.SVT = window.SVT || {};
 
   function building() {
     const floors = lab().floors.map((_, i) => floorRow(i + 1));
-    const car = h("div", { class: "car", "aria-hidden": "true" });
+    // The lift car follows the real trip: y = depth in floors, mapped onto the floor rows' centres.
+    const carAmt = h("span", { class: "car-amt" });
+    const car = h("div", { class: "car", "aria-hidden": "true" }, carAmt);
     const shaft = h("div", { class: "shaft", "aria-hidden": "true" }, car);
     bind(car, () => {
-      const L = lab();
-      const run = SVT.running(L, "freight", 0);
-      toggle(car, "run", run);
-      const trip = Math.max(1.2, Math.min(30, B.freightTrip(L.freight.lvl, L.floors.length)));
-      const v = trip.toFixed(1) + "s";
-      if (car.style.getPropertyValue("--trip") !== v) car.style.setProperty("--trip", v);
-      const dist = Math.max(0, list.offsetHeight - 160) + "px";
-      if (car.style.getPropertyValue("--dist") !== dist) car.style.setProperty("--dist", dist);
+      const L = lab(), lift = L.lift || { y: 0, load: 0, phase: "idle" };
+      const rows = list.children, carH = car.offsetHeight || 30;
+      const centre = (k) => (k <= 0 ? 0 : rows[k - 1] ? rows[k - 1].offsetTop + rows[k - 1].offsetHeight / 2 - carH / 2 : 0);
+      const k = Math.floor(lift.y), f = lift.y - k;
+      const y = centre(k) + (centre(k + 1) - centre(k)) * f;
+      const v = "translateY(" + y.toFixed(1) + "px)";
+      if (car.style.transform !== v) car.style.transform = v;
+      toggle(car, "full", lift.load > 0);
+      toggle(car, "run", lift.phase !== "idle");
+      setText(carAmt, lift.load > 0 ? fmt(lift.load) : "");
     });
     const list = h("div", { class: "floors" }, floors, lockedRow());
     return h("section", { class: "building" }, shaft, list);

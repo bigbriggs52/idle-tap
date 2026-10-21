@@ -91,7 +91,11 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--copper); outlin
 .building { position: relative; display: grid; grid-template-columns: 34px 1fr; gap: 8px; }
 .shaft { position: relative; background: repeating-linear-gradient(var(--deep) 0 18px, #c3d1d8 18px 20px); border: 1px solid var(--line); border-radius: 8px; }
 .car { position: absolute; left: 3px; right: 3px; top: 6px; height: 30px; border-radius: 4px; background: var(--copper); box-shadow: 0 0 10px color-mix(in srgb, var(--copper) 50%, transparent); }
-.car.run { animation: lift var(--trip, 4s) ease-in-out infinite alternate; }
+.car { transition: transform .16s linear; display: grid; place-items: center; z-index: 2; }
+.car::before { content: ""; position: absolute; left: 4px; right: 4px; bottom: 3px; height: 0; background: repeating-linear-gradient(90deg, #c9a27a 0 6px, #9c7650 6px 7px); border-radius: 1px; transition: height .3s; }
+.car.full::before { height: 12px; }
+.car-amt { position: relative; z-index: 1; font: 700 .55rem var(--f-display); color: #fff; text-shadow: 0 1px 0 #0006; white-space: nowrap; }
+.car.run { box-shadow: 0 0 12px #ffb37a; }
 .floors { display: grid; gap: 8px; min-width: 0; }
 
 .floor { display: grid; grid-template-columns: 30px 1fr; gap: 8px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 10px; }
@@ -466,3 +470,69 @@ table.stats td.next.up { color: var(--good); font-weight: 700; }
 .floor.locked, .floor.done { background: #fff8ef; border: 2px dashed #8a5d3b; }
 .owned.busy { opacity: .55; filter: grayscale(.6); }
 .owned.busy .where { color: var(--warn); font-weight: 700; }
+
+/* ===== v0.9: manager looks by rarity =====
+   Common: grey shirt. Uncommon: green shirt and tie. Rare: blue suit with a cap.
+   Epic: purple suit, shades and a spinning sparkle ring. Legendary: gold suit, crown and a pulsing glow.
+   Super: rainbow suit and ring, halo crown, orbiting stars and a strong glow. */
+.mgr-face { background: none !important; overflow: visible; }
+.seat:not(.empty) { overflow: visible; }
+.av { position: relative; display: block; width: 100%; height: 100%; border-radius: 50%; overflow: hidden; background: radial-gradient(circle at 50% 40%, #ffffff, #dde6ea); }
+.av .head { position: absolute; left: 50%; top: 18%; width: 46%; height: 46%; margin-left: -23%; border-radius: 50%; background: var(--skin); box-shadow: inset 0 -2px 0 #0000001a; }
+.av .head::before { content: ""; position: absolute; left: -4%; right: -4%; top: -8%; height: 46%; border-radius: 50% 50% 30% 30%; background: var(--hair); }
+.av .head::after { content: ""; position: absolute; left: 26%; top: 52%; width: 12%; height: 12%; border-radius: 50%; background: #2b2b2b; box-shadow: calc(var(--eye, 1) * 0.25em) 0 0 #2b2b2b; }
+.av .head::after { box-shadow: 0 0 0 transparent; }
+.av .head { background-image: radial-gradient(circle at 35% 58%, #2b2b2b 0 7%, transparent 8%), radial-gradient(circle at 65% 58%, #2b2b2b 0 7%, transparent 8%), radial-gradient(ellipse 18% 8% at 50% 78%, #b5523b 0 90%, transparent 100%); }
+.av .head::after { display: none; }
+.av .body { position: absolute; left: 50%; bottom: -14%; width: 84%; height: 46%; margin-left: -42%; border-radius: 45% 45% 0 0; background: var(--shirt, #9aa9b1); }
+.av .tie { display: none; position: absolute; left: 50%; bottom: 0; width: 12%; height: 26%; margin-left: -6%; background: var(--tie, #2f86d6); clip-path: polygon(50% 0, 100% 25%, 70% 100%, 30% 100%, 0 25%); }
+.av .hat, .av .fx { display: none; position: absolute; pointer-events: none; }
+
+.av.r-common { --shirt: #a3b1b8; }
+.av.r-uncommon { --shirt: #e9f2ec; --tie: var(--uncommon); background: radial-gradient(circle at 50% 40%, #ffffff, #d7efdd); }
+.av.r-uncommon .tie, .av.r-rare .tie, .av.r-epic .tie, .av.r-legendary .tie, .av.r-super .tie { display: block; }
+.av.r-uncommon .body { background: linear-gradient(90deg, var(--uncommon) 0 30%, #e9f2ec 30% 70%, var(--uncommon) 70%); }
+.av.r-rare { --tie: #e0453a; background: radial-gradient(circle at 50% 40%, #ffffff, #d3e5f6); }
+.av.r-rare .body { background: linear-gradient(90deg, var(--rare) 0 34%, #ffffff 34% 66%, var(--rare) 66%); }
+.av.r-rare .hat { display: block; left: 24%; right: 24%; top: 10%; height: 18%; border-radius: 60% 60% 10% 10%; background: var(--rare); box-shadow: 4px 3px 0 -1px var(--rare); }
+.av.r-epic { --tie: #f5b301; background: radial-gradient(circle at 50% 40%, #ffffff, #e6d6f8); }
+.av.r-epic .body { background: linear-gradient(90deg, var(--epic) 0 34%, #2b1f3a 34% 66%, var(--epic) 66%); }
+.av.r-epic .head { background-image: linear-gradient(transparent 50%, #1c1c24 50% 66%, transparent 66%), radial-gradient(ellipse 18% 8% at 50% 80%, #b5523b 0 90%, transparent 100%); }
+.av.r-legendary { --tie: #c0392b; background: radial-gradient(circle at 50% 40%, #fffbe8, #f6e2a5); }
+.av.r-legendary .body { background: linear-gradient(90deg, var(--legendary) 0 34%, #fff6d6 34% 66%, var(--legendary) 66%); }
+.av.r-legendary .hat { display: block; left: 30%; right: 30%; top: 2%; height: 18%; background: linear-gradient(#ffe066, #e0a21a); clip-path: polygon(0 100%, 0 20%, 25% 60%, 50% 0, 75% 60%, 100% 20%, 100% 100%); }
+.av.r-super { --tie: #fff; background: radial-gradient(circle at 50% 40%, #ffffff, #ffe1ec); }
+.av.r-super .body { background: linear-gradient(90deg, #ff5e8a, #ffb347, #ffe066, #5fd38a, #4fb3ff, #b07cff); background-size: 200% 100%; animation: rainbow 3s linear infinite; }
+.av.r-super .hat { display: block; left: 30%; right: 30%; top: 2%; height: 18%; background: linear-gradient(#fff, #ffe066); clip-path: polygon(0 100%, 0 20%, 25% 60%, 50% 0, 75% 60%, 100% 20%, 100% 100%); filter: drop-shadow(0 0 2px #fff); }
+@keyframes rainbow { to { background-position: 200% 0; } }
+
+/* rings and auras around the seat (and the face in the managers list) */
+.seat.r-common, .mgr-face:has(.av.r-common) { border-color: var(--common); }
+.seat.r-uncommon { border-color: var(--uncommon); }
+.seat.r-rare { border-color: var(--rare); box-shadow: 0 0 0 2px #ffffff66, 0 0 6px var(--rare); }
+.seat.r-epic, .seat.r-legendary, .seat.r-super, .mgr-face:has(.av.r-epic), .mgr-face:has(.av.r-legendary), .mgr-face:has(.av.r-super) { isolation: isolate; }
+.seat.r-epic::before, .seat.r-legendary::before, .seat.r-super::before,
+.mgr-face:has(.av.r-epic)::before, .mgr-face:has(.av.r-legendary)::before, .mgr-face:has(.av.r-super)::before { content: ""; position: absolute; inset: -6px; border-radius: 50%; z-index: -1; pointer-events: none; }
+.seat.r-epic { border-color: var(--epic); }
+.seat.r-epic::before, .mgr-face:has(.av.r-epic)::before { background: conic-gradient(from 0deg, transparent 0 20%, #d7b6ff 25%, transparent 30% 70%, #d7b6ff 75%, transparent 80%); animation: spin 2.4s linear infinite; }
+.seat.r-legendary { border-color: var(--legendary); animation: gold-pulse 1.8s ease-in-out infinite; }
+.seat.r-legendary::before, .mgr-face:has(.av.r-legendary)::before { background: radial-gradient(circle, #ffd95a99 55%, transparent 72%); animation: pulse 1.8s ease-in-out infinite; }
+.seat.r-super { border-color: transparent; background: conic-gradient(#ff5e8a, #ffb347, #ffe066, #5fd38a, #4fb3ff, #b07cff, #ff5e8a) border-box; animation: super-glow 1.4s ease-in-out infinite alternate; }
+.seat.r-super::before, .mgr-face:has(.av.r-super)::before { inset: -9px; background: conic-gradient(from 0deg, #ff5e8a, #ffb347, #ffe066, #5fd38a, #4fb3ff, #b07cff, #ff5e8a); filter: blur(5px); opacity: .75; animation: spin 2s linear infinite; }
+.seat.r-super::after, .mgr-face:has(.av.r-super)::after { content: "✦"; position: absolute; left: 50%; top: 50%; width: 0; height: 0; color: #fff; font-size: 11px; line-height: 0; text-shadow: 0 0 4px #ffe066, 0 0 8px #ff5e8a; animation: orbit 2.2s linear infinite; pointer-events: none; z-index: 3; }
+@keyframes gold-pulse { 50% { box-shadow: 0 0 0 2px #ffffff88, 0 0 14px #ffd24a; } }
+@keyframes super-glow { from { box-shadow: 0 0 8px #ff5e8a, 0 0 2px #fff; } to { box-shadow: 0 0 16px #4fb3ff, 0 0 4px #fff; } }
+@keyframes orbit { from { transform: rotate(0deg) translateX(26px) rotate(0deg); } to { transform: rotate(360deg) translateX(26px) rotate(-360deg); } }
+.mgr-face { position: relative; border: 2px solid var(--rc, var(--common)); padding: 0; }
+.floor-scene .seat.r-super { border-color: transparent; }
+
+/* money flying from a floor's crate into the lift while it loads there */
+.floor[data-floor] { position: relative; }
+.floor .fly { position: absolute; left: 22px; top: 52%; width: 0; height: 0; pointer-events: none; z-index: 4; }
+.floor .fly .coin { position: absolute; opacity: 0; width: 14px; height: 14px; font-size: .5rem; }
+.floor.loading .fly .coin { animation: to-lift .4s ease-in infinite; animation-delay: calc(var(--i) * .13s); }
+.floor.loading .rack { border-color: var(--legendary); box-shadow: 0 0 8px #ffd24a; }
+@keyframes to-lift { 0% { opacity: 1; transform: translate(0, 0) scale(1); } 100% { opacity: 0; transform: translate(-46px, 4px) scale(.6); } }
+.floor-scene .seat { width: 40px; height: 40px; }
+.boost { right: -16px; top: -12px; min-width: 22px; height: 22px; font-size: .58rem; }
+.boost.ready { font-size: .72rem; }

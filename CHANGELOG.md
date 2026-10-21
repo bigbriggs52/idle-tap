@@ -2,6 +2,22 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.9.0 (2026-10-21)
+
+- Managers look different by rarity, in their seats and in the managers list. Hair and skin vary by name.
+  - Common: grey shirt.
+  - Uncommon: green shirt and tie.
+  - Rare: blue suit, cap and a blue glow.
+  - Epic: purple suit, shades and a spinning sparkle ring.
+  - Legendary: gold suit, crown and a pulsing gold glow.
+  - Super: rainbow suit and ring, a shining crown, a blurred rainbow aura and an orbiting star.
+- The lift now works like Idle Miner's elevator.
+  - A tap (or a manager) starts a trip, and the trip always finishes.
+  - The lift goes down floor by floor, stopping at each floor that has money.
+  - At each stop it loads what fits and turns back up as soon as it's full. With room for 10 and 20 waiting on Floor 1, it loads 10 there and comes straight back.
+  - Coins fly from the floor's crate into the shaft while it loads. The car in the shaft shows its load and moves to the real floor.
+  - Travel time depends on how deep it actually went.
+
 ## v0.8.0 (2026-10-21)
 
 Idle Miner Tycoon-style cleanup, based on screenshots of the real game.
