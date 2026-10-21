@@ -2,6 +2,13 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.10.2 (2026-10-21)
+
+- Achievement and unlock pop-ups are smaller and sit low in the middle of the screen, between the floor numbers and the Level buttons, so they no longer cover controls. At most two show at a time, and they clear faster.
+- With a panel open, only the newest pop-up shows, at the very top above the panel.
+- The 🔄 Update button is now only in Settings.
+- The version now includes the build date and time in your local time, e.g. V0.10.2.10.21.26.18:05 (version, MM.DD.YY, HH:MM). It shows at the bottom of each screen and in Settings.
+
 ## v0.10.1 (2026-10-21)
 
 - Removed the duplicate Update button from the bottom bar; Update stays at the top. Its spot is now a 🚧 Coming soon (under construction) button.

@@ -663,3 +663,12 @@ table.stats td.next.up { color: var(--good); font-weight: 700; }
 .cap-tag { position: absolute; left: 10px; top: 6px; z-index: 3; padding: 1px 8px; border-radius: 999px; background: #24343ce6; color: #fff; font: 700 .66rem var(--f-display); white-space: nowrap; font-variant-numeric: tabular-nums; pointer-events: none; }
 .cap-tag b { color: #ffe36a; }
 .nav-btn.soon { opacity: .7; }
+
+/* v0.10.2: small toasts low in the middle, between the shaft numbers and the Level buttons, never over controls.
+   With a panel open they sit at the very top, above the panel. */
+#toasts { top: auto; bottom: calc(86px + env(safe-area-inset-bottom, 0px)); padding: 0 84px; gap: 4px; }
+.toast { max-width: 240px; padding: 4px 10px; font-size: .72rem; line-height: 1.25; border-radius: 999px; text-align: center; opacity: .95; box-shadow: 0 2px 8px #17252c40; animation: toast-in .2s ease-out; }
+.toast.big { font-size: .74rem; }
+@keyframes toast-in { from { opacity: 0; transform: translateY(8px); } }
+body:has(#sheet) #toasts { top: calc(4px + env(safe-area-inset-top, 0px)); bottom: auto; padding: 0 56px; }
+body:has(#sheet) .toast:not(:last-child) { display: none; }
