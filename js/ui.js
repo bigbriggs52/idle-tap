@@ -85,22 +85,37 @@ window.SVT = window.SVT || {};
       h("div", { class: "top-row" },
         h("button", { class: "btn small", onclick: () => setView("map"), text: "🗺 Map" }),
         h("div", { class: "lab-title" }, h("span", { class: "lab-icon", text: d.icon }), h("div", null, h("b", { text: d.name }), roundBadge)),
-        h("div", { class: "top-btns" }, fundBtn, h("button", { class: "icon-btn", "aria-label": "Settings", onclick: openSettings, text: "⚙" }))),
+        h("div", { class: "top-btns" }, fundBtn, h("button", { class: "icon-btn", "aria-label": "Owned managers", title: "Owned managers", onclick: () => openManagers("floor", null, 0), text: "👔" }), h("button", { class: "icon-btn", "aria-label": "Settings", onclick: openSettings, text: "⚙" }))),
       h("div", { class: "top-row money" }, h("div", null, cash, rate), chips));
   }
 
   // ---------- managers ----------
+  const roleOf = (kind) => kind;
+  function effectText(m) {
+    const r = SVT.rank(m.rank), ab = SVT.ability(m.role, m.ability);
+    return ab.name + ": " + (ab.kind === "boost" ? "×" + r.boost + " for " + B.BOOST_SECONDS + "s" : "−" + Math.round(r.discount * 100) + "% upgrades for " + B.DISCOUNT_SECONDS + "s") + (r.passive ? " · +" + r.passive * 100 + "% always" : "");
+  }
+  function hireAndOpen(role, kind, n) {
+    const m = SVT.hire(role);
+    if (!m) return;
+    toast("Hired " + SVT.rank(m.rank).name + " " + m.name + " · " + SVT.ability(role, m.ability).name, "r-" + m.rank);
+    openManagers(role, kind, n);
+  }
+
+  // The slot on a floor or hub: pick from owned managers, or hire one into the Owned list.
   function managerChip(kind, n) {
     const L = lab();
+    const role = roleOf(kind);
     const m = SVT.mgrOf(L, kind, n);
-    const role = B.ROLE_NAMES[kind];
+    const title = B.ROLE_NAMES[role];
     if (!m) {
-      const btn = bind(h("button", { class: "btn mgr-hire", onclick: () => { if (SVT.hire(kind, n)) { const mm = SVT.mgrOf(lab(), kind, n); const r = SVT.rank(mm.rank); toast("Hired " + r.name + " " + role + " · " + SVT.ability(kind, mm.ability).name, "r-" + mm.rank); } } }),
-        (e) => { const c = SVT.hireCost(lab(), kind, n); setText(e, "Hire " + role + " · $" + fmt(c)); setDisabled(e, lab().cash < c); });
-      return h("div", { class: "mgr none" }, btn);
+      const free = SVT.owned(L, role).filter((x) => !SVT.slotOfMgr(L, x.id)).length;
+      const pick = free ? h("button", { class: "btn mgr-pick", onclick: () => openManagers(role, kind, n), text: "Choose " + title + " (" + free + " free)" }) : null;
+      const hire = bind(h("button", { class: "btn mgr-hire", onclick: () => hireAndOpen(role, kind, n) }),
+        (e) => { const c = SVT.hireCost(lab(), role); setText(e, "Hire " + title + " · $" + fmt(c)); setDisabled(e, lab().cash < c); });
+      return h("div", { class: "mgr none" }, pick, hire);
     }
-    const r = SVT.rank(m.rank), ab = SVT.ability(kind, m.ability);
-    const effect = ab.kind === "boost" ? "×" + r.boost + " for " + B.BOOST_SECONDS + "s" : "−" + Math.round(r.discount * 100) + "% upgrades for " + B.DISCOUNT_SECONDS + "s";
+    const r = SVT.rank(m.rank), ab = SVT.ability(role, m.ability);
     const act = bind(h("button", { class: "btn ability", onclick: () => SVT.activate(kind, n) }), (e) => {
       const mm = SVT.mgrOf(lab(), kind, n); if (!mm) return;
       const t = SVT.now();
@@ -108,13 +123,49 @@ window.SVT = window.SVT || {};
       else if (mm.cdUntil > t) { setText(e, "Ready in " + SVT.fmtTime(mm.cdUntil - t)); setDisabled(e, true); toggle(e, "live", false); }
       else { setText(e, ab.name); setDisabled(e, false); toggle(e, "live", false); }
     });
-    const reroll = bind(h("button", { class: "btn small ghost", title: "Hire a different manager", onclick: () => { if (SVT.hire(kind, n)) { const mm = SVT.mgrOf(lab(), kind, n); toast("Hired " + SVT.rank(mm.rank).name + " " + role, "r-" + mm.rank); } } }),
-      (e) => { const c = SVT.hireCost(lab(), kind, n); setText(e, "↻ $" + fmt(c)); setDisabled(e, lab().cash < c); });
+    const swap = h("button", { class: "btn small ghost", title: "Choose a different manager", onclick: () => openManagers(role, kind, n), text: "Swap" });
     return h("div", { class: "mgr r-" + m.rank },
-      h("div", { class: "mgr-face", "aria-hidden": "true", text: r.name[0] }),
-      h("div", { class: "mgr-info" }, h("b", { text: r.name + " " + role }), h("span", { text: ab.name + ": " + effect + (r.passive ? " · +" + r.passive * 100 + "% always" : "") })),
-      act, reroll);
+      h("div", { class: "mgr-face", "aria-hidden": "true", text: m.name[0] }),
+      h("div", { class: "mgr-info" }, h("b", { text: m.name + " · " + r.name + " " + title }), h("span", { text: effectText(m) })),
+      act, swap);
   }
+
+  // Owned managers sheet. With a slot (kind, n) it offers "Use here"; without one it is the general list.
+  let sheetCtx = null;
+  function openManagers(role, kind, n) {
+    sheetCtx = { role, kind, n };
+    const L = lab();
+    const tabs = h("div", { class: "tabs", role: "tablist" }, ["floor", "freight", "commercial"].map((ro) =>
+      h("button", { class: "tab" + (ro === role ? " on" : ""), role: "tab", "aria-selected": ro === role ? "true" : "false",
+        onclick: () => openManagers(ro, ro === kind ? kind : (ro === "floor" ? null : ro), ro === kind ? n : 0),
+        text: { floor: "Floor Leads", freight: "Lift", commercial: "Warehouse" }[ro] + " (" + SVT.owned(L, ro).length + ")" })));
+    const here = kind ? SVT.slotKey(kind, n) : null;
+    const list = SVT.owned(L, role);
+    const rows = list.length ? list.map((m) => {
+      const r = SVT.rank(m.rank);
+      const slot = SVT.slotOfMgr(L, m.id);
+      const btns = [];
+      if (here && slot !== here) btns.push(h("button", { class: "btn small use", onclick: () => { SVT.assign(m.id, kind, n); closeSheet(); toast(m.name + " now runs " + SVT.slotName(here)); }, text: "Use here" }));
+      if (slot) btns.push(h("button", { class: "btn small ghost", onclick: () => { SVT.unassign(m.id); openManagers(role, kind, n); }, text: "Unassign" }));
+      else btns.push(h("button", { class: "btn small ghost", onclick: () => { SVT.sell(m.id); openManagers(role, kind, n); }, text: "Sell $" + fmt(m.paid * B.SELL_REFUND) }));
+      return h("li", { class: "owned r-" + m.rank },
+        h("div", { class: "mgr-face", "aria-hidden": "true", text: m.name[0] }),
+        h("div", { class: "owned-info" },
+          h("b", { text: m.name }), h("span", { class: "rarity", text: r.name }),
+          h("span", { class: "muted", text: effectText(m) }),
+          h("span", { class: "where" + (slot ? " busy" : ""), text: slot ? (slot === here ? "Working here" : "Working on " + SVT.slotName(slot)) : "Not working" })),
+        h("div", { class: "owned-btns" }, btns));
+    }) : [h("li", { class: "muted empty", text: "No " + B.ROLE_NAMES[role] + "s owned yet. Hire one below." })];
+    const hire = bind(h("button", { class: "btn fund-cta big", onclick: () => hireAndOpen(role, kind, n) }),
+      (e) => { const c = SVT.hireCost(lab(), role); setText(e, "Hire " + B.ROLE_NAMES[role] + " · $" + fmt(c)); setDisabled(e, lab().cash < c); });
+    sheet(here ? "Managers for " + SVT.slotName(here) : "Owned managers", h("div", { class: "sheet-body" },
+      tabs,
+      h("p", { class: "muted small", text: "Best first. Each hire rolls: Super 0.5%, Legendary 1%, Epic 3%, Rare 10%, Uncommon 30%, Common 55.5%. Floor Leads can work any floor. Funding rounds send every manager away." }),
+      h("ul", { class: "owned-list" }, rows),
+      hire));
+    update();
+  }
+  SVT.openManagers = openManagers;
 
   // ---------- upgrade button ----------
   function upgradeBtn(kind, n) {
@@ -393,7 +444,7 @@ window.SVT = window.SVT || {};
     });
     sheet("Funding", h("div", { class: "sheet-body" },
       h("p", { text: "Current multiplier: ×" + SVT.prestigeMult(L) }),
-      h("p", { class: "muted", text: "Some floors start a new tech era and need funding before you can afford them. Raising a round resets this lab's floors, hubs and cash. You keep every manager, and the whole lab earns more forever." }),
+      h("p", { class: "muted", text: "Some floors start a new tech era and need funding before you can afford them. Raising a round resets this lab's floors, hubs, cash and managers. You will need to hire new managers, but the whole lab earns more forever." }),
       ladder, btn));
   }
 
@@ -439,7 +490,8 @@ window.SVT = window.SVT || {};
       else toast("🔓 " + where + " Lv " + last.lvl + ": " + tierList[(last.lvl / 5) % tierList.length] + " " + multLabel(last.mult));
     }
     if (type === "floor") { toast("New floor: " + productName(d.n)); render(); }
-    if (type === "hire" || type === "switch") render();
+    if (type === "assign" || type === "switch") render();
+    if (type === "hire") { const y = window.scrollY; render(); window.scrollTo(0, y); }
     if (type === "raise") { toast("💰 Raised " + d.round.name + "! Lab income now ×" + d.mult, "big"); render(); }
     if (type === "labUnlocked") toast("🗺 New location open on the map: " + d.lab.name, "big");
   });
