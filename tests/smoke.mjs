@@ -132,15 +132,14 @@ await page.screenshot({ path: out + "/07-arcade.png" });
 // lift: goes down only as far as it has room for, loads, and comes back up
 const liftRun = await page.evaluate(() => {
   const L = SVT.lab();
-  while (L.floors.length < 3) L.floors.push({ lvl: 1, workUntil: 0, stock: 0 });
+  while (L.floors.length < 3) L.floors.push({ lvl: 1, left: 0, stock: 0 });
   L.assign = {}; L.lift = { phase: "idle", y: 0, load: 0, timer: 0, at: 0 }; L.lobby = 0;
-  L.floors.forEach((f) => (f.workUntil = 0));
-  L.commercial.workUntil = 0;
+  L.floors.forEach((f) => (f.left = 0));
+  L.commercial.left = 0;
   const cap = SVT.liftCapacity(L);
   L.floors[0].stock = cap * 2; L.floors[1].stock = cap; L.floors[2].stock = cap;
-  L.freight.workUntil = SVT.now() + 60; // a tap starts a trip...
+  SVT.tap("freight", 0); // one tap, one trip; no new trip starts after
   SVT.tick(0.05);
-  L.freight.workUntil = 0; // ...which finishes on its own; no new trip starts after
   let maxY = 0, partial = 0;
   for (let i = 0; i < 200; i++) { SVT.tick(0.05); maxY = Math.max(maxY, L.lift.y); if (L.lift.phase === "load" && L.lift.load > 0 && L.lift.load < cap * 0.9) partial++; }
   return { cap, maxY, partial, f1: L.floors[0].stock / cap, f2: L.floors[1].stock / cap, lobby: L.lobby / cap, phase: L.lift.phase };
@@ -148,6 +147,31 @@ const liftRun = await page.evaluate(() => {
 console.log("lift trip", JSON.stringify(liftRun));
 if (liftRun.maxY > 1.001 || Math.abs(liftRun.f1 - 1) > 1e-6 || Math.abs(liftRun.f2 - 1) > 1e-6 || Math.abs(liftRun.lobby - 1) > 1e-6) errors.push("Lift did not stop at the first full floor");
 if (liftRun.partial < 3) errors.push("Lift loaded instantly instead of filling up");
+// one tap = one cycle: a floor builds once and stops; the warehouse ships one trip and stops
+const cyc = await page.evaluate(() => {
+  const L = SVT.lab();
+  L.assign = {}; L.floors.forEach((f) => { f.left = 0; f.stock = 0; }); L.commercial.left = 0; L.lobby = 100; L.cash = 0;
+  L.lift = { phase: "idle", y: 0, load: 0, timer: 0, at: 0 };
+  SVT.tap("floor", 1); SVT.tap("floor", 1); SVT.tap("commercial", 0);
+  for (let i = 0; i < 200; i++) SVT.tick(0.05);
+  const one = SVT.B.floorOutput(1, L.floors[0].lvl) * SVT.prestigeMult(L) * SVT.B.FLOOR_CYCLE;
+  return { cycles: L.floors[0].stock / one, floorLeft: L.floors[0].left, shipped: L.cash, trip: SVT.shipLoad(L), whLeft: L.commercial.left, lift: L.lift.phase };
+});
+console.log("one tap", JSON.stringify(cyc));
+if (Math.abs(cyc.cycles - 1) > 1e-6 || cyc.floorLeft > 0) errors.push("Floor tap did not run exactly one cycle");
+if (Math.abs(cyc.shipped - Math.min(100, cyc.trip)) > 1e-6 || cyc.whLeft > 0) errors.push("Warehouse tap did not ship exactly one trip");
+if (cyc.lift !== "idle") errors.push("Lift moved without a tap");
+// upgrade badge: ▲ / ▲▲ / ▲▲▲ for 1 / 10 / 50 affordable levels
+const tri = await page.evaluate(async () => {
+  const L = SVT.lab(), out = [];
+  for (const c of [0, SVT.B.bulk("floor", 1, L.floors[0].lvl, 1, 0, 0).cost, SVT.B.bulk("floor", 1, L.floors[0].lvl, 10, 0, 0).cost, SVT.B.bulk("floor", 1, L.floors[0].lvl, 50, 0, 0).cost]) {
+    L.cash = c * 1.0001; await new Promise((r) => setTimeout(r, 400));
+    out.push(document.querySelector(".floor .lvl-btn").dataset.tri);
+  }
+  return out.join("");
+});
+console.log("badge tiers", tri);
+if (tri !== "0123") errors.push("Upgrade badge tiers wrong: " + tri);
 // save + reload restores
 await page.evaluate(() => SVT.save());
 await page.reload(); await page.waitForTimeout(400);

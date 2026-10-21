@@ -2,6 +2,17 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.11.0 (2026-10-21)
+
+- One tap, one cycle, like Idle Miner. With a manager, it keeps going on its own.
+  - Floor: a tap runs one 3-second build cycle, then the crate gets that cycle's products.
+  - Lift: a tap sends it down once and back up once. The extra 5-second timer is gone.
+  - Warehouse: a tap ships one 3-second trip from the top of the shaft, and you're paid when it arrives.
+  - Tapping again while a cycle or trip is running does nothing.
+- The number above the lift tower is now what's stored at the top of the shaft, waiting for the warehouse. The number above the warehouse is gone, since your cash is the total.
+- The Level panel shows "Per cycle" for floors and "Load per trip" for the warehouse.
+- Upgrade badges on Level buttons: ▲ when you can afford 1 level, ▲▲ for 10, and a gold ▲▲▲ for 50.
+
 ## v0.10.4 (2026-10-21)
 
 - Bottom bar: Map and Funding swapped. Map is now the big green button in the middle, and Funding sits on the left, pulsing yellow when you can raise.

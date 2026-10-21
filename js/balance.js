@@ -19,9 +19,9 @@ window.SVT = window.SVT || {};
   }
 
   const B = {
-    VERSION: "0.10.4",
+    VERSION: "0.11.0",
     // Release time in UTC, set with each release. Shown after the version in the player's local time.
-    BUILT: "2026-10-21T22:09Z",
+    BUILT: "2026-10-21T22:15Z",
     FLOORS: 30,
     FLOOR_MAX: 800,
     HUB_MAX: 2400,
@@ -31,7 +31,8 @@ window.SVT = window.SVT || {};
     HUB_STEP: 1.02,   // small unlock every 5 levels on hubs
     FLOOR_MILESTONES,
     HUB_MILESTONES,
-    TAP_SECONDS: 5,
+    FLOOR_CYCLE: 3, // seconds per build cycle; a tap runs one, a manager keeps them going
+    WH_TRIP: 3,     // seconds per warehouse shipping trip
     OFFLINE_CAP: 2 * 3600,
     START_CASH: 10,
 
