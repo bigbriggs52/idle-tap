@@ -19,9 +19,9 @@ window.SVT = window.SVT || {};
   }
 
   const B = {
-    VERSION: "0.10.2",
+    VERSION: "0.10.3",
     // Release time in UTC, set with each release. Shown after the version in the player's local time.
-    BUILT: "2026-10-21T22:02Z",
+    BUILT: "2026-10-21T22:05Z",
     FLOORS: 30,
     FLOOR_MAX: 800,
     HUB_MAX: 2400,
