@@ -2,6 +2,18 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.8.0 (2026-10-21)
+
+Idle Miner Tycoon-style cleanup, based on screenshots of the real game.
+
+- Top bar: one big coin-and-cash pill in the middle with income under it, the lab name on the left and 🔄 Update on the right. The buy amount chips now live in each Level sheet.
+- Above ground is one scene: sky, sun and hills, with the lift tower on the left and the warehouse on the right. Each building shows a coin tag with what it's holding (the lift shows the total waiting on the floors, the warehouse shows what's ready to ship), its animation in a window, the manager seat in its doorway and a big blue Level button. A courier pushes a cart between them while the warehouse works.
+- Floors are tunnels in brown earth: number and product tag, a cash crate on the left with the money waiting for the lift, the manager seat, the production line (now flowing toward the crate) and a rock face with the big blue Level button. Much less text.
+- Tap a manager seat to hire, pick or swap. A ⚡ bolt on the seat fires the manager's ability and shows its timer. A green ▲ on a Level button means you can afford an upgrade. Upgrades happen in the Level sheet.
+- Hold the Upgrade button to keep buying, faster the longer you hold, until you let go or run out of cash.
+- Managers list: managers already working somewhere else go to the bottom, greyed out, and can't be assigned (unassign them first).
+- Map: "Your labs" now sits above the map.
+
 ## v0.7.1 (2026-10-21)
 
 - Tapping fast no longer highlights words or pops up a dictionary or long-press menu. Text selection, the tap flash and double-tap zoom are turned off so the game feels like an app.

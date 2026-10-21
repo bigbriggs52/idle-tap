@@ -92,21 +92,17 @@ window.SVT = window.SVT || {};
 
   // ---------- header ----------
   function header() {
-    const L = lab(), d = def();
-    const cash = bind(h("div", { class: "cash" }), (e) => setText(e, "$" + fmt(lab().cash)));
-    const rate = bind(h("div", { class: "rate" }), (e) => setText(e, "+$" + fmt(lab().rate) + "/s"));
+    const d = def();
+    const cash = bind(h("b", { class: "cash" }), (e) => setText(e, "$" + fmt(lab().cash)));
+    const rate = bind(h("span", { class: "rate" }), (e) => setText(e, "+$" + fmt(lab().rate) + "/s"));
     const roundBadge = bind(h("span", { class: "badge" }), (e) => {
       const r = lab().round;
-      setText(e, r === 0 ? "Bootstrapped" : B.ROUNDS[r - 1].name + " · ×" + SVT.prestigeMult(lab()));
+      setText(e, r === 0 ? "Bootstrapped" : B.ROUNDS[r - 1].name + " ×" + SVT.prestigeMult(lab()));
     });
-    const chips = h("div", { class: "buy", role: "group", "aria-label": "Buy amount" },
-      [1, 10, 50, "max"].map((b) => bind(h("button", { class: "chip", onclick: () => SVT.setBuy(b), text: b === "max" ? "Max" : "×" + b }),
-        (e) => toggle(e, "on", SVT.state().buy === b))));
     return h("header", { class: "top" },
-      h("div", { class: "top-row" },
-        h("div", { class: "lab-title" }, h("span", { class: "lab-icon", text: d.icon }), h("div", null, h("b", { text: d.name }), roundBadge)),
-        h("button", { class: "btn small ghost refresh", "aria-label": "Check for update", onclick: checkUpdate, text: "🔄 Update" })),
-      h("div", { class: "top-row money" }, h("div", null, cash, rate), chips));
+      h("div", { class: "lab-title" }, h("span", { class: "lab-icon", text: d.icon }), h("div", null, h("b", { text: d.name }), roundBadge)),
+      h("div", { class: "cash-pill" }, h("span", { class: "coin big", "aria-hidden": "true", text: "$" }), h("div", null, h("span", { class: "cash-label", text: "Cash" }), cash, rate)),
+      h("button", { class: "icon-btn refresh", "aria-label": "Check for update", title: "Check for update", onclick: checkUpdate, text: "🔄" }));
   }
 
   // Saves, asks for a new service worker, then reloads. If a new version is installing, index.html reloads when it takes over.
@@ -184,15 +180,17 @@ window.SVT = window.SVT || {};
         onclick: () => openManagers(ro, ro === kind ? kind : (ro === "floor" ? null : ro), ro === kind ? n : 0, ro === kind ? back : null),
         text: { floor: "Floor Leads", freight: "Lift", commercial: "Warehouse" }[ro] + " (" + SVT.owned(L, ro).length + ")" })));
     const here = kind ? SVT.slotKey(kind, n) : null;
-    const list = SVT.owned(L, role);
+    // Free managers first (rarest first), then the one working here, then managers busy elsewhere, greyed out.
+    const busyRank = (m) => { const sl = SVT.slotOfMgr(L, m.id); return !sl ? 0 : sl === here ? 1 : 2; };
+    const list = SVT.owned(L, role).map((m, i) => [m, i]).sort((a, b) => busyRank(a[0]) - busyRank(b[0]) || a[1] - b[1]).map((x) => x[0]);
     const rows = list.length ? list.map((m) => {
       const r = SVT.rank(m.rank);
       const slot = SVT.slotOfMgr(L, m.id);
       const btns = [];
-      if (here && slot !== here) btns.push(h("button", { class: "btn small use", onclick: () => { SVT.assign(m.id, kind, n); if (back) back(); else closeSheet(); toast(m.name + " now runs " + SVT.slotName(here)); }, text: "Use here" }));
+      if (here && !slot) btns.push(h("button", { class: "btn small use", onclick: () => { SVT.assign(m.id, kind, n); if (back) back(); else closeSheet(); toast(m.name + " now runs " + SVT.slotName(here)); }, text: "Use here" }));
       if (slot) btns.push(h("button", { class: "btn small ghost", onclick: () => { SVT.unassign(m.id); openManagers(role, kind, n, back); }, text: "Unassign" }));
       else btns.push(h("button", { class: "btn small ghost", onclick: () => { SVT.sell(m.id); openManagers(role, kind, n, back); }, text: "Sell $" + fmt(m.paid * B.SELL_REFUND) }));
-      return h("li", { class: "owned r-" + m.rank },
+      return h("li", { class: "owned r-" + m.rank + (slot && slot !== here ? " busy" : "") },
         h("div", { class: "mgr-face", "aria-hidden": "true", text: m.name[0] }),
         h("div", { class: "owned-info" },
           h("b", { text: m.name }), h("span", { class: "rarity", text: r.name }),
@@ -313,13 +311,27 @@ window.SVT = window.SVT || {};
     if (e.key === "ArrowLeft") stepNode(-1);
     if (e.key === "ArrowRight") stepNode(1);
   });
-  function detailsBtn(kind, n) {
-    return bind(h("button", { class: "btn lvl", onclick: () => openNode(kind, n), "aria-label": "Stats and upgrades" }), (e) => setText(e, "Lv " + SVT.levelOf(lab(), kind, n) + " ›"));
-  }
+
 
   // ---------- upgrade button ----------
+  // Hold to keep buying: one buy on press, then repeats that speed up until you let go or run out of cash.
+  function holdToRepeat(el, fn) {
+    let timer = null, held = false;
+    const stop = () => { clearTimeout(timer); timer = null; held = false; };
+    const loop = (gap) => { timer = setTimeout(() => { if (!fn()) return stop(); loop(Math.max(35, gap * 0.75)); }, gap); };
+    el.addEventListener("pointerdown", (e) => {
+      if (e.button > 0 || el.disabled) return;
+      held = true;
+      fn();
+      loop(320);
+    });
+    ["pointerup", "pointerleave", "pointercancel", "blur"].forEach((t) => el.addEventListener(t, stop));
+    // Keyboard and assistive tech still get a plain click (pointer presses are handled above).
+    el.addEventListener("click", (e) => { if (e.detail === 0 && !held) fn(); });
+    return el;
+  }
   function upgradeBtn(kind, n) {
-    return bind(h("button", { class: "btn up", onclick: () => upgradeAndToast(kind, n) }), (e) => {
+    return bind(holdToRepeat(h("button", { class: "btn up" }), () => SVT.upgrade(kind, n)), (e) => {
       const L = lab();
       const lv = SVT.levelOf(L, kind, n);
       if (lv >= B.maxLevel(kind)) { setText(e, "Max level"); setDisabled(e, true); return; }
@@ -329,9 +341,6 @@ window.SVT = window.SVT || {};
       setDisabled(e, L.cash < q.cost);
       toggle(e, "sale", disc > 0);
     });
-  }
-  function upgradeAndToast(kind, n) {
-    SVT.upgrade(kind, n);
   }
 
   function unlockBar(kind, n) {
@@ -348,7 +357,7 @@ window.SVT = window.SVT || {};
   }
 
   function bottleneckPill(which) {
-    return bind(h("span", { class: "pill warn", text: "Bottleneck" }), (e) => {
+    return bind(h("span", { class: "pill warn", text: "Slowest" }), (e) => {
       const r = SVT.rates(lab());
       e.hidden = !(r.limit === which && lab().floors.length > 0);
     });
@@ -365,60 +374,92 @@ window.SVT = window.SVT || {};
       box.classList.remove("auto");
       const left = SVT.nodeOf(L, kind, n).workUntil - SVT.now();
       box.hidden = !(left > 0);
-      if (left > 0) { setText(label, verb + " " + Math.ceil(left) + "s"); fill.style.width = (100 * left / B.TAP_SECONDS) + "%"; }
+      if (left > 0) { setText(label, Math.ceil(left) + "s"); fill.style.width = (100 * left / B.TAP_SECONDS) + "%"; }
     });
     return box;
   }
   function totalWaiting(L) { return L.floors.reduce((a, f) => a + f.stock, 0); }
 
-  // ---------- hubs ----------
-  // The two hubs sit side by side above ground: lift (Freight Hub) left, warehouse (Commercial Hub) right.
-  function hubHead(icon, title, sub, which) {
-    return h("div", { class: "hub-head" },
-      h("div", { class: "hub-title" }, h("h3", { text: icon + " " + title }), h("span", { class: "muted", text: sub })),
-      bottleneckPill(which));
+  // ---------- shared Idle Miner-style pieces ----------
+  // Manager seat: the manager's face (rarity ring) or an empty dashed seat. Tap to hire, pick or swap.
+  function seat(kind, n) {
+    const el = h("button", { class: "seat empty", onclick: (e) => { e.stopPropagation(); openManagers(kind, kind, n); } });
+    let shown = null;
+    bind(el, () => {
+      const m = SVT.mgrOf(lab(), kind, n);
+      const key = m ? m.id : "none";
+      if (key === shown) return;
+      shown = key;
+      el.className = "seat" + (m ? " r-" + m.rank : " empty");
+      el.setAttribute("aria-label", m ? m.name + ", " + SVT.rank(m.rank).name + " " + B.ROLE_NAMES[kind] : "Manager: hire or choose a " + B.ROLE_NAMES[kind]);
+      el.replaceChildren(m ? h("span", { class: "face", text: m.name[0] }) : h("span", { class: "plus", text: "+" }));
+    });
+    return el;
   }
-
-  function commercialCard() {
-    const kind = "commercial";
-    const scene = h("div", { class: "scene hub-scene", onclick: () => SVT.tap(kind, 0) },
-      h("div", { class: "store", "aria-hidden": "true" }), h("div", { class: "belt", "aria-hidden": "true" }),
-      [0, 1, 2].map((i) => h("div", { class: "wbox", style: "--d:" + (-i * 0.6) + "s", "aria-hidden": "true" })),
-      h("div", { class: "truck t1", "aria-hidden": "true" }, h("span", { class: "cargo" })),
-      h("div", { class: "cloud", "aria-hidden": "true", text: "☁" }),
-      bind(h("div", { class: "tap-hint", text: "Tap to ship" }), (e) => { e.hidden = SVT.running(lab(), kind, 0); }),
-      workTimer(kind, 0, "Shipping…"));
-    bind(scene, (e) => toggle(e, "run", SVT.running(lab(), kind, 0)));
-    const total = bind(h("div", { class: "waiting" }), (e) => {
-      const L = lab();
-      e.replaceChildren(h("span", { class: "label", text: "Waiting to ship" }), h("b", { text: "$" + fmt(L.lobby) }));
+  // Ability button beside the seat: ⚡ when ready, a countdown while active or cooling down.
+  function boostBtn(kind, n) {
+    const el = h("button", { class: "boost", "aria-label": "Use manager ability", onclick: (e) => { e.stopPropagation(); SVT.activate(kind, n); } });
+    bind(el, () => {
+      const m = SVT.mgrOf(lab(), kind, n);
+      el.hidden = !m;
+      if (!m) return;
+      const t = SVT.now(), live = m.activeUntil > t, cd = !live && m.cdUntil > t;
+      setText(el, live ? SVT.fmtTime(m.activeUntil - t) : cd ? SVT.fmtTime(m.cdUntil - t) : "⚡");
+      setDisabled(el, live || cd); toggle(el, "live", live); toggle(el, "ready", !live && !cd);
     });
-    const info = bind(h("div", { class: "stat" }), (e) => setText(e, "Lv " + lab().commercial.lvl + " · ships $" + fmt(SVT.rates(lab()).commercial) + "/s"));
-    return h("section", { class: "hub commercial" },
-      hubHead("🏬", "Warehouse", "Commercial Hub", "commercial"),
-      scene, total, info, unlockBar(kind, 0), h("div", { class: "actions" }, detailsBtn(kind, 0), upgradeBtn(kind, 0)), managerChip(kind, 0));
+    return el;
   }
+  // Big blue Level button: opens the stats and upgrade sheet. A green ▲ shows when you can afford an upgrade.
+  function levelBtn(kind, n) {
+    const num = h("b");
+    const el = h("button", { class: "lvl-btn", onclick: (e) => { e.stopPropagation(); openNode(kind, n); } },
+      h("span", { text: "Level" }), num, h("i", { class: "can", "aria-hidden": "true", text: "▲" }));
+    bind(el, () => {
+      const L = lab(), lv = SVT.levelOf(L, kind, n), max = lv >= B.maxLevel(kind);
+      setText(num, max ? "MAX" : String(lv));
+      const q = SVT.quote(L, kind, n);
+      toggle(el, "afford", !max && q.count > 0 && L.cash >= q.cost);
+      el.setAttribute("aria-label", "Level " + lv + ": stats and upgrades");
+    });
+    return el;
+  }
+  // Coin tag with a live amount, like the numbers over Idle Miner's buildings and crates.
+  function coinTag(cls, label, get) {
+    const amt = h("b");
+    const el = h("div", { class: "coin-tag " + cls, title: label }, h("span", { class: "coin", "aria-hidden": "true", text: "$" }), amt);
+    bind(el, () => setText(amt, fmt(get())));
+    return el;
+  }
+  const runBind = (el, kind, n) => bind(el, (e) => toggle(e, "run", SVT.running(lab(), kind, n)));
 
-  function freightCard() {
-    const kind = "freight";
-    const scene = h("div", { class: "scene lift-scene", onclick: () => SVT.tap(kind, 0) },
-      h("div", { class: "dock", "aria-hidden": "true" }), h("div", { class: "lbox in", "aria-hidden": "true" }), h("div", { class: "lbox out", "aria-hidden": "true" }),
-      h("div", { class: "lift-shaft", "aria-hidden": "true" }, h("div", { class: "lift-car" }, h("span", { class: "lbox ride" }))),
-      bind(h("div", { class: "tap-hint", text: "Tap to lift" }), (e) => { e.hidden = SVT.running(lab(), kind, 0); }),
-      workTimer(kind, 0, "Lifting…"));
-    bind(scene, (e) => toggle(e, "run", SVT.running(lab(), kind, 0)));
-    const waiting = bind(h("div", { class: "waiting" }), (e) => {
-      const L = lab();
-      e.replaceChildren(h("span", { class: "label", text: "Waiting on floors" }), h("b", { text: "$" + fmt(totalWaiting(L)) }),
-        h("span", { class: "muted", text: "Carries $" + fmt(B.freightLoad(L.freight.lvl) * SVT.prestigeMult(L) * SVT.nodeMult(L, kind, 0)) + " a trip" }));
-    });
-    const info = bind(h("div", { class: "stat" }), (e) => {
-      const L = lab();
-      setText(e, "Lv " + L.freight.lvl + " · moves $" + fmt(SVT.rates(L).freight) + "/s");
-    });
-    return h("section", { class: "hub freight" },
-      hubHead("🛗", "Lift", "Freight Hub", "freight"),
-      scene, waiting, info, unlockBar(kind, 0), h("div", { class: "actions" }, detailsBtn(kind, 0), upgradeBtn(kind, 0)), managerChip(kind, 0));
+  // ---------- surface: lift tower (left) and warehouse (right) ----------
+  function surface() {
+    const lift = runBind(h("div", { class: "tower lift-tower lift-scene", onclick: () => SVT.tap("freight", 0) },
+      h("div", { class: "roof" }),
+      coinTag("over", "Waiting on the floors for the lift", () => totalWaiting(lab())),
+      bottleneckPill("freight"),
+      h("div", { class: "window" },
+        h("div", { class: "dock", "aria-hidden": "true" }), h("div", { class: "lbox in", "aria-hidden": "true" }), h("div", { class: "lbox out", "aria-hidden": "true" }),
+        h("div", { class: "lift-shaft", "aria-hidden": "true" }, h("div", { class: "lift-car" }, h("span", { class: "lbox ride" })))),
+      workTimer("freight", 0, "Lifting"),
+      h("div", { class: "tower-foot" }, h("div", { class: "door" }, seat("freight", 0), boostBtn("freight", 0)), levelBtn("freight", 0)),
+      bind(h("div", { class: "tap-hint", text: "Tap" }), (e) => { e.hidden = SVT.running(lab(), "freight", 0); })), "freight", 0);
+    const wh = runBind(h("div", { class: "tower wh-tower hub-scene", onclick: () => SVT.tap("commercial", 0) },
+      h("div", { class: "roof" }),
+      coinTag("over", "Ready to ship", () => lab().lobby),
+      bottleneckPill("commercial"),
+      h("div", { class: "window shelves" },
+        h("div", { class: "store", "aria-hidden": "true" }), h("div", { class: "belt", "aria-hidden": "true" }),
+        [0, 1, 2].map((i) => h("div", { class: "wbox", style: "--d:" + (-i * 0.6) + "s", "aria-hidden": "true" })),
+        h("div", { class: "truck t1", "aria-hidden": "true" }, h("span", { class: "cargo" }))),
+      workTimer("commercial", 0, "Shipping"),
+      h("div", { class: "tower-foot" }, levelBtn("commercial", 0), h("div", { class: "door" }, seat("commercial", 0), boostBtn("commercial", 0))),
+      bind(h("div", { class: "tap-hint", text: "Tap" }), (e) => { e.hidden = SVT.running(lab(), "commercial", 0); })), "commercial", 0);
+    // A courier pushes boxes from the lift to the warehouse whenever the warehouse is working.
+    const yard = runBind(h("div", { class: "yard", "aria-hidden": "true" }, h("div", { class: "courier" }, h("span", { class: "cart" }))), "commercial", 0);
+    return h("section", { class: "surface-scene" },
+      h("div", { class: "hills", "aria-hidden": "true" }), h("div", { class: "sun", "aria-hidden": "true" }),
+      yard, lift, wh, h("div", { class: "grass", "aria-hidden": "true" }));
   }
 
   // ---------- floors ----------
@@ -435,7 +476,8 @@ window.SVT = window.SVT || {};
     return box;
   }
 
-  // The floor's production line: build at the bench (sparks), wrap at the packer, ride the belt to the rack.
+  // The floor's production line: build at the bench (sparks), wrap at the packer, ride the belt to the crate.
+  // It is drawn left-to-right and mirrored so products flow toward the crate on the left, like Idle Miner's shafts.
   // The tool and sparks change by tech era (see .tier* in style.css). Everything pauses when nobody is working.
   function productionLine(n) {
     const sparks = h("div", { class: "sparks" }, [0, 1, 2, 3, 4, 5, 6, 7].map((k) => h("span", { style: "--k:" + k })));
@@ -446,13 +488,13 @@ window.SVT = window.SVT || {};
       items, workers(n));
   }
 
-  // Money waiting on this floor for the lift to pick up.
+  // Crate with the money waiting on this floor for the lift.
   function rack(n) {
     const amount = h("b", { class: "rack-amt" });
-    const box = h("div", { class: "rack" }, h("span", { class: "rack-label", text: "📦 For lift" }), amount);
+    const box = h("div", { class: "rack", title: "Waiting for the lift" }, h("span", { class: "coin", "aria-hidden": "true", text: "$" }), amount, h("span", { class: "crate", "aria-hidden": "true" }));
     bind(box, () => {
       const f = lab().floors[n - 1]; if (!f) return;
-      setText(amount, "$" + fmt(f.stock));
+      setText(amount, fmt(f.stock));
       toggle(box, "full", f.stock > 0 && f.stock > SVT.rates(lab()).floors[n - 1] * 20);
     });
     return box;
@@ -460,23 +502,16 @@ window.SVT = window.SVT || {};
 
   function floorRow(n) {
     const tier = B.tierOf(n);
-    const scene = h("div", { class: "scene floor-scene", onclick: () => SVT.tap("floor", n) },
+    const scene = runBind(h("div", { class: "scene floor-scene", onclick: () => SVT.tap("floor", n) },
+      h("div", { class: "rock", "aria-hidden": "true" }),
       productionLine(n),
       rack(n),
-      bind(h("div", { class: "tap-hint", text: "Tap to build" }), (e) => { e.hidden = SVT.running(lab(), "floor", n); }),
-      workTimer("floor", n, "Building…"));
-    bind(scene, (e) => toggle(e, "run", SVT.running(lab(), "floor", n)));
-    const stat = bind(h("div", { class: "stat" }), (e) => {
-      const lv = SVT.levelOf(lab(), "floor", n);
-      setText(e, "Lv " + lv + " · " + teamSize(lv) + " × " + teamName(n) + " · $" + fmt(SVT.rates(lab()).floors[n - 1]) + "/s");
-    });
-    return h("div", { class: "floor tier" + tier, "data-floor": n },
-      h("button", { class: "fnum", onclick: () => openNode("floor", n), "aria-label": "Floor " + n + " stats", text: n }),
-      h("div", { class: "fbody" },
-        h("button", { class: "fname", onclick: () => openNode("floor", n) }, h("b", { text: productName(n) }), h("span", { class: "more", "aria-hidden": "true", text: "Stats ›" }), n === 1 ? bottleneckPill("build") : null),
-        scene, stat, unlockBar("floor", n),
-        h("div", { class: "actions" }, detailsBtn("floor", n), upgradeBtn("floor", n)),
-        managerChip("floor", n)));
+      h("div", { class: "seat-wrap" }, seat("floor", n), boostBtn("floor", n)),
+      h("button", { class: "fname-tag", onclick: (e) => { e.stopPropagation(); openNode("floor", n); } }, h("b", { text: n }), productName(n), n === 1 ? bottleneckPill("build") : null),
+      workTimer("floor", n, "Building"),
+      levelBtn("floor", n),
+      bind(h("div", { class: "tap-hint", text: "Tap to build" }), (e) => { e.hidden = SVT.running(lab(), "floor", n); })), "floor", n);
+    return h("div", { class: "floor tier" + tier, "data-floor": n }, scene);
   }
 
   function lockedRow() {
@@ -488,7 +523,7 @@ window.SVT = window.SVT || {};
         h("div", { class: "fnum", text: n }),
         h("div", { class: "fbody" },
           h("div", { class: "fname" }, h("b", { text: "🔒 " + productName(n) })),
-          h("p", { class: "muted", text: "Funding wall: a new tech era needs investors. Raise " + nf.round.name + " to open this floor. Raising resets this lab but makes everything earn ×" + nf.round.mult + " more, forever." }),
+          h("p", { class: "muted", text: "New tech era: raise " + nf.round.name + " to open it. The lab restarts, but earns ×" + nf.round.mult + " forever." }),
           h("div", { class: "actions" }, h("button", { class: "btn fund-cta", onclick: openFunding, text: "Raise " + nf.round.name + " in Funding" }))));
     }
     const btn = bind(h("button", { class: "btn up", onclick: () => SVT.unlockFloor() }), (e) => {
@@ -523,8 +558,7 @@ window.SVT = window.SVT || {};
   function labView() {
     return h("main", { class: "lab-view" },
       header(),
-      h("div", { class: "surface" }, freightCard(), commercialCard()),
-      h("div", { class: "ground", "aria-hidden": "true" }, h("span", { text: "▼ Underground R&D" })),
+      surface(),
       building(),
       h("footer", { class: "foot", text: "Silicon Valley Tycoon v" + B.VERSION }),
       bottomNav());
@@ -559,13 +593,13 @@ window.SVT = window.SVT || {};
         h("button", { class: "btn small", onclick: () => setView("lab"), text: "← Back" }),
         h("div", { class: "lab-title" }, h("b", { text: "Silicon Valley Map" })),
         h("span", { class: "muted small", text: "5 of 30 open" }))),
+      h("div", { class: "loc-list" }, h("h3", { text: "Your labs" }), list,
+        h("p", { class: "muted small", text: "Each lab is its own company with 30 floors and its own cash. Raising Seed funding in a lab opens the next one. Locations 6–30 are coming in a later update." })),
       h("div", { class: "map-wrap" },
         h("div", { class: "map" },
           h("div", { class: "bay", "aria-hidden": "true" }),
           h("div", { class: "road r1", "aria-hidden": "true" }), h("div", { class: "road r2", "aria-hidden": "true" }), h("div", { class: "road r3", "aria-hidden": "true" }),
           pins)),
-      h("div", { class: "loc-list" }, h("h3", { text: "Your labs" }), list,
-        h("p", { class: "muted small", text: "Each lab is its own company with 30 floors and its own cash. Raising Seed funding in a lab opens the next one. Locations 6–30 are coming in a later update." })),
       h("footer", { class: "foot", text: "Silicon Valley Tycoon v" + B.VERSION }));
   }
 
@@ -622,7 +656,7 @@ window.SVT = window.SVT || {};
     sheet("Settings", h("div", { class: "sheet-body" },
       h("p", null, h("b", { text: "Silicon Valley Tycoon v" + B.VERSION })),
       h("button", { class: "btn", onclick: checkUpdate, text: "🔄 Check for update" }),
-      h("p", { class: "muted", text: "Tap floors and hubs to work them. Hire a manager on each one to automate it and keep earning while you're away (up to 2 hours). Income is limited by the slowest of build, freight and commercial, marked Bottleneck." }),
+      h("p", { class: "muted", text: "Tap floors, the lift and the warehouse to work them. Tap a dashed seat to hire a manager to automate it and keep earning while you're away (up to 2 hours). Income is limited by the slowest of build, freight and commercial, marked Slowest. Tap a blue Level button for stats and upgrades, and hold Upgrade to keep buying." }),
       h("p", { class: "muted", text: "Every 5 levels unlocks new tech (+10% on floors, +2% on hubs). Levels 10, 25, 50, 100 and beyond are big milestones." }),
       h("p", null, h("a", { href: "https://github.com/bigbriggs52/idle-tap/blob/main/CHANGELOG.md", target: "_blank", rel: "noopener", text: "Changelog" })),
       reset));
