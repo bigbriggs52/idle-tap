@@ -153,13 +153,31 @@ window.SVT = window.SVT || {};
     });
   }
 
+  // Countdown shown while a tapped node works; managers show "Auto" instead.
+  function workTimer(kind, n, verb) {
+    const fill = h("span", { class: "fill" });
+    const label = h("span", { class: "wt-label" });
+    const box = h("div", { class: "work-timer", "aria-live": "off" }, label, h("span", { class: "wt-track" }, fill));
+    bind(box, () => {
+      const L = lab();
+      if (SVT.mgrOf(L, kind, n)) { box.hidden = false; box.classList.add("auto"); setText(label, "Auto"); fill.style.width = "100%"; return; }
+      box.classList.remove("auto");
+      const left = SVT.nodeOf(L, kind, n).workUntil - SVT.now();
+      box.hidden = !(left > 0);
+      if (left > 0) { setText(label, verb + " " + Math.ceil(left) + "s"); fill.style.width = (100 * left / B.TAP_SECONDS) + "%"; }
+    });
+    return box;
+  }
+  function totalWaiting(L) { return L.floors.reduce((a, f) => a + f.stock, 0); }
+
   // ---------- hubs ----------
   function commercialCard() {
     const kind = "commercial";
     const scene = h("div", { class: "scene hub-scene", onclick: () => SVT.tap(kind, 0) },
       h("div", { class: "truck t1", "aria-hidden": "true" }), h("div", { class: "truck t2", "aria-hidden": "true" }),
       h("div", { class: "cloud", "aria-hidden": "true", text: "☁" }),
-      bind(h("div", { class: "tap-hint", text: "Tap to ship" }), (e) => { e.hidden = SVT.running(lab(), kind, 0); }));
+      bind(h("div", { class: "tap-hint", text: "Tap to ship" }), (e) => { e.hidden = SVT.running(lab(), kind, 0); }),
+      workTimer(kind, 0, "Shipping…"));
     bind(scene, (e) => toggle(e, "run", SVT.running(lab(), kind, 0)));
     const info = bind(h("div", { class: "stat" }), (e) => {
       const r = SVT.rates(lab());
@@ -178,9 +196,14 @@ window.SVT = window.SVT || {};
       setText(e, "Lv " + L.freight.lvl + " · moves $" + fmt(r.freight) + "/s · trip " + B.freightTrip(L.freight.lvl, L.floors.length).toFixed(1) + "s");
     });
     const hint = bind(h("button", { class: "btn small ghost", onclick: () => SVT.tap(kind, 0), text: "Tap to run lift" }), (e) => { e.hidden = SVT.running(lab(), kind, 0); });
+    const waiting = bind(h("div", { class: "waiting" }), (e) => {
+      const L = lab();
+      e.replaceChildren(h("span", { class: "label", text: "Waiting on floors" }), h("b", { text: "$" + fmt(totalWaiting(L)) }),
+        h("span", { class: "muted", text: "Lift carries $" + fmt(B.freightLoad(L.freight.lvl) * SVT.prestigeMult(L) * SVT.nodeMult(L, kind, 0)) + " per trip" }));
+    });
     return h("section", { class: "hub freight" },
       h("div", { class: "hub-head" }, h("h3", { text: "Freight & Data Hub" }), bottleneckPill("freight")),
-      info, unlockBar(kind, 0), h("div", { class: "actions" }, upgradeBtn(kind, 0), hint), managerChip(kind, 0));
+      waiting, info, workTimer(kind, 0, "Lifting…"), unlockBar(kind, 0), h("div", { class: "actions" }, upgradeBtn(kind, 0), hint), managerChip(kind, 0));
   }
 
   // ---------- floors ----------
@@ -197,17 +220,26 @@ window.SVT = window.SVT || {};
     return box;
   }
 
+  // Money waiting on this floor for the lift to pick up.
+  function rack(n) {
+    const amount = h("b", { class: "rack-amt" });
+    const box = h("div", { class: "rack" }, h("span", { class: "rack-label", text: "📦 For lift" }), amount);
+    bind(box, () => {
+      const f = lab().floors[n - 1]; if (!f) return;
+      setText(amount, "$" + fmt(f.stock));
+      toggle(box, "full", f.stock > 0 && f.stock > SVT.rates(lab()).floors[n - 1] * 20);
+    });
+    return box;
+  }
+
   function floorRow(n) {
     const tier = B.tierOf(n);
     const scene = h("div", { class: "scene floor-scene", onclick: () => SVT.tap("floor", n) },
       h("div", { class: "bench", "aria-hidden": "true" }),
       workers(n),
-      bind(h("div", { class: "rack" }), (e) => {
-        const f = lab().floors[n - 1]; if (!f) return;
-        setText(e, "$" + fmt(f.stock));
-        toggle(e, "full", f.stock > 0 && f.stock > SVT.rates(lab()).floors[n - 1] * 20);
-      }),
-      bind(h("div", { class: "tap-hint", text: "Tap to build" }), (e) => { e.hidden = SVT.running(lab(), "floor", n); }));
+      rack(n),
+      bind(h("div", { class: "tap-hint", text: "Tap to build" }), (e) => { e.hidden = SVT.running(lab(), "floor", n); }),
+      workTimer("floor", n, "Building…"));
     bind(scene, (e) => toggle(e, "run", SVT.running(lab(), "floor", n)));
     const stat = bind(h("div", { class: "stat" }), (e) => {
       const lv = SVT.levelOf(lab(), "floor", n);
