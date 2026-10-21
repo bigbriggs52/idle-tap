@@ -122,7 +122,7 @@ window.SVT = window.SVT || {};
     return h("header", { class: "top" },
       h("div", { class: "lab-title" }, h("span", { class: "lab-icon", text: d.icon }), h("div", null, h("b", { text: d.name }), roundBadge)),
       h("div", { class: "cash-pill" }, h("span", { class: "coin big", "aria-hidden": "true", text: "$" }), h("div", null, h("span", { class: "cash-label", text: "Cash" }), cash, rate)),
-      h("button", { class: "icon-btn refresh", "aria-label": "Check for update", title: "Check for update", onclick: checkUpdate, text: "🔄" }));
+      h("span", { "aria-hidden": "true" })); // keeps the cash pill centred; Update lives in Settings
   }
 
   // Saves, asks for a new service worker, then reloads. If a new version is installing, index.html reloads when it takes over.
