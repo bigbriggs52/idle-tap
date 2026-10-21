@@ -2,6 +2,17 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.7.0 (2026-10-21)
+
+Work animations: you can watch every floor make, pack and move its products.
+
+- Each floor is a small production line. A tech builds the product at the bench, a wrapping machine film-wraps and tapes it into a box, and the conveyor carries it into the "For lift" rack.
+- The building tool changes with the tech era: soldering with orange sparks (Early Computing, Mobile Boom), welding with blue-white sparks and a flash (8-Bit & 16-Bit, Smart Devices) and a laser cutter (Flagship Tech).
+- As the team grows, extra builders and packers appear, and carriers walk boxes to the rack.
+- The lift loads boxes at the bottom, rides them up and unloads them at the top.
+- At the warehouse, boxes ride a belt into a truck that fills up, drives off, and comes back for the next load.
+- Everything stops when nobody is working, so it's easy to see which floors need a tap or a manager.
+
 ## v0.6.2 (2026-10-21)
 
 - The Hire button on the managers screen sits at the top, right under the tabs, so you can hire several in a row without scrolling.

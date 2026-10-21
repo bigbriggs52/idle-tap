@@ -85,8 +85,6 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--copper); outlin
 .truck::after { content: ""; position: absolute; right: -10px; bottom: 0; width: 12px; height: 13px; background: #7fa7bd; border-radius: 2px 6px 2px 2px; }
 .truck::before { content: ""; position: absolute; bottom: -5px; left: 6px; width: 8px; height: 8px; border-radius: 50%; background: #2b3338; box-shadow: 26px 0 #2b3338; }
 .cloud { position: absolute; right: 14px; top: 4px; font-size: 1.6rem; opacity: .8; }
-.run .truck { animation: drive 3s linear infinite; }
-.run .truck.t2 { animation-delay: -1.5s; }
 
 .building { position: relative; display: grid; grid-template-columns: 34px 1fr; gap: 8px; }
 .shaft { position: relative; background: repeating-linear-gradient(var(--deep) 0 18px, #c3d1d8 18px 20px); border: 1px solid var(--line); border-radius: 8px; }
@@ -106,12 +104,6 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--copper); outlin
 .tier2 .floor-scene { background: linear-gradient(#e8eafa 0 60%, #c1c6e6 60%); }
 .tier3 .floor-scene { background: linear-gradient(#e8f2f8 0 60%, #bcd2e0 60%); }
 .tier4 .floor-scene { background: linear-gradient(#f7fbfd 0 60%, #dfe9ee 60%); }
-.bench { position: absolute; left: 8px; bottom: 22px; width: 70px; height: 10px; background: #a8774f; border-radius: 2px; }
-.bench::after { content: ""; position: absolute; left: 10px; top: -10px; width: 16px; height: 10px; background: #93a6b0; border-radius: 2px; box-shadow: 28px 2px 0 -2px var(--copper); }
-.workers { position: absolute; left: 12px; right: 100px; bottom: 6px; height: 34px; }
-.worker { position: absolute; bottom: 0; left: calc(var(--i) * 13px); width: 10px; height: 20px; border-radius: 5px 5px 2px 2px; background: hsl(calc(200 + var(--i) * 30) 50% 60%); }
-.worker::before { content: ""; position: absolute; top: -9px; left: 1px; width: 8px; height: 8px; border-radius: 50%; background: #f0c9a4; }
-.run .worker { animation: walk 2.4s ease-in-out infinite; animation-delay: calc(var(--i) * -0.4s); }
 .rack { position: absolute; right: 6px; top: 6px; bottom: 6px; min-width: 84px; padding: 3px 8px; border-radius: 8px; background: var(--surface); border: 2px solid var(--line); display: grid; align-content: center; justify-items: center; text-align: center; font-variant-numeric: tabular-nums; z-index: 2; }
 .rack-label { font-size: .66rem; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
 .rack-amt { font-family: var(--f-display); font-size: 1.05rem; color: var(--ink); }
@@ -184,9 +176,7 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--copper); outlin
 .loc .muted { font-size: .78rem; }
 .foot { text-align: center; color: var(--muted); font-size: .75rem; padding: 18px 0 4px; }
 
-@keyframes drive { from { left: -60px; } to { left: 105%; } }
 @keyframes lift { from { transform: translateY(0); } to { transform: translateY(var(--dist, 200px)); } }
-@keyframes walk { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(40px); } }
 @keyframes pulse { 50% { opacity: .55; } }
 @keyframes glow { 50% { box-shadow: 0 0 0 6px #23905f33; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; } }
@@ -215,9 +205,7 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--copper); outlin
 .lift-scene { background: linear-gradient(#cdebfa, #a9d8f0); }
 .lift-shaft { position: absolute; left: 50%; top: 4px; bottom: 4px; width: 30px; transform: translateX(-50%); background: repeating-linear-gradient(#e3ecf0 0 10px, #c3d1d8 10px 12px); border: 1px solid var(--line); border-radius: 4px; }
 .lift-car { position: absolute; left: 3px; right: 3px; bottom: 3px; height: 18px; border-radius: 3px; background: var(--copper); }
-.run .lift-car { animation: bob 2s ease-in-out infinite alternate; }
 .hub .work-timer { left: 6px; top: 6px; }
-@keyframes bob { from { transform: translateY(0); } to { transform: translateY(-34px); } }
 @media (max-width: 340px) { .surface { grid-template-columns: 1fr; } }
 
 /* owned managers */
@@ -289,3 +277,96 @@ table.stats td.next.up { color: var(--good); font-weight: 700; }
 .nav-btn:active { background: var(--surface-2); }
 .nav-btn.fund.ready { color: var(--good); animation: glow 1.6s ease-in-out infinite; }
 .btn.refresh { font-size: .8rem; padding: 6px 10px; }
+
+/* v0.7: work animations. Floors: build (sparks) → wrap → belt → rack. Lift: load, ride up, unload. Warehouse: belt → truck → drive off. */
+.line { position: absolute; left: 0; top: 0; bottom: 0; right: 92px; }
+.line *, .lift-scene *, .hub-scene * { animation-play-state: paused; }
+.run .line *, .run.lift-scene *, .run.hub-scene * { animation-play-state: running; }
+.scene:not(.run) .sparks, .scene:not(.run) .flash { visibility: hidden; }
+.bench { position: absolute; left: 4%; bottom: 16px; width: 30%; height: 7px; background: #a8774f; border-radius: 2px; }
+.bench::before, .bench::after { content: ""; position: absolute; bottom: -10px; width: 4px; height: 10px; background: #8a6240; }
+.bench::before { left: 3px; } .bench::after { right: 3px; }
+.conveyor { position: absolute; left: 34%; right: -20px; bottom: 16px; height: 5px; border-radius: 3px; background: repeating-linear-gradient(90deg, #6f7f88 0 6px, #94a4ad 6px 12px); background-size: 12px 5px; animation: belt .5s linear infinite; }
+.conveyor::after { content: ""; position: absolute; left: 0; right: 0; top: 5px; height: 6px; background: repeating-linear-gradient(90deg, transparent 0 14px, #7d8b93 14px 17px); }
+/* the product: a circuit board that becomes a wrapped box */
+.item { position: absolute; bottom: 21px; width: 16px; height: 12px; margin-left: -8px; animation: flow 3.2s linear infinite; animation-delay: var(--d); z-index: 1; }
+.item .pcb, .item .box { position: absolute; inset: 0; border-radius: 2px; animation: inherit; animation-name: var(--a); }
+.item .pcb { --a: pcb; height: 6px; top: auto; background: var(--item, #2f8f5b); box-shadow: inset 0 0 0 1px #0002, 4px -2px 0 -1px #c9a227; }
+.item .box { --a: wrap; background: #c9a27a; border: 1px solid #9c7650; opacity: 0; overflow: hidden; }
+.item .box::before { content: ""; position: absolute; left: 0; right: 0; top: 4px; height: 3px; background: #e0d2b0; transform-origin: left; transform: scaleX(var(--tape, 0)); }
+.item .box::after { content: ""; position: absolute; inset: 0; background: linear-gradient(120deg, transparent 30%, #ffffff99 50%, transparent 70%); background-size: 300% 100%; animation: shine 1.6s linear infinite; }
+@keyframes flow { 0%, 30% { left: 18%; } 50%, 76% { left: 63%; } 100% { left: 112%; } }
+@keyframes pcb { 0%, 54% { opacity: 1; } 60%, 100% { opacity: 0; } }
+@keyframes wrap { 0%, 52% { opacity: 0; --tape: 0; transform: scale(.6); } 60% { opacity: 1; transform: scale(1); --tape: 0; } 74%, 100% { opacity: 1; --tape: 1; transform: scale(1); } }
+@property --tape { syntax: "<number>"; inherits: true; initial-value: 0; }
+@keyframes shine { from { background-position: 100% 0; } to { background-position: 0 0; } }
+@keyframes belt { to { background-position: -12px 0; } }
+/* packing station: a wrapping arch with a spinning film roll */
+.packer { position: absolute; left: calc(63% - 14px); width: 28px; bottom: 21px; height: 26px; border: 3px solid #7d8b93; border-bottom: 0; border-radius: 6px 6px 0 0; }
+.packer .roll { position: absolute; left: 50%; top: -9px; width: 12px; height: 12px; margin-left: -6px; border-radius: 50%; background: radial-gradient(circle, #7d8b93 0 2px, #dbe8ee 3px); border: 2px dashed #9fb3bd; animation: spin 1s linear infinite; }
+.packer .film { position: absolute; left: 2px; right: 2px; top: 0; height: 100%; background: linear-gradient(#bfe3f5aa, #e8f6fc66); transform-origin: top; transform: scaleY(0); animation: film 1.6s ease-in-out infinite; animation-delay: -0.48s; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes film { 0%, 10% { transform: scaleY(0); opacity: 1; } 45% { transform: scaleY(1); opacity: 1; } 55%, 100% { transform: scaleY(1); opacity: 0; } }
+/* build station: tool, sparks and (for welding eras) a flash */
+.tool { position: absolute; left: calc(18% + 4px); bottom: 28px; width: 3px; height: 16px; background: #5b6a72; border-radius: 2px; transform: rotate(35deg); transform-origin: bottom; animation: dab .4s ease-in-out infinite alternate; }
+.tool::after { content: ""; position: absolute; bottom: -2px; left: -1px; width: 5px; height: 5px; border-radius: 50%; background: var(--tip, #ff8a2a); box-shadow: 0 0 6px var(--tip, #ff8a2a); }
+@keyframes dab { to { transform: rotate(25deg) translateY(1px); } }
+.sparks { position: absolute; left: calc(18% + 2px); bottom: 25px; width: 0; height: 0; animation: build-phase 1.6s steps(1) infinite; }
+.sparks span { position: absolute; width: var(--sz, 3px); height: var(--sz, 3px); border-radius: 50%; background: var(--spark, #ffc14d); box-shadow: 0 0 4px var(--spark, #ffc14d); opacity: 0;
+  animation: spark var(--st, .45s) ease-out infinite; animation-delay: calc(var(--k) * -0.06s);
+  --ang: calc(var(--k) * 45deg - 160deg); }
+@keyframes spark { 0% { opacity: 1; transform: rotate(var(--ang)) translateX(0); } 100% { opacity: 0; transform: rotate(var(--ang)) translateX(var(--reach, 12px)) translateY(6px); } }
+@keyframes build-phase { 0% { opacity: 1; } 60% { opacity: 0; } }
+.flash { display: none; position: absolute; left: calc(18% - 10px); bottom: 16px; width: 24px; height: 24px; border-radius: 50%; background: radial-gradient(circle, #ffffff 0 20%, #bfe6ff88 45%, transparent 70%); animation: flash .25s steps(2) infinite; }
+@keyframes flash { 50% { opacity: .2; } }
+/* eras: solder (orange), welding (blue-white with flash), fine solder, robot welding, laser */
+.tier0 .line, .tier2 .line { --spark: #ffb347; --tip: #ff7a1a; --item: #2f8f5b; }
+.tier2 .line { --item: #2c3e50; --reach: 9px; --sz: 2px; }
+.tier1 .line, .tier3 .line { --spark: #d9f1ff; --tip: #8fd3ff; --reach: 18px; --sz: 3px; --st: .35s; --item: #6c7a89; }
+.tier3 .line { --item: #34495e; }
+.tier1 .flash, .tier3 .flash { display: block; }
+.tier1 .tool, .tier3 .tool { width: 4px; height: 18px; background: #3d4a51; }
+.tier4 .line { --spark: #ff5a6e; --tip: #ff2d4a; --reach: 8px; --sz: 2px; --item: #1b1f24; }
+.tier4 .tool { height: 30px; bottom: 28px; transform: none; animation: none; width: 2px; background: linear-gradient(#ff2d4a00, #ff2d4a); box-shadow: 0 0 6px #ff2d4a; left: calc(18%); }
+.tier4 .tool::after { display: none; }
+/* crew: builder at the bench, packer at the arch, carriers walking boxes over */
+.workers { position: absolute; inset: 0; }
+.worker { position: absolute; bottom: 16px; width: 9px; height: 18px; border-radius: 5px 5px 2px 2px; background: hsl(calc(200 + var(--i) * 30) 50% 60%); animation: work .5s ease-in-out infinite alternate; }
+.worker::before { content: ""; position: absolute; top: -8px; left: 1px; width: 7px; height: 7px; border-radius: 50%; background: #f0c9a4; }
+.worker.w0 { left: 4%; z-index: 0; }
+.worker.w1 { left: calc(63% + 16px); }
+.worker.w3 { left: calc(4% + 14px); bottom: 14px; }
+.worker.w4 { left: calc(63% - 26px); }
+.worker.w2, .worker.w5 { left: 76%; bottom: 4px; animation: carry 2.4s ease-in-out infinite alternate; }
+.worker.w5 { animation-delay: -1.2s; }
+.worker.w2::after, .worker.w5::after { content: ""; position: absolute; left: 5px; top: 4px; width: 10px; height: 8px; background: #c9a27a; border: 1px solid #9c7650; border-radius: 1px; }
+.tier1 .worker.w0::before, .tier3 .worker.w0::before { background: #3d4a51; } /* welding mask */
+@keyframes work { to { transform: translateY(-2px); } }
+@keyframes carry { from { transform: translateX(-30px); } to { transform: translateX(20px); } }
+/* lift scene: boxes slide in at the bottom, ride up, slide out at the top */
+.lift-car, .lbox.ride, .lbox.in, .lbox.out { animation-duration: 4s; animation-iteration-count: infinite; animation-timing-function: ease-in-out; }
+.lift-car { animation-name: lift4; }
+.lbox { position: absolute; width: 12px; height: 10px; background: #c9a27a; border: 1px solid #9c7650; border-radius: 1px; }
+.lbox.ride { left: 50%; bottom: 100%; margin-left: -6px; animation-name: ride; }
+.lbox.in { bottom: 7px; animation-name: box-in; }
+.lbox.out { top: 12px; animation-name: box-out; }
+.dock { position: absolute; left: 0; width: calc(50% - 15px); bottom: 0; height: 6px; background: #8b9aa2; }
+@keyframes lift4 { 0%, 8% { transform: translateY(0); } 42%, 58% { transform: translateY(-50px); } 92%, 100% { transform: translateY(0); } }
+@keyframes ride { 0%, 50% { opacity: 1; } 54%, 100% { opacity: 0; } }
+@keyframes box-in { 0%, 70% { left: 4px; opacity: 0; } 74% { opacity: 1; left: 4px; } 98% { left: calc(50% - 18px); opacity: 1; } 100% { opacity: 0; left: calc(50% - 18px); } }
+@keyframes box-out { 0%, 50% { left: calc(50% + 16px); opacity: 0; } 54% { opacity: 1; left: calc(50% + 16px); } 85% { left: 105%; opacity: 1; } 100% { left: 105%; opacity: 0; } }
+/* warehouse scene: boxes ride a belt from the store into the truck, the truck leaves, the next one backs in */
+.store { position: absolute; left: 0; bottom: 6px; width: 22px; height: 30px; background: #e9eef1; border: 1px solid var(--line); border-radius: 2px 2px 0 0; }
+.store::after { content: ""; position: absolute; left: 5px; right: 5px; bottom: 0; height: 14px; background: #7d8b93; border-radius: 1px 1px 0 0; }
+.belt { position: absolute; left: 22px; width: calc(52% - 22px); bottom: 10px; height: 4px; background: repeating-linear-gradient(90deg, #6f7f88 0 6px, #94a4ad 6px 12px); animation: belt .5s linear infinite; }
+.wbox { position: absolute; bottom: 14px; width: 10px; height: 8px; background: #c9a27a; border: 1px solid #9c7650; border-radius: 1px; animation: wbox 1.8s linear infinite; animation-delay: var(--d); }
+@keyframes wbox { 0% { left: 12px; opacity: 0; } 10% { opacity: 1; } 85% { opacity: 1; } 100% { left: 52%; opacity: 0; } }
+.truck { left: 52%; animation: haul 5.4s ease-in-out infinite; }
+.cargo { position: absolute; left: 3px; right: 3px; bottom: 3px; background: repeating-linear-gradient(90deg, #c9a27a 0 7px, #9c7650 7px 8px); border-radius: 1px; height: 0; animation: cargo 5.4s linear infinite; }
+@keyframes haul { 0% { left: 110%; } 15%, 70% { left: 52%; } 100% { left: 110%; } }
+@keyframes cargo { 0%, 15% { height: 0; } 70%, 100% { height: 14px; } }
+.cloud { animation: drift 8s ease-in-out infinite alternate; }
+@keyframes drift { to { transform: translateX(-20px); } }
+.hub .scene { height: 88px; }
+.hub .work-timer { left: 4px; right: auto; top: 4px; font-size: .66rem; padding: 1px 6px; white-space: nowrap; gap: 4px; }
+.hub .work-timer .wt-track { width: 22px; }

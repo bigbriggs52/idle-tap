@@ -382,7 +382,9 @@ window.SVT = window.SVT || {};
   function commercialCard() {
     const kind = "commercial";
     const scene = h("div", { class: "scene hub-scene", onclick: () => SVT.tap(kind, 0) },
-      h("div", { class: "truck t1", "aria-hidden": "true" }), h("div", { class: "truck t2", "aria-hidden": "true" }),
+      h("div", { class: "store", "aria-hidden": "true" }), h("div", { class: "belt", "aria-hidden": "true" }),
+      [0, 1, 2].map((i) => h("div", { class: "wbox", style: "--d:" + (-i * 0.6) + "s", "aria-hidden": "true" })),
+      h("div", { class: "truck t1", "aria-hidden": "true" }, h("span", { class: "cargo" })),
       h("div", { class: "cloud", "aria-hidden": "true", text: "☁" }),
       bind(h("div", { class: "tap-hint", text: "Tap to ship" }), (e) => { e.hidden = SVT.running(lab(), kind, 0); }),
       workTimer(kind, 0, "Shipping…"));
@@ -400,7 +402,8 @@ window.SVT = window.SVT || {};
   function freightCard() {
     const kind = "freight";
     const scene = h("div", { class: "scene lift-scene", onclick: () => SVT.tap(kind, 0) },
-      h("div", { class: "lift-shaft", "aria-hidden": "true" }, h("div", { class: "lift-car" })),
+      h("div", { class: "dock", "aria-hidden": "true" }), h("div", { class: "lbox in", "aria-hidden": "true" }), h("div", { class: "lbox out", "aria-hidden": "true" }),
+      h("div", { class: "lift-shaft", "aria-hidden": "true" }, h("div", { class: "lift-car" }, h("span", { class: "lbox ride" }))),
       bind(h("div", { class: "tap-hint", text: "Tap to lift" }), (e) => { e.hidden = SVT.running(lab(), kind, 0); }),
       workTimer(kind, 0, "Lifting…"));
     bind(scene, (e) => toggle(e, "run", SVT.running(lab(), kind, 0)));
@@ -426,10 +429,21 @@ window.SVT = window.SVT || {};
       const c = teamSize(SVT.levelOf(lab(), "floor", n));
       if (c !== shown) {
         shown = c; box.innerHTML = "";
-        for (let i = 0; i < c; i++) box.append(h("span", { class: "worker", style: "--i:" + i }));
+        for (let i = 0; i < c; i++) box.append(h("span", { class: "worker w" + i, style: "--i:" + i }));
       }
     });
     return box;
+  }
+
+  // The floor's production line: build at the bench (sparks), wrap at the packer, ride the belt to the rack.
+  // The tool and sparks change by tech era (see .tier* in style.css). Everything pauses when nobody is working.
+  function productionLine(n) {
+    const sparks = h("div", { class: "sparks" }, [0, 1, 2, 3, 4, 5, 6, 7].map((k) => h("span", { style: "--k:" + k })));
+    const items = [0, 1].map((i) => h("div", { class: "item", style: "--d:" + (-1.6 * i) + "s" }, h("span", { class: "pcb" }), h("span", { class: "box" })));
+    return h("div", { class: "line", "aria-hidden": "true" },
+      h("div", { class: "bench" }), h("div", { class: "tool" }), h("div", { class: "flash" }), sparks,
+      h("div", { class: "conveyor" }), h("div", { class: "packer" }, h("span", { class: "roll" }), h("span", { class: "film" })),
+      items, workers(n));
   }
 
   // Money waiting on this floor for the lift to pick up.
@@ -447,8 +461,7 @@ window.SVT = window.SVT || {};
   function floorRow(n) {
     const tier = B.tierOf(n);
     const scene = h("div", { class: "scene floor-scene", onclick: () => SVT.tap("floor", n) },
-      h("div", { class: "bench", "aria-hidden": "true" }),
-      workers(n),
+      productionLine(n),
       rack(n),
       bind(h("div", { class: "tap-hint", text: "Tap to build" }), (e) => { e.hidden = SVT.running(lab(), "floor", n); }),
       workTimer("floor", n, "Building…"));
