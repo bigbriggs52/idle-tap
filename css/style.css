@@ -662,3 +662,4 @@ table.stats td.next.up { color: var(--good); font-weight: 700; }
 .building { padding-top: 34px; }
 .cap-tag { position: absolute; left: 10px; top: 6px; z-index: 3; padding: 1px 8px; border-radius: 999px; background: #24343ce6; color: #fff; font: 700 .66rem var(--f-display); white-space: nowrap; font-variant-numeric: tabular-nums; pointer-events: none; }
 .cap-tag b { color: #ffe36a; }
+.nav-btn.soon { opacity: .7; }

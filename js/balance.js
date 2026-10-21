@@ -19,7 +19,7 @@ window.SVT = window.SVT || {};
   }
 
   const B = {
-    VERSION: "0.10.0",
+    VERSION: "0.10.1",
     FLOORS: 30,
     FLOOR_MAX: 800,
     HUB_MAX: 2400,

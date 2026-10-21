@@ -139,7 +139,7 @@ window.SVT = window.SVT || {};
       item("🗺", "Map", () => setView("map")),
       item("👔", "Managers", () => openManagers("floor", null, 0), { "aria-label": "Owned managers" }),
       fund,
-      item("🔄", "Update", checkUpdate, { "aria-label": "Check for update" }),
+      item("🚧", "Soon", () => toast("🚧 Under construction: coming soon"), { class: "nav-btn soon", "aria-label": "Coming soon, under construction" }),
       item("⚙", "Settings", openSettings, { "aria-label": "Settings" }));
   }
 
