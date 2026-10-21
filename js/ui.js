@@ -57,16 +57,38 @@ window.SVT = window.SVT || {};
   SVT.toast = toast;
 
   // ---------- sheets (modals) ----------
+  // opts.nav = { prev, next, pos, dir } adds ‹ › arrows and left/right swipes (the floor detail sheet).
   function sheet(title, body, opts) {
     closeSheet();
-    const wrap = h("div", { class: "sheet-wrap", id: "sheet", onclick: (e) => { if (e.target.id === "sheet" && !(opts && opts.sticky)) closeSheet(); } },
-      h("div", { class: "sheet", role: "dialog", "aria-label": title },
-        h("div", { class: "sheet-head" }, h("h2", { text: title }),
-          opts && opts.sticky ? null : h("button", { class: "icon-btn", "aria-label": "Close", onclick: closeSheet, text: "✕" })),
-        body));
+    opts = opts || {};
+    const nav = opts.nav;
+    const box = h("div", { class: "sheet" + (nav && nav.dir ? (nav.dir > 0 ? " from-r" : " from-l") : ""), role: "dialog", "aria-label": title },
+      h("div", { class: "sheet-head" },
+        nav ? h("button", { class: "icon-btn nav-arrow", "aria-label": "Previous", onclick: nav.prev, text: "‹" }) : null,
+        h("div", { class: "sheet-title" }, h("h2", { text: title }), nav && nav.pos ? h("span", { class: "muted small", text: nav.pos }) : null),
+        nav ? h("button", { class: "icon-btn nav-arrow", "aria-label": "Next", onclick: nav.next, text: "›" }) : null,
+        opts.sticky ? null : h("button", { class: "icon-btn", "aria-label": "Close", onclick: closeSheet, text: "✕" })),
+      body);
+    if (nav) {
+      let x0 = null, y0 = 0;
+      box.addEventListener("touchstart", (e) => { const t = e.touches[0]; x0 = t.clientX; y0 = t.clientY; }, { passive: true });
+      box.addEventListener("touchend", (e) => {
+        if (x0 == null) return;
+        const t = e.changedTouches[0], dx = t.clientX - x0, dy = t.clientY - y0;
+        x0 = null;
+        if (Math.abs(dx) > 50 && Math.abs(dx) > 1.5 * Math.abs(dy)) (dx < 0 ? nav.next : nav.prev)();
+      });
+    }
+    const wrap = h("div", { class: "sheet-wrap", id: "sheet", onclick: (e) => { if (e.target.id === "sheet" && !opts.sticky) closeSheet(); } }, box);
     document.body.append(wrap);
   }
-  function closeSheet() { const s = document.getElementById("sheet"); if (s) s.remove(); }
+  function closeSheet() {
+    const s = document.getElementById("sheet");
+    detail = null;
+    if (!s) return;
+    s.remove();
+    binds = binds.filter((b) => !s.contains(b.e));
+  }
 
   // ---------- header ----------
   function header() {
@@ -77,16 +99,24 @@ window.SVT = window.SVT || {};
       const r = lab().round;
       setText(e, r === 0 ? "Bootstrapped" : B.ROUNDS[r - 1].name + " · ×" + SVT.prestigeMult(lab()));
     });
-    const fundBtn = bind(h("button", { class: "btn small fund", onclick: openFunding, text: "Funding" }), (e) => toggle(e, "ready", SVT.canRaise(lab())));
     const chips = h("div", { class: "buy", role: "group", "aria-label": "Buy amount" },
-      [1, 10, 100, "max"].map((b) => bind(h("button", { class: "chip", onclick: () => SVT.setBuy(b), text: b === "max" ? "Max" : "×" + b }),
+      [1, 10, 50, "max"].map((b) => bind(h("button", { class: "chip", onclick: () => SVT.setBuy(b), text: b === "max" ? "Max" : "×" + b }),
         (e) => toggle(e, "on", SVT.state().buy === b))));
     return h("header", { class: "top" },
       h("div", { class: "top-row" },
-        h("button", { class: "btn small", onclick: () => setView("map"), text: "🗺 Map" }),
-        h("div", { class: "lab-title" }, h("span", { class: "lab-icon", text: d.icon }), h("div", null, h("b", { text: d.name }), roundBadge)),
-        h("div", { class: "top-btns" }, fundBtn, h("button", { class: "icon-btn", "aria-label": "Owned managers", title: "Owned managers", onclick: () => openManagers("floor", null, 0), text: "👔" }), h("button", { class: "icon-btn", "aria-label": "Settings", onclick: openSettings, text: "⚙" }))),
+        h("div", { class: "lab-title" }, h("span", { class: "lab-icon", text: d.icon }), h("div", null, h("b", { text: d.name }), roundBadge))),
       h("div", { class: "top-row money" }, h("div", null, cash, rate), chips));
+  }
+
+  // Bottom bar, like Idle Miner Tycoon's: the screens you jump to most.
+  function bottomNav() {
+    const item = (icon, label, on, attrs) => h("button", Object.assign({ class: "nav-btn", onclick: on }, attrs), h("span", { class: "nav-ic", "aria-hidden": "true", text: icon }), h("span", { text: label }));
+    const fund = bind(item("💰", "Funding", openFunding, { class: "nav-btn fund" }), (e) => toggle(e, "ready", SVT.canRaise(lab())));
+    return h("nav", { class: "bottom-nav", "aria-label": "Main" },
+      item("🗺", "Map", () => setView("map")),
+      item("👔", "Managers", () => openManagers("floor", null, 0), { "aria-label": "Owned managers" }),
+      fund,
+      item("⚙", "Settings", openSettings, { "aria-label": "Settings" }));
   }
 
   // ---------- managers ----------
@@ -95,23 +125,23 @@ window.SVT = window.SVT || {};
     const r = SVT.rank(m.rank), ab = SVT.ability(m.role, m.ability);
     return ab.name + ": " + (ab.kind === "boost" ? "×" + r.boost + " for " + B.BOOST_SECONDS + "s" : "−" + Math.round(r.discount * 100) + "% upgrades for " + B.DISCOUNT_SECONDS + "s") + (r.passive ? " · +" + r.passive * 100 + "% always" : "");
   }
-  function hireAndOpen(role, kind, n) {
+  function hireAndOpen(role, kind, n, back) {
     const m = SVT.hire(role);
     if (!m) return;
     toast("Hired " + SVT.rank(m.rank).name + " " + m.name + " · " + SVT.ability(role, m.ability).name, "r-" + m.rank);
-    openManagers(role, kind, n);
+    openManagers(role, kind, n, back);
   }
 
   // The slot on a floor or hub: pick from owned managers, or hire one into the Owned list.
-  function managerChip(kind, n) {
+  function managerChip(kind, n, back) {
     const L = lab();
     const role = roleOf(kind);
     const m = SVT.mgrOf(L, kind, n);
     const title = B.ROLE_NAMES[role];
     if (!m) {
       const free = SVT.owned(L, role).filter((x) => !SVT.slotOfMgr(L, x.id)).length;
-      const pick = free ? h("button", { class: "btn mgr-pick", onclick: () => openManagers(role, kind, n), text: "Choose " + title + " (" + free + " free)" }) : null;
-      const hire = bind(h("button", { class: "btn mgr-hire", onclick: () => hireAndOpen(role, kind, n) }),
+      const pick = free ? h("button", { class: "btn mgr-pick", onclick: () => openManagers(role, kind, n, back), text: "Choose " + title + " (" + free + " free)" }) : null;
+      const hire = bind(h("button", { class: "btn mgr-hire", onclick: () => hireAndOpen(role, kind, n, back) }),
         (e) => { const c = SVT.hireCost(lab(), role); setText(e, "Hire " + title + " · $" + fmt(c)); setDisabled(e, lab().cash < c); });
       return h("div", { class: "mgr none" }, pick, hire);
     }
@@ -123,7 +153,7 @@ window.SVT = window.SVT || {};
       else if (mm.cdUntil > t) { setText(e, "Ready in " + SVT.fmtTime(mm.cdUntil - t)); setDisabled(e, true); toggle(e, "live", false); }
       else { setText(e, ab.name); setDisabled(e, false); toggle(e, "live", false); }
     });
-    const swap = h("button", { class: "btn small ghost", title: "Choose a different manager", onclick: () => openManagers(role, kind, n), text: "Swap" });
+    const swap = h("button", { class: "btn small ghost", title: "Choose a different manager", onclick: () => openManagers(role, kind, n, back), text: "Swap" });
     return h("div", { class: "mgr r-" + m.rank },
       h("div", { class: "mgr-face", "aria-hidden": "true", text: m.name[0] }),
       h("div", { class: "mgr-info" }, h("b", { text: m.name + " · " + r.name + " " + title }), h("span", { text: effectText(m) })),
@@ -132,12 +162,12 @@ window.SVT = window.SVT || {};
 
   // Owned managers sheet. With a slot (kind, n) it offers "Use here"; without one it is the general list.
   let sheetCtx = null;
-  function openManagers(role, kind, n) {
+  function openManagers(role, kind, n, back) {
     sheetCtx = { role, kind, n };
     const L = lab();
     const tabs = h("div", { class: "tabs", role: "tablist" }, ["floor", "freight", "commercial"].map((ro) =>
       h("button", { class: "tab" + (ro === role ? " on" : ""), role: "tab", "aria-selected": ro === role ? "true" : "false",
-        onclick: () => openManagers(ro, ro === kind ? kind : (ro === "floor" ? null : ro), ro === kind ? n : 0),
+        onclick: () => openManagers(ro, ro === kind ? kind : (ro === "floor" ? null : ro), ro === kind ? n : 0, ro === kind ? back : null),
         text: { floor: "Floor Leads", freight: "Lift", commercial: "Warehouse" }[ro] + " (" + SVT.owned(L, ro).length + ")" })));
     const here = kind ? SVT.slotKey(kind, n) : null;
     const list = SVT.owned(L, role);
@@ -145,9 +175,9 @@ window.SVT = window.SVT || {};
       const r = SVT.rank(m.rank);
       const slot = SVT.slotOfMgr(L, m.id);
       const btns = [];
-      if (here && slot !== here) btns.push(h("button", { class: "btn small use", onclick: () => { SVT.assign(m.id, kind, n); closeSheet(); toast(m.name + " now runs " + SVT.slotName(here)); }, text: "Use here" }));
-      if (slot) btns.push(h("button", { class: "btn small ghost", onclick: () => { SVT.unassign(m.id); openManagers(role, kind, n); }, text: "Unassign" }));
-      else btns.push(h("button", { class: "btn small ghost", onclick: () => { SVT.sell(m.id); openManagers(role, kind, n); }, text: "Sell $" + fmt(m.paid * B.SELL_REFUND) }));
+      if (here && slot !== here) btns.push(h("button", { class: "btn small use", onclick: () => { SVT.assign(m.id, kind, n); if (back) back(); else closeSheet(); toast(m.name + " now runs " + SVT.slotName(here)); }, text: "Use here" }));
+      if (slot) btns.push(h("button", { class: "btn small ghost", onclick: () => { SVT.unassign(m.id); openManagers(role, kind, n, back); }, text: "Unassign" }));
+      else btns.push(h("button", { class: "btn small ghost", onclick: () => { SVT.sell(m.id); openManagers(role, kind, n, back); }, text: "Sell $" + fmt(m.paid * B.SELL_REFUND) }));
       return h("li", { class: "owned r-" + m.rank },
         h("div", { class: "mgr-face", "aria-hidden": "true", text: m.name[0] }),
         h("div", { class: "owned-info" },
@@ -156,9 +186,10 @@ window.SVT = window.SVT || {};
           h("span", { class: "where" + (slot ? " busy" : ""), text: slot ? (slot === here ? "Working here" : "Working on " + SVT.slotName(slot)) : "Not working" })),
         h("div", { class: "owned-btns" }, btns));
     }) : [h("li", { class: "muted empty", text: "No " + B.ROLE_NAMES[role] + "s owned yet. Hire one below." })];
-    const hire = bind(h("button", { class: "btn fund-cta big", onclick: () => hireAndOpen(role, kind, n) }),
+    const hire = bind(h("button", { class: "btn fund-cta big", onclick: () => hireAndOpen(role, kind, n, back) }),
       (e) => { const c = SVT.hireCost(lab(), role); setText(e, "Hire " + B.ROLE_NAMES[role] + " · $" + fmt(c)); setDisabled(e, lab().cash < c); });
     sheet(here ? "Managers for " + SVT.slotName(here) : "Owned managers", h("div", { class: "sheet-body" },
+      back ? h("button", { class: "btn small ghost back", onclick: back, text: "‹ Back to " + SVT.slotName(here) }) : null,
       tabs,
       h("p", { class: "muted small", text: "Best first. Each hire rolls: Super 0.5%, Legendary 1%, Epic 3%, Rare 10%, Uncommon 30%, Common 55.5%. Floor Leads can work any floor. Funding rounds send every manager away." }),
       h("ul", { class: "owned-list" }, rows),
@@ -166,6 +197,111 @@ window.SVT = window.SVT || {};
     update();
   }
   SVT.openManagers = openManagers;
+
+  // ---------- detail sheet (Idle Miner Tycoon's upgrade panel) ----------
+  // Same order as the screen: lift, warehouse, then floors top to bottom. Swipe or ‹ › moves through it.
+  let detail = null;
+  function nodeList() {
+    return [["freight", 0], ["commercial", 0]].concat(lab().floors.map((_, i) => ["floor", i + 1]));
+  }
+  function stepNode(d) {
+    if (!detail) return;
+    const list = nodeList();
+    const i = Math.max(0, list.findIndex(([k, m]) => k === detail.kind && m === detail.n));
+    const [k, m] = list[(i + d + list.length) % list.length];
+    openNode(k, m, d);
+  }
+  const multText = (m) => "×" + (m < 1000 ? String(+m.toFixed(2)) : fmt(m));
+  // [label, fn(level)] rows, shown at the current level and at the level the upgrade button would reach.
+  function nodeStats(kind, n) {
+    const P = () => SVT.prestigeMult(lab()), M = () => SVT.nodeMult(lab(), kind, n), depth = () => lab().floors.length;
+    if (kind === "floor") return [
+      ["Output", (L) => "$" + fmt(B.floorOutput(n, L) * P() * M()) + "/s"],
+      ["Team", (L) => teamSize(L) + " " + teamName(n)],
+      ["Value per product", () => "$" + fmt(B.floorValue(n) * P())],
+      ["Tech unlock bonus", (L) => multText(B.floorMult(L))],
+    ];
+    if (kind === "freight") return [
+      ["Moves", (L) => "$" + fmt(B.freightCap(L, depth()) * P() * M()) + "/s"],
+      ["Load per trip", (L) => "$" + fmt(B.freightLoad(L) * P() * M())],
+      ["Lift speed", (L) => multText(B.freightSpeed(L))],
+      ["Round trip", (L) => B.freightTrip(L, depth()).toFixed(1) + "s"],
+      ["Tech unlock bonus", (L) => multText(B.hubMult(L))],
+    ];
+    return [
+      ["Ships", (L) => "$" + fmt(B.commercialCap(L) * P() * M()) + "/s"],
+      ["Tech unlock bonus", (L) => multText(B.hubMult(L))],
+    ];
+  }
+  // Live numbers that don't depend on level.
+  function nodeLive(kind, n) {
+    const rows = [];
+    if (kind === "floor") {
+      rows.push(["Waiting for the lift", () => "$" + fmt(lab().floors[n - 1].stock)]);
+      rows.push(["Share of lab output", () => { const r = SVT.rates(lab()); return r.build > 0 ? Math.round(100 * r.floors[n - 1] / r.build) + "%" : "0%"; }]);
+    }
+    if (kind === "freight") rows.push(["Waiting on floors", () => "$" + fmt(totalWaiting(lab()))]);
+    if (kind === "commercial") rows.push(["Waiting to ship", () => "$" + fmt(lab().lobby)]);
+    rows.push(["Manager bonus", () => { const m = SVT.nodeMult(lab(), kind, n); return m > 1 ? multText(m) : "None"; }]);
+    rows.push(["Prestige bonus", () => multText(SVT.prestigeMult(lab()))]);
+    rows.push(["Lab income", () => { const r = SVT.rates(lab()); return "$" + fmt(r.income) + "/s · limited by " + { build: "floors", freight: "lift", commercial: "warehouse" }[r.limit]; }]);
+    return rows;
+  }
+  function openNode(kind, n, dir) {
+    const list = nodeList();
+    const pos = list.findIndex(([k, m]) => k === kind && m === n) + 1;
+    const title = kind === "floor" ? "Floor " + n + ": " + productName(n) : kind === "freight" ? "🛗 Lift" : "🏬 Warehouse";
+    const back = () => openNode(kind, n);
+    const level = bind(h("div", { class: "node-level" }), (e) => {
+      const lv = SVT.levelOf(lab(), kind, n);
+      setText(e, "Level " + lv + " / " + B.maxLevel(kind));
+    });
+    const head = h("tr", null, h("th", { text: "" }), h("th", { class: "n", text: "Now" }),
+      bind(h("th", { class: "n next" }), (e) => {
+        const lv = SVT.levelOf(lab(), kind, n), q = SVT.quote(lab(), kind, n);
+        setText(e, lv >= B.maxLevel(kind) ? "Max" : "Lv " + (lv + q.count));
+      }));
+    const rows = nodeStats(kind, n).map(([label, f]) => {
+      const now = h("td", { class: "n" }), next = h("td", { class: "n next" });
+      const tr = h("tr", null, h("td", { text: label }), now, next);
+      bind(tr, () => {
+        const lv = SVT.levelOf(lab(), kind, n), q = SVT.quote(lab(), kind, n);
+        const a = f(lv), b = lv >= B.maxLevel(kind) ? "–" : f(lv + q.count);
+        setText(now, a); setText(next, b); toggle(next, "up", b !== a && b !== "–");
+      });
+      return tr;
+    });
+    const live = nodeLive(kind, n).map(([label, f]) => {
+      const v = bind(h("span", { class: "n" }), (e) => setText(e, f()));
+      return h("li", null, h("span", { class: "muted", text: label }), v);
+    });
+    const chips = h("div", { class: "buy", role: "group", "aria-label": "Buy amount" },
+      [1, 10, 50, "max"].map((b) => bind(h("button", { class: "chip", onclick: () => SVT.setBuy(b), text: b === "max" ? "Max" : "×" + b }),
+        (e) => toggle(e, "on", SVT.state().buy === b))));
+    const sub = kind === "floor" ? SVT.TIERS[B.tierOf(n)].name : kind === "freight" ? "Freight Hub: brings products up from the floors" : "Commercial Hub: sells what the lift brings up";
+    sheet(title, h("div", { class: "sheet-body node-sheet" },
+      h("p", { class: "muted small", text: sub }),
+      h("div", { class: "node-top" }, level, chips),
+      unlockBar(kind, n),
+      h("div", { class: "tbl" }, h("table", { class: "stats" }, h("thead", null, head), h("tbody", null, rows))),
+      h("div", { class: "actions" }, upgradeBtn(kind, n)),
+      h("ul", { class: "live" }, live),
+      h("h3", { class: "mgr-title", text: "Manager" }),
+      managerChip(kind, n, back),
+      h("p", { class: "muted small swipe-hint", text: "Swipe left or right, or use ‹ ›, to see the other floors." })),
+      { nav: { prev: () => stepNode(-1), next: () => stepNode(1), pos: pos + " of " + list.length, dir } });
+    detail = { kind, n };
+    update();
+  }
+  SVT.openNode = openNode;
+  document.addEventListener("keydown", (e) => {
+    if (!detail) return;
+    if (e.key === "ArrowLeft") stepNode(-1);
+    if (e.key === "ArrowRight") stepNode(1);
+  });
+  function detailsBtn(kind, n) {
+    return bind(h("button", { class: "btn lvl", onclick: () => openNode(kind, n), "aria-label": "Stats and upgrades" }), (e) => setText(e, "Lv " + SVT.levelOf(lab(), kind, n) + " ›"));
+  }
 
   // ---------- upgrade button ----------
   function upgradeBtn(kind, n) {
@@ -244,7 +380,7 @@ window.SVT = window.SVT || {};
     const info = bind(h("div", { class: "stat" }), (e) => setText(e, "Lv " + lab().commercial.lvl + " · ships $" + fmt(SVT.rates(lab()).commercial) + "/s"));
     return h("section", { class: "hub commercial" },
       hubHead("🏬", "Warehouse", "Commercial Hub", "commercial"),
-      scene, total, info, unlockBar(kind, 0), upgradeBtn(kind, 0), managerChip(kind, 0));
+      scene, total, info, unlockBar(kind, 0), h("div", { class: "actions" }, detailsBtn(kind, 0), upgradeBtn(kind, 0)), managerChip(kind, 0));
   }
 
   function freightCard() {
@@ -265,7 +401,7 @@ window.SVT = window.SVT || {};
     });
     return h("section", { class: "hub freight" },
       hubHead("🛗", "Lift", "Freight Hub", "freight"),
-      scene, waiting, info, unlockBar(kind, 0), upgradeBtn(kind, 0), managerChip(kind, 0));
+      scene, waiting, info, unlockBar(kind, 0), h("div", { class: "actions" }, detailsBtn(kind, 0), upgradeBtn(kind, 0)), managerChip(kind, 0));
   }
 
   // ---------- floors ----------
@@ -308,11 +444,11 @@ window.SVT = window.SVT || {};
       setText(e, "Lv " + lv + " · " + teamSize(lv) + " × " + teamName(n) + " · $" + fmt(SVT.rates(lab()).floors[n - 1]) + "/s");
     });
     return h("div", { class: "floor tier" + tier, "data-floor": n },
-      h("div", { class: "fnum", text: n }),
+      h("button", { class: "fnum", onclick: () => openNode("floor", n), "aria-label": "Floor " + n + " stats", text: n }),
       h("div", { class: "fbody" },
-        h("div", { class: "fname" }, h("b", { text: productName(n) }), n === 1 ? bottleneckPill("build") : null),
+        h("button", { class: "fname", onclick: () => openNode("floor", n) }, h("b", { text: productName(n) }), h("span", { class: "more", "aria-hidden": "true", text: "Stats ›" }), n === 1 ? bottleneckPill("build") : null),
         scene, stat, unlockBar("floor", n),
-        h("div", { class: "actions" }, upgradeBtn("floor", n)),
+        h("div", { class: "actions" }, detailsBtn("floor", n), upgradeBtn("floor", n)),
         managerChip("floor", n)));
   }
 
@@ -363,7 +499,8 @@ window.SVT = window.SVT || {};
       h("div", { class: "surface" }, freightCard(), commercialCard()),
       h("div", { class: "ground", "aria-hidden": "true" }, h("span", { text: "▼ Underground R&D" })),
       building(),
-      h("footer", { class: "foot", text: "Silicon Valley Tycoon v" + B.VERSION }));
+      h("footer", { class: "foot", text: "Silicon Valley Tycoon v" + B.VERSION }),
+      bottomNav());
   }
 
   function mapView() {
@@ -409,7 +546,7 @@ window.SVT = window.SVT || {};
   SVT.setView = setView;
 
   function render() {
-    binds = [];
+    binds = binds.filter((b) => b.e.isConnected && b.e.closest("#sheet")); // an open sheet keeps its live numbers
     const root = app();
     const y = window.scrollY;
     root.innerHTML = "";

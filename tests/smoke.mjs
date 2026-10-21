@@ -43,7 +43,7 @@ console.log("owned", JSON.stringify(owned));
 const rankIdx = await page.evaluate(() => SVT.RANK_ORDER);
 if (owned.order.some((r, i) => i && rankIdx[r] < rankIdx[owned.order[i - 1]])) errors.push("Owned list not sorted by rarity");
 if (owned.total !== 4 || owned.assigned !== 3) errors.push("Owned/assigned counts wrong");
-await page.click("#sheet .icon-btn");
+await page.click('#sheet [aria-label="Close"]');
 // rarity odds: 100k rolls should land near the stated odds
 const dist = await page.evaluate(() => { const c = {}; for (let i = 0; i < 100000; i++) { const k = SVT.rollRank(); c[k] = (c[k] || 0) + 1; } return c; });
 const want = { super: 500, legendary: 1000, epic: 3000, rare: 10000, uncommon: 30000, common: 55500 };
@@ -51,13 +51,43 @@ for (const k in want) if (Math.abs((dist[k] || 0) - want[k]) > Math.max(150, wan
 console.log("rarity rolls", JSON.stringify(dist));
 for (let i = 0; i < 4; i++) await page.click("text=/Unlock Floor/");
 await page.waitForTimeout(1500);
+// floor detail sheet: stats table, arrows, swipe, keyboard, manager round trip
+await page.click(".floor .fnum >> nth=0");
+const title = () => page.locator("#sheet h2").innerText();
+const t1 = await title();
+const statRows = await page.locator("#sheet table.stats tbody tr").count();
+if (!t1.startsWith("Floor 1") || statRows < 4) errors.push("Floor detail sheet missing: " + t1 + " rows " + statRows);
+await page.screenshot({ path: out + "/03a-detail.png" });
+await page.click('#sheet [aria-label="Next"]');
+if (!(await title()).startsWith("Floor 2")) errors.push("Next arrow did not go to Floor 2: " + (await title()));
+await page.evaluate(() => {
+  const el = document.querySelector("#sheet .sheet");
+  const tp = (x) => new Touch({ identifier: 1, target: el, clientX: x, clientY: 400 });
+  el.dispatchEvent(new TouchEvent("touchstart", { touches: [tp(300)], changedTouches: [tp(300)], bubbles: true }));
+  el.dispatchEvent(new TouchEvent("touchend", { touches: [], changedTouches: [tp(150)], bubbles: true }));
+});
+if (!(await title()).startsWith("Floor 3")) errors.push("Swipe left did not go to Floor 3: " + (await title()));
+await page.keyboard.press("ArrowLeft");
+await page.keyboard.press("ArrowLeft");
+await page.keyboard.press("ArrowLeft");
+if (!(await title()).includes("Warehouse")) errors.push("ArrowLeft x3 did not reach Warehouse: " + (await title()));
+await page.keyboard.press("ArrowRight"); await page.keyboard.press("ArrowRight"); await page.keyboard.press("ArrowRight");
+const lv0 = await page.evaluate(() => SVT.lab().floors[2].lvl);
+await page.click("#sheet .btn.up");
+const lv1 = await page.evaluate(() => SVT.lab().floors[2].lvl);
+if (lv1 <= lv0) errors.push("Upgrade in detail sheet did nothing");
+await page.click("#sheet .mgr-hire");
+await page.click("#sheet .btn.use");
+if (!(await title()).startsWith("Floor 3")) errors.push("Use here did not return to the floor sheet: " + (await title()));
+await page.screenshot({ path: out + "/03b-detail-mgr.png" });
+await page.click('#sheet [aria-label="Close"]');
 const s = await page.evaluate(() => ({ floors: SVT.lab().floors.length, wall: !!document.querySelector(".floor.wall"), rates: SVT.rates(SVT.lab()) }));
 console.log("state", JSON.stringify(s));
 await page.screenshot({ path: out + "/03-floors.png", fullPage: false });
 await page.locator(".floor.wall").scrollIntoViewIfNeeded();
 await page.screenshot({ path: out + "/04-wall.png" });
 // raise seed
-await page.click(".btn.fund");
+await page.click(".nav-btn.fund");
 await page.screenshot({ path: out + "/05-funding.png" });
 await page.click("#sheet .btn.fund-cta");
 await page.click("#sheet .btn.fund-cta");
@@ -65,7 +95,7 @@ const after = await page.evaluate(() => ({ round: SVT.lab().round, mult: SVT.pre
 if (after.managers !== 0) errors.push("Managers survived the funding round");
 console.log("after raise", JSON.stringify(after));
 await page.waitForTimeout(300);
-await page.click("text=🗺 Map");
+await page.click(".bottom-nav >> text=Map");
 await page.waitForTimeout(300);
 const pins = await page.evaluate(() => ({ total: document.querySelectorAll(".pin").length, soon: document.querySelectorAll(".pin.soon").length, open: document.querySelectorAll(".pin.open").length }));
 console.log("pins", JSON.stringify(pins));
