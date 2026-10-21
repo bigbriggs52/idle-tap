@@ -672,3 +672,7 @@ table.stats td.next.up { color: var(--good); font-weight: 700; }
 @keyframes toast-in { from { opacity: 0; transform: translateY(8px); } }
 body:has(#sheet) #toasts { top: calc(4px + env(safe-area-inset-top, 0px)); bottom: auto; padding: 0 56px; }
 body:has(#sheet) .toast:not(:last-child) { display: none; }
+
+/* v0.10.3: panels you swipe through (Level, slot managers) have one fixed height, so the buy toggle, Level Up and Hire
+   buttons stay in exactly the same spot on every floor, the lift and the warehouse. The body scrolls inside. */
+.sheet:has(> .side-arrow) { height: min(86vh, 760px); }

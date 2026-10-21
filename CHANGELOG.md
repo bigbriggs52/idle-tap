@@ -2,6 +2,10 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.10.3 (2026-10-21)
+
+- The Level and manager panels keep one fixed size, so the x1/x10/x50/Max toggle, Level Up and Hire buttons stay in exactly the same spot when you swipe between floors, the lift and the warehouse.
+
 ## v0.10.2 (2026-10-21)
 
 - Achievement and unlock pop-ups are smaller and sit low in the middle of the screen, between the floor numbers and the Level buttons, so they no longer cover controls. At most two show at a time, and they clear faster.
