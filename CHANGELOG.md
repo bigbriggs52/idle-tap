@@ -2,6 +2,11 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.4.0 (2026-10-21)
+
+- The lift (Freight Hub) and the warehouse (Commercial Hub) now sit side by side at the top: lift on the left, warehouse on the right, like Idle Miner Tycoon.
+- The lift has its own tap area with a moving car, and the warehouse shows how much money is waiting to ship.
+
 ## v0.3.0 (2026-10-21)
 
 Fixes from playing v0.2.0 on a phone.
