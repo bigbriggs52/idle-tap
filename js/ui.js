@@ -45,14 +45,22 @@ window.SVT = window.SVT || {};
   }
   function multLabel(m) { return m >= 1.5 ? "×" + m : "+" + Math.round((m - 1) * 100) + "%"; }
 
+  // Version plus release date and time, e.g. V0.10.2.10.21.26.18:05 (MM.DD.YY.HH:MM, local time).
+  function buildTag() {
+    const d = new Date(B.BUILT), p = (n) => String(n).padStart(2, "0");
+    if (isNaN(d)) return "V" + B.VERSION;
+    return "V" + B.VERSION + "." + p(d.getMonth() + 1) + "." + p(d.getDate()) + "." + p(d.getFullYear() % 100) + "." + p(d.getHours()) + ":" + p(d.getMinutes());
+  }
+  SVT.buildTag = buildTag;
+
   // ---------- toasts ----------
   function toast(msg, kind) {
     const box = document.getElementById("toasts");
     const t = h("div", { class: "toast " + (kind || "") , role: "status" }, msg);
     box.append(t);
-    while (box.children.length > 3) box.firstChild.remove();
-    setTimeout(() => t.classList.add("out"), 2600);
-    setTimeout(() => t.remove(), 3100);
+    while (box.children.length > 2) box.firstChild.remove();
+    setTimeout(() => t.classList.add("out"), 2200);
+    setTimeout(() => t.remove(), 2600);
   }
   SVT.toast = toast;
 
@@ -629,7 +637,7 @@ window.SVT = window.SVT || {};
       header(),
       surface(),
       building(),
-      h("footer", { class: "foot", text: "Silicon Valley Tycoon v" + B.VERSION }),
+      h("footer", { class: "foot", text: "Silicon Valley Tycoon " + buildTag() }),
       bottomNav());
   }
 
@@ -669,7 +677,7 @@ window.SVT = window.SVT || {};
           h("div", { class: "bay", "aria-hidden": "true" }),
           h("div", { class: "road r1", "aria-hidden": "true" }), h("div", { class: "road r2", "aria-hidden": "true" }), h("div", { class: "road r3", "aria-hidden": "true" }),
           pins)),
-      h("footer", { class: "foot", text: "Silicon Valley Tycoon v" + B.VERSION }));
+      h("footer", { class: "foot", text: "Silicon Valley Tycoon " + buildTag() }));
   }
 
   function setView(v) { view = v; render(); window.scrollTo(0, 0); }
@@ -723,7 +731,7 @@ window.SVT = window.SVT || {};
       SVT.reset(); closeSheet(); toast("Progress reset");
     });
     sheet("Settings", h("div", { class: "sheet-body" },
-      h("p", null, h("b", { text: "Silicon Valley Tycoon v" + B.VERSION })),
+      h("p", null, h("b", { text: "Silicon Valley Tycoon " + buildTag() })),
       h("button", { class: "btn", onclick: checkUpdate, text: "🔄 Check for update" }),
       h("p", { class: "muted", text: "Tap floors, the lift and the warehouse to work them. Tap a dashed seat to hire a manager to automate it and keep earning while you're away (up to 2 hours). Income is limited by the slowest of build, freight and commercial, marked Slowest. Tap a blue Level button for stats and upgrades, and hold Upgrade to keep buying." }),
       h("p", { class: "muted", text: "Every 5 levels unlocks new tech (+10% on floors, +2% on hubs). Levels 10, 25, 50, 100 and beyond are big milestones." }),
