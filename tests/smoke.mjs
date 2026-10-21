@@ -1,0 +1,61 @@
+// Browser smoke test: node tests/smoke.mjs (serves the repo on :8123 first).
+import { chromium } from "playwright";
+const url = process.env.URL || "http://localhost:8123/";
+const out = process.env.OUT || ".";
+const browser = await chromium.launch();
+const page = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 });
+const errors = [];
+page.on("pageerror", (e) => errors.push(e.message));
+page.on("console", (m) => { if (m.type() === "error") errors.push(m.text()); });
+await page.goto(url);
+await page.waitForTimeout(500);
+await page.screenshot({ path: out + "/01-intro.png" });
+await page.click("text=Start building");
+// tap all three nodes, then let it run
+await page.click(".floor-scene");
+await page.click(".hub-scene");
+await page.click("text=Tap to run lift");
+await page.waitForTimeout(2500);
+const cash1 = await page.evaluate(() => SVT.lab().cash);
+console.log("cash after taps", cash1);
+await page.screenshot({ path: out + "/02-start.png" });
+// give money, buy upgrades, hire, unlock floors up to the Seed wall
+await page.evaluate(() => SVT.debug.addCash(1e7));
+await page.click(".chip >> text=×10");
+for (let i = 0; i < 3; i++) await page.click(".floor .btn.up >> nth=0");
+await page.click("text=/Hire Floor Lead/");
+await page.click("text=/Hire Logistics Lead/");
+await page.click("text=/Hire Commercial Director/");
+for (let i = 0; i < 4; i++) await page.click("text=/Unlock Floor/");
+await page.waitForTimeout(1500);
+const s = await page.evaluate(() => ({ floors: SVT.lab().floors.length, wall: !!document.querySelector(".floor.wall"), rates: SVT.rates(SVT.lab()) }));
+console.log("state", JSON.stringify(s));
+await page.screenshot({ path: out + "/03-floors.png", fullPage: false });
+await page.locator(".floor.wall").scrollIntoViewIfNeeded();
+await page.screenshot({ path: out + "/04-wall.png" });
+// raise seed
+await page.click(".btn.fund");
+await page.screenshot({ path: out + "/05-funding.png" });
+await page.click("#sheet .btn.fund-cta");
+await page.click("#sheet .btn.fund-cta");
+const after = await page.evaluate(() => ({ round: SVT.lab().round, mult: SVT.prestigeMult(SVT.lab()), labs: Object.keys(SVT.state().labs) }));
+console.log("after raise", JSON.stringify(after));
+await page.waitForTimeout(300);
+await page.click("text=🗺 Map");
+await page.waitForTimeout(300);
+const pins = await page.evaluate(() => ({ total: document.querySelectorAll(".pin").length, soon: document.querySelectorAll(".pin.soon").length, open: document.querySelectorAll(".pin.open").length }));
+console.log("pins", JSON.stringify(pins));
+await page.screenshot({ path: out + "/06-map.png", fullPage: true });
+await page.click(".pin.open >> nth=1");
+await page.waitForTimeout(300);
+console.log("active lab", await page.evaluate(() => SVT.state().activeLab));
+await page.screenshot({ path: out + "/07-arcade.png" });
+// save + reload restores
+await page.evaluate(() => SVT.save());
+await page.reload(); await page.waitForTimeout(400);
+console.log("reload labs", await page.evaluate(() => Object.keys(SVT.state().labs).join(",") + " garage round=" + SVT.state().labs.garage.round));
+const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
+console.log("horizontal overflow", overflow);
+console.log("errors", JSON.stringify(errors));
+await browser.close();
+if (errors.length || overflow) process.exit(1);
