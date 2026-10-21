@@ -677,3 +677,7 @@ body:has(#sheet) .toast:not(:last-child) { display: none; }
 /* v0.10.3: panels you swipe through (Level, slot managers) have one fixed height, so the buy toggle, Level Up and Hire
    buttons stay in exactly the same spot on every floor, the lift and the warehouse. The body scrolls inside. */
 .sheet:has(> .side-arrow) { height: min(86vh, 760px); }
+
+/* v0.11: upgrade badge shows ▲ / ▲▲ / ▲▲▲ for 1 / 10 / 50 affordable levels */
+.lvl-btn .can { width: auto; min-width: 20px; padding: 0 4px; border-radius: 10px; letter-spacing: -1px; }
+.lvl-btn[data-tri="3"] .can { background: linear-gradient(#ffd23f, #e9a800); color: #5a3b00; }

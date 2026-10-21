@@ -34,8 +34,8 @@ window.SVT = window.SVT || {};
   };
 
   // ---------- state ----------
-  const newFloor = () => ({ lvl: 1, stock: 0, workUntil: 0 });
-  const newNode = () => ({ lvl: 1, workUntil: 0 });
+  const newFloor = () => ({ lvl: 1, stock: 0, left: 0 });
+  const newNode = () => ({ lvl: 1, left: 0 });
   function newLab() {
     return {
       cash: B.START_CASH, lifetime: 0, round: 0,
@@ -94,10 +94,13 @@ window.SVT = window.SVT || {};
   SVT.nodeOf = (lab, kind, n) => (kind === "floor" ? lab.floors[n - 1] : lab[kind]);
   SVT.levelOf = (lab, kind, n) => SVT.nodeOf(lab, kind, n).lvl;
 
-  SVT.running = (lab, kind, n, t) => {
-    const node = SVT.nodeOf(lab, kind, n);
-    return !!SVT.mgrOf(lab, kind, n) || node.workUntil > (t || now());
+  // Working right now: a manager keeps it going; otherwise one tap runs one cycle (one trip for the lift).
+  SVT.running = (lab, kind, n) => {
+    if (SVT.mgrOf(lab, kind, n)) return true;
+    if (kind === "freight") return !!lab.lift && (lab.lift.phase !== "idle" || !!lab.lift.go);
+    return (SVT.nodeOf(lab, kind, n).left || 0) > 0;
   };
+  SVT.cycleTime = (kind) => (kind === "floor" ? B.FLOOR_CYCLE : B.WH_TRIP);
   // Throughput multiplier from the node's manager: passive bonus x active boost.
   SVT.nodeMult = (lab, kind, n, t) => {
     const m = SVT.mgrOf(lab, kind, n);
@@ -129,7 +132,7 @@ window.SVT = window.SVT || {};
   };
 
   // ---------- lift ----------
-  // Like Idle Miner's elevator: a trip only starts while the lift is worked (tap or manager), then always finishes.
+  // Like Idle Miner's elevator: a tap sends it on one trip (a manager keeps sending it), and a trip always finishes.
   // Down one floor every 1/speed s, stop at each floor with stock and pour it in at the loading speed until the floor
   // is empty or the car is full, turn back once full or past the last floor, then empty it over UNLOAD_TIME at the top.
   // Average throughput matches B.freightCap.
@@ -146,8 +149,9 @@ window.SVT = window.SVT || {};
     let guard = 20;
     while (dt > 1e-9 && guard-- > 0) {
       if (L.phase === "idle") {
-        if (!SVT.running(lab, "freight", 0, t) || !nextStop(lab, 0)) return;
-        L.phase = "down";
+        if (!SVT.mgrOf(lab, "freight", 0) && !L.go) return;
+        if (!nextStop(lab, 0)) { L.go = false; return; }
+        L.go = false; L.phase = "down";
       } else if (L.phase === "down") {
         const k = nextStop(lab, L.y);
         if (!k) { L.phase = "up"; continue; }
@@ -177,18 +181,43 @@ window.SVT = window.SVT || {};
   }
 
   // ---------- simulation ----------
-  function tickLab(lab, dt, t) {
-    const r = SVT.rates(lab, t);
-    lab.floors.forEach((f, i) => {
-      if (SVT.running(lab, "floor", i + 1, t)) f.stock += r.floors[i] * dt;
-    });
-    stepLift(lab, dt, t);
-    let earned = 0;
-    if (SVT.running(lab, "commercial", 0, t)) {
-      earned = Math.min(r.commercial * dt, lab.lobby);
-      lab.lobby -= earned; lab.cash += earned; lab.lifetime += earned;
+  // Floors build in cycles: one cycle adds a cycle's worth of products to the crate when it ends.
+  // The warehouse ships in trips: it loads up to a trip's worth from the top of the shaft and is paid when the trip ends.
+  // A tap runs one cycle or trip; a manager starts the next one straight away.
+  function stepFloor(lab, f, n, dt, t) {
+    const mgr = !!SVT.mgrOf(lab, "floor", n), T = B.FLOOR_CYCLE;
+    let guard = 50;
+    while (dt > 1e-9 && guard-- > 0) {
+      if (!(f.left > 0)) { if (!mgr) return; f.left = T; }
+      if (f.left > dt) { f.left -= dt; return; }
+      dt -= f.left; f.left = 0;
+      f.stock += B.floorOutput(n, f.lvl) * SVT.prestigeMult(lab) * SVT.nodeMult(lab, "floor", n, t) * T;
     }
-    const a = Math.min(1, dt / 3);
+  }
+  function stepWarehouse(lab, dt, t) {
+    const c = lab.commercial, mgr = !!SVT.mgrOf(lab, "commercial", 0);
+    let earned = 0, guard = 50;
+    while (dt > 1e-9 && guard-- > 0) {
+      if (!(c.left > 0)) {
+        if (!mgr || !(lab.lobby > 0)) return earned;
+        SVT.startShip(lab, t);
+      }
+      if (c.left > dt) { c.left -= dt; return earned; }
+      dt -= c.left; c.left = 0;
+      earned += c.carry || 0; lab.cash += c.carry || 0; lab.lifetime += c.carry || 0; c.carry = 0;
+    }
+    return earned;
+  }
+  SVT.shipLoad = (lab, t) => B.commercialCap(lab.commercial.lvl) * SVT.prestigeMult(lab) * SVT.nodeMult(lab, "commercial", 0, t) * B.WH_TRIP;
+  SVT.startShip = (lab, t) => {
+    const c = lab.commercial, take = Math.min(lab.lobby, SVT.shipLoad(lab, t));
+    lab.lobby -= take; c.carry = take; c.left = B.WH_TRIP;
+  };
+  function tickLab(lab, dt, t) {
+    lab.floors.forEach((f, i) => stepFloor(lab, f, i + 1, dt, t));
+    stepLift(lab, dt, t);
+    const earned = stepWarehouse(lab, dt, t);
+    const a = Math.min(1, dt / 8); // income arrives per trip, so smooth over a few trips
     lab.rate = lab.rate * (1 - a) + (earned / dt) * a;
     return earned;
   }
@@ -209,8 +238,6 @@ window.SVT = window.SVT || {};
     const step = 5, t0 = now() - away;
     for (const id in S.labs) {
       const lab = S.labs[id];
-      lab.floors.forEach((f) => (f.workUntil = 0));
-      lab.freight.workUntil = 0; lab.commercial.workUntil = 0;
       let earned = 0;
       for (let s = 0; s < away; s += step) earned += tickLab(lab, Math.min(step, away - s), t0 + s);
       lab.rate = 0;
@@ -223,8 +250,15 @@ window.SVT = window.SVT || {};
   SVT.tap = (kind, n) => {
     const lab = SVT.lab();
     if (SVT.mgrOf(lab, kind, n)) return;
-    const node = SVT.nodeOf(lab, kind, n);
-    node.workUntil = now() + B.TAP_SECONDS;
+    // One tap, one cycle: ignored while that cycle (or lift trip) is still going.
+    if (SVT.running(lab, kind, n)) return;
+    if (kind === "freight") {
+      if (!lab.floors.some((f) => f.stock > 0)) { SVT.toast && SVT.toast("Nothing waiting on the floors yet"); return; }
+      lab.lift.go = true;
+    } else if (kind === "commercial") {
+      if (!(lab.lobby > 0)) { SVT.toast && SVT.toast("Nothing at the top of the shaft to ship yet"); return; }
+      SVT.startShip(lab);
+    } else SVT.nodeOf(lab, kind, n).left = B.FLOOR_CYCLE;
     emit("tap", { kind, n });
   };
 
@@ -358,8 +392,8 @@ window.SVT = window.SVT || {};
     lab.floors = [newFloor()];
     lab.lobby = 0;
     lab.lift = newLift();
-    lab.freight.lvl = 1; lab.freight.workUntil = 0;
-    lab.commercial.lvl = 1; lab.commercial.workUntil = 0;
+    lab.freight.lvl = 1; lab.freight.left = 0;
+    lab.commercial.lvl = 1; lab.commercial.left = 0; lab.commercial.carry = 0;
     lab.managers = {}; lab.assign = {}; lab.hires = { floor: 0, freight: 0, commercial: 0 };
     lab.rate = 0;
     emit("raise", { round: r, mult: SVT.prestigeMult(lab) });

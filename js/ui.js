@@ -247,6 +247,7 @@ window.SVT = window.SVT || {};
     const P = () => SVT.prestigeMult(lab()), M = () => SVT.nodeMult(lab(), kind, n), depth = () => lab().floors.length;
     if (kind === "floor") return [
       ["Output", (L) => "$" + fmt(B.floorOutput(n, L) * P() * M()) + "/s"],
+      ["Per cycle", (L) => "$" + fmt(B.floorOutput(n, L) * P() * M() * B.FLOOR_CYCLE) + " / " + B.FLOOR_CYCLE + "s"],
       ["Team", (L) => teamSize(L) + " " + teamName(n)],
       ["Value per product", () => "$" + fmt(B.floorValue(n) * P())],
       ["Tech unlock bonus", (L) => multText(B.floorMult(L))],
@@ -261,6 +262,7 @@ window.SVT = window.SVT || {};
     ];
     return [
       ["Ships", (L) => "$" + fmt(B.commercialCap(L) * P() * M()) + "/s"],
+      ["Load per trip", (L) => "$" + fmt(B.commercialCap(L) * P() * M() * B.WH_TRIP) + " / " + B.WH_TRIP + "s"],
       ["Tech unlock bonus", (L) => multText(B.hubMult(L))],
     ];
   }
@@ -278,7 +280,7 @@ window.SVT = window.SVT || {};
     rows.push(["Lab income", () => { const r = SVT.rates(lab()); return "$" + fmt(r.income) + "/s · limited by " + { build: "floors", freight: "lift", commercial: "warehouse" }[r.limit]; }]);
     return rows;
   }
-  const STAT_ICON = { "Output": "⚙️", "Team": "👷", "Value per product": "💲", "Tech unlock bonus": "🔬", "Moves": "🛗", "Load per trip": "📦",
+  const STAT_ICON = { "Output": "⚙️", "Per cycle": "🔁", "Team": "👷", "Value per product": "💲", "Tech unlock bonus": "🔬", "Moves": "🛗", "Load per trip": "📦",
     "Lift speed": "⏩", "Loading speed": "⬇️", "Round trip": "⏱️", "Ships": "🚚", "Waiting for the lift": "📦", "Share of lab output": "📊", "Waiting on floors": "📦",
     "Waiting to ship": "🏬", "Manager bonus": "👔", "Prestige bonus": "💰", "Lab income": "💵" };
   function statRow(label, ...val) {
@@ -406,11 +408,12 @@ window.SVT = window.SVT || {};
     const box = h("div", { class: "work-timer", "aria-live": "off" }, label, h("span", { class: "wt-track" }, fill));
     bind(box, () => {
       const L = lab();
-      if (SVT.mgrOf(L, kind, n)) { box.hidden = false; box.classList.add("auto"); setText(label, "Auto"); fill.style.width = "100%"; return; }
-      box.classList.remove("auto");
-      const left = SVT.nodeOf(L, kind, n).workUntil - SVT.now();
-      box.hidden = !(left > 0);
-      if (left > 0) { setText(label, Math.ceil(left) + "s"); fill.style.width = (100 * left / B.TAP_SECONDS) + "%"; }
+      // Progress of the one cycle (or trip) that is running; "Auto" when a manager keeps them coming.
+      const auto = !!SVT.mgrOf(L, kind, n), left = SVT.nodeOf(L, kind, n).left || 0, T = SVT.cycleTime(kind);
+      toggle(box, "auto", auto);
+      box.hidden = !auto && !(left > 0);
+      setText(label, auto ? "Auto" : Math.ceil(left) + "s");
+      fill.style.width = (left > 0 ? 100 * (1 - left / T) : auto ? 0 : 100) + "%";
     });
     return box;
   }
@@ -459,14 +462,18 @@ window.SVT = window.SVT || {};
   }
   // Big blue Level button: opens the stats and upgrade sheet. A green ▲ shows when you can afford an upgrade.
   function levelBtn(kind, n) {
-    const num = h("b");
+    const num = h("b"), badge = h("i", { class: "can", "aria-hidden": "true", text: "▲" });
     const el = h("button", { class: "lvl-btn", onclick: (e) => { e.stopPropagation(); openNode(kind, n); } },
-      h("span", { text: "Level" }), num, h("i", { class: "can", "aria-hidden": "true", text: "▲" }));
+      h("span", { text: "Level" }), num, badge);
     bind(el, () => {
       const L = lab(), lv = SVT.levelOf(L, kind, n), max = lv >= B.maxLevel(kind);
       setText(num, max ? "MAX" : String(lv));
-      const q = SVT.quote(L, kind, n);
-      toggle(el, "afford", !max && q.count > 0 && L.cash >= q.cost);
+      // ▲ affords 1 level, ▲▲ affords 10, ▲▲▲ affords 50.
+      const m = max ? null : B.bulk(kind, n, lv, Infinity, L.cash, SVT.discount(L, kind, n));
+      const can = m && L.cash >= m.cost ? m.count : 0, tri = can >= 50 ? 3 : can >= 10 ? 2 : can >= 1 ? 1 : 0;
+      toggle(el, "afford", tri > 0);
+      setText(badge, "▲".repeat(tri || 1));
+      el.dataset.tri = tri;
       el.setAttribute("aria-label", "Level " + lv + ": stats and upgrades");
     });
     return el;
@@ -484,18 +491,17 @@ window.SVT = window.SVT || {};
   function surface() {
     const lift = (h("div", { class: "tower lift-tower lift-scene", onclick: () => SVT.tap("freight", 0) },
       h("div", { class: "roof" }),
-      coinTag("over", "Waiting on the floors for the lift", () => totalWaiting(lab())),
+      // What the lift has brought up and stored at the top of the shaft, waiting for the warehouse.
+      coinTag("over", "Stored at the top of the shaft", () => lab().lobby),
       bottleneckPill("freight"),
       h("div", { class: "window" },
         h("div", { class: "dock", "aria-hidden": "true" }), h("div", { class: "lbox in", "aria-hidden": "true" }), h("div", { class: "lbox out", "aria-hidden": "true" }),
         h("div", { class: "lift-shaft", "aria-hidden": "true" }, h("div", { class: "lift-car" }, h("span", { class: "lbox ride" })))),
-      workTimer("freight", 0, "Lifting"),
       h("div", { class: "tower-foot" }, h("div", { class: "door" }, seat("freight", 0), boostBtn("freight", 0)), levelBtn("freight", 0)),
       bind(h("div", { class: "tap-hint", text: "Tap" }), (e) => { e.hidden = SVT.running(lab(), "freight", 0) || (lab().lift && lab().lift.phase !== "idle"); })));
     bind(lift, (e) => toggle(e, "run", SVT.running(lab(), "freight", 0) || (lab().lift && lab().lift.phase !== "idle")));
     const wh = runBind(h("div", { class: "tower wh-tower hub-scene", onclick: () => SVT.tap("commercial", 0) },
       h("div", { class: "roof" }),
-      coinTag("over", "Ready to ship", () => lab().lobby),
       bottleneckPill("commercial"),
       h("div", { class: "window shelves" },
         h("div", { class: "store", "aria-hidden": "true" }), h("div", { class: "belt", "aria-hidden": "true" }),
