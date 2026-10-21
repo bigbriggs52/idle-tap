@@ -42,9 +42,11 @@ window.SVT = window.SVT || {};
       floors: [newFloor()],
       // Owned managers by id, which slot each one works ("floor:3", "freight", "commercial"), hires this round by role.
       managers: {}, assign: {}, hires: { floor: 0, freight: 0, commercial: 0 }, nextMgr: 1,
-      freight: newNode(), commercial: newNode(), lobby: 0, rate: 0,
+      freight: newNode(), commercial: newNode(), lobby: 0, rate: 0, lift: newLift(),
     };
   }
+  // The lift's trip: y is its depth in floors (0 = surface). It goes down floor by floor, loads, and turns back when full.
+  function newLift() { return { phase: "idle", y: 0, load: 0, timer: 0, at: 0 }; }
   function newState() {
     return { v: 3, activeLab: "garage", buy: 1, labs: { garage: newLab() }, lastSeen: Date.now(), seenIntro: false };
   }
@@ -126,19 +128,57 @@ window.SVT = window.SVT || {};
     return { floors, build, freight, commercial, income: min, limit };
   };
 
+  // ---------- lift ----------
+  // Like Idle Miner's elevator: a trip only starts while the lift is worked (tap or manager), then always finishes.
+  // Down one floor every 1/speed s, stop LOAD_TIME at each floor with stock, take what fits, turn back once full
+  // or past the last floor, then UNLOAD_TIME at the top. Average throughput matches B.freightCap.
+  const LOAD_TIME = 0.4, UNLOAD_TIME = 1;
+  SVT.liftCapacity = (lab, t) => B.freightLoad(lab.freight.lvl) * SVT.prestigeMult(lab) * SVT.nodeMult(lab, "freight", 0, t);
+  function nextStop(lab, from) {
+    for (let k = Math.floor(from + 1e-9) + 1; k <= lab.floors.length; k++) if (lab.floors[k - 1].stock > 0) return k;
+    return 0;
+  }
+  function stepLift(lab, dt, t) {
+    const L = lab.lift || (lab.lift = newLift());
+    const speed = B.freightSpeed(lab.freight.lvl);
+    let guard = 20;
+    while (dt > 1e-9 && guard-- > 0) {
+      if (L.phase === "idle") {
+        if (!SVT.running(lab, "freight", 0, t) || !nextStop(lab, 0)) return;
+        L.phase = "down";
+      } else if (L.phase === "down") {
+        const k = nextStop(lab, L.y);
+        if (!k) { L.phase = "up"; continue; }
+        const need = (k - L.y) / speed;
+        if (need > dt) { L.y += speed * dt; return; }
+        dt -= need; L.y = k; L.at = k; L.phase = "load"; L.timer = LOAD_TIME;
+      } else if (L.phase === "load") {
+        if (L.timer > dt) { L.timer -= dt; return; }
+        dt -= L.timer;
+        const f = lab.floors[L.at - 1], room = SVT.liftCapacity(lab, t) - L.load;
+        const take = Math.min(room, f ? f.stock : 0);
+        if (f) f.stock -= take;
+        L.load += take;
+        L.phase = L.load >= SVT.liftCapacity(lab, t) - 1e-9 ? "up" : "down";
+      } else if (L.phase === "up") {
+        const need = L.y / speed;
+        if (need > dt) { L.y -= speed * dt; return; }
+        dt -= need; L.y = 0; L.phase = "unload"; L.timer = UNLOAD_TIME;
+      } else if (L.phase === "unload") {
+        if (L.timer > dt) { L.timer -= dt; return; }
+        dt -= L.timer;
+        lab.lobby += L.load; L.load = 0; L.phase = "idle";
+      }
+    }
+  }
+
   // ---------- simulation ----------
   function tickLab(lab, dt, t) {
     const r = SVT.rates(lab, t);
     lab.floors.forEach((f, i) => {
       if (SVT.running(lab, "floor", i + 1, t)) f.stock += r.floors[i] * dt;
     });
-    if (SVT.running(lab, "freight", 0, t)) {
-      let cap = r.freight * dt;
-      for (let i = 0; i < lab.floors.length && cap > 0; i++) {
-        const take = Math.min(cap, lab.floors[i].stock);
-        lab.floors[i].stock -= take; cap -= take; lab.lobby += take;
-      }
-    }
+    stepLift(lab, dt, t);
     let earned = 0;
     if (SVT.running(lab, "commercial", 0, t)) {
       earned = Math.min(r.commercial * dt, lab.lobby);
@@ -313,6 +353,7 @@ window.SVT = window.SVT || {};
     lab.cash = B.START_CASH;
     lab.floors = [newFloor()];
     lab.lobby = 0;
+    lab.lift = newLift();
     lab.freight.lvl = 1; lab.freight.workUntil = 0;
     lab.commercial.lvl = 1; lab.commercial.workUntil = 0;
     lab.managers = {}; lab.assign = {}; lab.hires = { floor: 0, freight: 0, commercial: 0 };

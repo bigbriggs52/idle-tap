@@ -124,6 +124,24 @@ await page.click(".pin.open >> nth=1");
 await page.waitForTimeout(300);
 console.log("active lab", await page.evaluate(() => SVT.state().activeLab));
 await page.screenshot({ path: out + "/07-arcade.png" });
+// lift: goes down only as far as it has room for, loads, and comes back up
+const liftRun = await page.evaluate(() => {
+  const L = SVT.lab();
+  while (L.floors.length < 3) L.floors.push({ lvl: 1, workUntil: 0, stock: 0 });
+  L.assign = {}; L.lift = { phase: "idle", y: 0, load: 0, timer: 0, at: 0 }; L.lobby = 0;
+  L.floors.forEach((f) => (f.workUntil = 0));
+  L.commercial.workUntil = 0;
+  const cap = SVT.liftCapacity(L);
+  L.floors[0].stock = cap * 2; L.floors[1].stock = cap; L.floors[2].stock = cap;
+  L.freight.workUntil = SVT.now() + 60; // a tap starts a trip...
+  SVT.tick(0.05);
+  L.freight.workUntil = 0; // ...which finishes on its own; no new trip starts after
+  let maxY = 0;
+  for (let i = 0; i < 200; i++) { SVT.tick(0.05); maxY = Math.max(maxY, L.lift.y); }
+  return { cap, maxY, f1: L.floors[0].stock / cap, f2: L.floors[1].stock / cap, lobby: L.lobby / cap, phase: L.lift.phase };
+});
+console.log("lift trip", JSON.stringify(liftRun));
+if (liftRun.maxY > 1.001 || Math.abs(liftRun.f1 - 1) > 1e-6 || Math.abs(liftRun.f2 - 1) > 1e-6 || Math.abs(liftRun.lobby - 1) > 1e-6) errors.push("Lift did not stop at the first full floor");
 // save + reload restores
 await page.evaluate(() => SVT.save());
 await page.reload(); await page.waitForTimeout(400);
