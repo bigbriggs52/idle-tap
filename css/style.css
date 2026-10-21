@@ -220,3 +220,28 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--copper); outlin
 .hub .work-timer { left: 6px; top: 6px; }
 @keyframes bob { from { transform: translateY(0); } to { transform: translateY(-34px); } }
 @media (max-width: 340px) { .surface { grid-template-columns: 1fr; } }
+
+/* owned managers */
+.mgr.none { flex-direction: column; align-items: stretch; }
+.btn.mgr-pick { border-color: var(--good); color: var(--good); background: transparent; }
+.tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+.tab { border: 1px solid var(--line); background: transparent; border-radius: 999px; padding: 6px 12px; font-size: .85rem; cursor: pointer; }
+.tab.on { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.sheet ul.owned-list { list-style: none; padding: 0; gap: 8px; }
+.owned { display: grid; grid-template-columns: 32px 1fr; gap: 6px 10px; align-items: start; border: 1px solid var(--line); border-left-width: 4px; border-radius: 10px; padding: 10px; background: var(--surface-2); }
+.owned.r-junior { border-left-color: var(--common); }
+.owned.r-senior { border-left-color: var(--rare); }
+.owned.r-vp { border-left-color: var(--epic); }
+.owned-info { display: grid; gap: 1px; min-width: 0; font-size: .82rem; }
+.owned-info b { font-size: .95rem; }
+.owned .rarity { font-size: .7rem; text-transform: uppercase; letter-spacing: .06em; font-weight: 700; color: var(--common); }
+.owned.r-senior .rarity { color: var(--rare); }
+.owned.r-vp .rarity { color: var(--epic); }
+.owned .where { color: var(--muted); }
+.owned .where.busy { color: var(--good); font-weight: 600; }
+.owned-btns { grid-column: 2; display: flex; gap: 6px; flex-wrap: wrap; }
+.btn.use { background: var(--copper); border-color: var(--copper); color: var(--on-accent); }
+.owned-list .empty { padding: 8px 0; }
+.top-row .btn { white-space: nowrap; }
+.top-btns .icon-btn { padding: 6px 5px; }
+@media (max-width: 400px) { .lab-title b { font-size: .95rem; } .lab-icon { font-size: 1.25rem; } }

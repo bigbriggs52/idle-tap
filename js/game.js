@@ -35,16 +35,18 @@ window.SVT = window.SVT || {};
 
   // ---------- state ----------
   const newFloor = () => ({ lvl: 1, stock: 0, workUntil: 0 });
-  const newNode = () => ({ lvl: 1, workUntil: 0, mgr: null, hires: 0 });
+  const newNode = () => ({ lvl: 1, workUntil: 0 });
   function newLab() {
     return {
       cash: B.START_CASH, lifetime: 0, round: 0, pity: 0,
-      floors: [newFloor()], floorMgr: {}, floorHires: {},
+      floors: [newFloor()],
+      // Owned managers by id, which slot each one works ("floor:3", "freight", "commercial"), hires this round by role.
+      managers: {}, assign: {}, hires: { floor: 0, freight: 0, commercial: 0 }, nextMgr: 1,
       freight: newNode(), commercial: newNode(), lobby: 0, rate: 0,
     };
   }
   function newState() {
-    return { v: 2, activeLab: "garage", buy: 1, labs: { garage: newLab() }, lastSeen: Date.now(), seenIntro: false };
+    return { v: 3, activeLab: "garage", buy: 1, labs: { garage: newLab() }, lastSeen: Date.now(), seenIntro: false };
   }
 
   let S = newState();
@@ -74,7 +76,17 @@ window.SVT = window.SVT || {};
   SVT.ability = (role, id) => B.ABILITIES[role].find((a) => a.id === id);
   const roleOf = (kind) => (kind === "floor" ? "floor" : kind);
 
-  SVT.mgrOf = (lab, kind, n) => (kind === "floor" ? lab.floorMgr[n] || null : lab[kind].mgr);
+  SVT.slotKey = (kind, n) => (kind === "floor" ? "floor:" + n : kind);
+  SVT.slotName = (key) => (key.startsWith("floor:") ? "Floor " + key.slice(6) : key === "freight" ? "Lift" : "Warehouse");
+  SVT.mgrOf = (lab, kind, n) => {
+    const id = lab.assign[SVT.slotKey(kind, n)];
+    return id ? lab.managers[id] || null : null;
+  };
+  SVT.slotOfMgr = (lab, id) => Object.keys(lab.assign).find((k) => lab.assign[k] === id) || null;
+  // Owned managers for a role, best rarity first, then newest.
+  const RANK_ORDER = { vp: 0, senior: 1, junior: 2 };
+  SVT.owned = (lab, role) => Object.values(lab.managers).filter((m) => !role || m.role === role)
+    .sort((a, b) => RANK_ORDER[a.rank] - RANK_ORDER[b.rank] || b.id - a.id);
   SVT.nodeOf = (lab, kind, n) => (kind === "floor" ? lab.floors[n - 1] : lab[kind]);
   SVT.levelOf = (lab, kind, n) => SVT.nodeOf(lab, kind, n).lvl;
 
@@ -213,13 +225,11 @@ window.SVT = window.SVT || {};
     return true;
   };
 
-  SVT.hireCost = (lab, kind, n) => {
-    const hires = kind === "floor" ? lab.floorHires[n] || 0 : lab[kind].hires;
-    return B.hireCost(kind, n, hires);
-  };
-  SVT.hire = (kind, n) => {
+  SVT.hireCost = (lab, role) => B.hireCost(role, lab.hires[role]);
+  // Hiring adds a manager to the Owned list; the player chooses where it works.
+  SVT.hire = (role) => {
     const lab = SVT.lab();
-    const cost = SVT.hireCost(lab, kind, n);
+    const cost = SVT.hireCost(lab, role);
     if (lab.cash < cost) return false;
     lab.cash -= cost;
     let roll = Math.random(), rank = "junior";
@@ -227,12 +237,46 @@ window.SVT = window.SVT || {};
     else if (roll < B.RANKS[2].odds + B.RANKS[1].odds) rank = "senior";
     lab.pity = rank === "vp" ? 0 : lab.pity + 1;
     if (lab.pity >= B.PITY) { rank = "vp"; lab.pity = 0; }
-    const list = B.ABILITIES[roleOf(kind)];
+    const list = B.ABILITIES[role];
     const ability = list[Math.floor(Math.random() * list.length)].id;
-    const mgr = { rank, ability, activeUntil: 0, cdUntil: 0 };
-    if (kind === "floor") { lab.floorMgr[n] = mgr; lab.floorHires[n] = (lab.floorHires[n] || 0) + 1; }
-    else { lab[kind].mgr = mgr; lab[kind].hires++; }
-    emit("hire", { kind, n, mgr });
+    const names = SVT.MANAGER_NAMES;
+    const mgr = { id: lab.nextMgr++, role, rank, ability, name: names[Math.floor(Math.random() * names.length)], paid: cost, activeUntil: 0, cdUntil: 0 };
+    lab.managers[mgr.id] = mgr;
+    lab.hires[role]++;
+    emit("hire", { mgr });
+    emit("change");
+    return mgr;
+  };
+
+  // Put an owned manager to work in a slot. Whoever was there goes back to the Owned list.
+  SVT.assign = (id, kind, n) => {
+    const lab = SVT.lab();
+    const m = lab.managers[id];
+    if (!m || m.role !== roleOf(kind)) return false;
+    const from = SVT.slotOfMgr(lab, id);
+    if (from) delete lab.assign[from];
+    lab.assign[SVT.slotKey(kind, n)] = id;
+    emit("assign", { id });
+    emit("change");
+    return true;
+  };
+  SVT.unassign = (id) => {
+    const lab = SVT.lab();
+    const from = SVT.slotOfMgr(lab, id);
+    if (!from) return false;
+    delete lab.assign[from];
+    emit("assign", { id });
+    emit("change");
+    return true;
+  };
+  // Selling refunds half the hire price. Only managers who are not working can be sold.
+  SVT.sell = (id) => {
+    const lab = SVT.lab();
+    const m = lab.managers[id];
+    if (!m || SVT.slotOfMgr(lab, id)) return false;
+    lab.cash += m.paid * B.SELL_REFUND;
+    delete lab.managers[id];
+    emit("assign", { id });
     emit("change");
     return true;
   };
@@ -251,7 +295,7 @@ window.SVT = window.SVT || {};
     return true;
   };
 
-  // Funding rounds: the prestige reset. Each round needs a floor reached, resets the lab, keeps managers.
+  // Funding rounds: the prestige reset. Each round needs a floor reached and resets the lab, managers included.
   SVT.nextRound = (lab) => (lab.round < B.ROUNDS.length ? B.ROUNDS[lab.round] : null);
   SVT.canRaise = (lab) => {
     const r = SVT.nextRound(lab);
@@ -267,6 +311,7 @@ window.SVT = window.SVT || {};
     lab.lobby = 0;
     lab.freight.lvl = 1; lab.freight.workUntil = 0;
     lab.commercial.lvl = 1; lab.commercial.workUntil = 0;
+    lab.managers = {}; lab.assign = {}; lab.hires = { floor: 0, freight: 0, commercial: 0 };
     lab.rate = 0;
     emit("raise", { round: r, mult: SVT.prestigeMult(lab) });
     // Seed round in one lab opens the next location on the map.
@@ -306,13 +351,35 @@ window.SVT = window.SVT || {};
     S = newState();
     emit("switch");
   };
+  // v0.2-v0.4 saves kept one manager per node; move them into the Owned list, still assigned.
+  function migrateV2(d) {
+    for (const id in d.labs) {
+      const lab = d.labs[id];
+      lab.managers = {}; lab.assign = {}; lab.hires = { floor: 0, freight: 0, commercial: 0 }; lab.nextMgr = 1;
+      const add = (m, role, key) => {
+        if (!m) return;
+        const mm = Object.assign({ id: lab.nextMgr++, role, name: SVT.MANAGER_NAMES[(lab.nextMgr * 7) % SVT.MANAGER_NAMES.length], paid: B.hireCost(role, 0) }, m);
+        lab.managers[mm.id] = mm; lab.assign[key] = mm.id; lab.hires[role]++;
+      };
+      Object.keys(lab.floorMgr || {}).forEach((n) => add(lab.floorMgr[n], "floor", "floor:" + n));
+      add(lab.freight && lab.freight.mgr, "freight", "freight");
+      add(lab.commercial && lab.commercial.mgr, "commercial", "commercial");
+      delete lab.floorMgr; delete lab.floorHires;
+      if (lab.freight) { delete lab.freight.mgr; delete lab.freight.hires; }
+      if (lab.commercial) { delete lab.commercial.mgr; delete lab.commercial.hires; }
+    }
+    d.v = 3;
+    return d;
+  }
+
   SVT.load = () => {
     let raw = null;
     try { raw = localStorage.getItem(SAVE_KEY); } catch (e) {}
     if (raw) {
       try {
         const d = JSON.parse(raw);
-        if (d && d.v === 2 && d.labs && d.labs.garage) S = d;
+        if (d && d.v === 2 && d.labs && d.labs.garage) S = migrateV2(d);
+        else if (d && d.v === 3 && d.labs && d.labs.garage) S = d;
       } catch (e) {}
     }
     return applyOffline();

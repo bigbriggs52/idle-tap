@@ -30,9 +30,20 @@ await page.screenshot({ path: out + "/02-start.png" });
 await page.evaluate(() => SVT.debug.addCash(1e7));
 await page.click(".chip >> text=×10");
 for (let i = 0; i < 3; i++) await page.click(".floor .btn.up >> nth=0");
-await page.click("text=/Hire Floor Lead/");
-await page.click("text=/Hire Logistics Lead/");
-await page.click("text=/Hire Commercial Director/");
+// hire -> Owned sheet -> Use here, for each role
+for (const role of ["Floor Lead", "Logistics Lead", "Commercial Director"]) {
+  await page.click(`.mgr-hire >> text=/Hire ${role}/`);
+  await page.click("#sheet .btn.use");
+}
+// hire a spare Floor Lead from the 👔 sheet; it should sit unassigned in Owned
+await page.click('button[aria-label="Owned managers"]');
+await page.click("#sheet .btn.fund-cta");
+const owned = await page.evaluate(() => { const L = SVT.lab(); return { total: Object.keys(L.managers).length, assigned: Object.keys(L.assign).length, order: SVT.owned(L, "floor").map((m) => m.rank) }; });
+console.log("owned", JSON.stringify(owned));
+const rankIdx = { vp: 0, senior: 1, junior: 2 };
+if (owned.order.some((r, i) => i && rankIdx[r] < rankIdx[owned.order[i - 1]])) errors.push("Owned list not sorted by rarity");
+if (owned.total !== 4 || owned.assigned !== 3) errors.push("Owned/assigned counts wrong");
+await page.click("#sheet .icon-btn");
 for (let i = 0; i < 4; i++) await page.click("text=/Unlock Floor/");
 await page.waitForTimeout(1500);
 const s = await page.evaluate(() => ({ floors: SVT.lab().floors.length, wall: !!document.querySelector(".floor.wall"), rates: SVT.rates(SVT.lab()) }));
@@ -45,7 +56,8 @@ await page.click(".btn.fund");
 await page.screenshot({ path: out + "/05-funding.png" });
 await page.click("#sheet .btn.fund-cta");
 await page.click("#sheet .btn.fund-cta");
-const after = await page.evaluate(() => ({ round: SVT.lab().round, mult: SVT.prestigeMult(SVT.lab()), labs: Object.keys(SVT.state().labs) }));
+const after = await page.evaluate(() => ({ round: SVT.lab().round, mult: SVT.prestigeMult(SVT.lab()), labs: Object.keys(SVT.state().labs), managers: Object.keys(SVT.lab().managers).length }));
+if (after.managers !== 0) errors.push("Managers survived the funding round");
 console.log("after raise", JSON.stringify(after));
 await page.waitForTimeout(300);
 await page.click("text=🗺 Map");

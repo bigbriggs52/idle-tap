@@ -1,6 +1,9 @@
 // Content data: labs (map locations), floor products, tier names, tech unlock names.
 window.SVT = window.SVT || {};
 
+// First names for hired managers (flavor only).
+SVT.MANAGER_NAMES = ["Ada", "Grace", "Alan", "Hedy", "Kay", "Steve", "Radia", "Dennis", "Margaret", "Ken", "Frances", "Jean", "Barbara", "Lynn", "Mark", "Priya", "Diego", "Mei", "Omar", "Sofia", "Kofi", "Yuki", "Nina", "Raj", "Leah", "Theo", "Ivy", "Marco", "Zara", "Ben"];
+
 SVT.TIERS = [
   { from: 1, to: 5, name: "Early Computing" },
   { from: 6, to: 10, name: "8-Bit & 16-Bit Era" },

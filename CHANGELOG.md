@@ -2,6 +2,18 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.5.0 (2026-10-21)
+
+Managers rework.
+
+- Hiring now puts the manager in your **Owned** list instead of straight onto a floor. Open it with 👔 in the top bar, or tap "Choose" or "Swap" on any floor, the lift or the warehouse.
+- The Owned list is sorted by rarity (VP, then Senior, then Junior) and has tabs for Floor Leads, Lift and Warehouse managers. Pick **Use here** to put one to work, **Unassign** to take one off, or **Sell** one you don't need for half its price.
+- Floor Leads can work any floor, so you can move your best one to your most valuable floor.
+- Managers now have names.
+- **Funding rounds now clear your managers.** After a prestige you hire a new team, and hire prices start low again.
+- Hire price now grows with each manager of that role you hire (Floor Lead $40, Lift $200, Warehouse $250, ×2.5 each time).
+- Saves from earlier versions carry over, with your current managers kept in place.
+
 ## v0.4.0 (2026-10-21)
 
 - The lift (Freight Hub) and the warehouse (Commercial Hub) now sit side by side at the top: lift on the left, warehouse on the right, like Idle Miner Tycoon.

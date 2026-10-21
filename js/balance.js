@@ -19,7 +19,7 @@ window.SVT = window.SVT || {};
   }
 
   const B = {
-    VERSION: "0.4.0",
+    VERSION: "0.5.0",
     FLOORS: 30,
     FLOOR_MAX: 800,
     HUB_MAX: 2400,
@@ -113,11 +113,12 @@ window.SVT = window.SVT || {};
     return { count: k, cost };
   };
 
-  // Manager hire cost: H0 x 2.5^k, k = managers already hired for that node.
-  B.hireCost = (kind, n, k) => {
-    const h0 = kind === "floor" ? 10 * B.floorBase(n) : kind === "freight" ? 200 : 250;
+  // Manager hire cost: H0 x 2.5^k, k = managers of that role hired since the last funding round.
+  B.hireCost = (role, k) => {
+    const h0 = role === "floor" ? 40 : role === "freight" ? 200 : 250;
     return h0 * Math.pow(2.5, k);
   };
+  B.SELL_REFUND = 0.5;
 
   B.tierOf = (n) => SVT.TIERS.findIndex((t) => n >= t.from && n <= t.to);
 
