@@ -18,21 +18,24 @@ if (await page.locator(".floor-scene .tap-hint").isVisible()) errors.push("Tap t
 if (!(await page.locator(".floor-scene .work-timer").isVisible())) errors.push("Work countdown not shown after tapping");
 await page.click(".hub-scene");
 await page.click(".lift-scene");
-const order = await page.evaluate(() => [...document.querySelectorAll(".surface .hub")].map((h) => h.className));
-console.log("hub order", order.join(" | "));
-if (!order[0].includes("freight")) errors.push("Lift is not on the left");
+const order = await page.evaluate(() => [".lift-tower", ".wh-tower"].map((q) => document.querySelector(q).getBoundingClientRect().left));
+console.log("hub x", order.join(" | "));
+if (!(order[0] < order[1])) errors.push("Lift is not on the left");
 await page.waitForTimeout(2500);
 const cash1 = await page.evaluate(() => SVT.lab().cash);
-console.log("rack text", await page.locator(".rack").first().innerText(), "| waiting", await page.locator(".freight .waiting b").innerText());
+console.log("rack text", await page.locator(".rack").first().innerText(), "| waiting", await page.locator(".lift-tower .coin-tag b").innerText());
 console.log("cash after taps", cash1);
 await page.screenshot({ path: out + "/02-start.png" });
 // give money, buy upgrades, hire, unlock floors up to the Seed wall
 await page.evaluate(() => SVT.debug.addCash(1e7));
-await page.click(".chip >> text=×10");
-for (let i = 0; i < 3; i++) await page.click(".floor .btn.up >> nth=0");
-// hire -> Owned sheet -> Use here, for each role
-for (const role of ["Floor Lead", "Logistics Lead", "Commercial Director"]) {
-  await page.click(`.mgr-hire >> text=/Hire ${role}/`);
+await page.evaluate(() => SVT.setBuy(10));
+await page.click(".floor .lvl-btn >> nth=0");
+for (let i = 0; i < 3; i++) await page.click("#sheet .btn.up");
+await page.click('#sheet [aria-label="Close"]');
+// tap the empty manager seat -> hire (top of the list) -> Use here, for each role
+for (const q of [".floor-scene .seat >> nth=0", ".lift-tower .seat", ".wh-tower .seat"]) {
+  await page.click(q);
+  await page.click("#sheet .btn.fund-cta");
   await page.click("#sheet .btn.use");
 }
 // hire a spare Floor Lead from the 👔 sheet; it should sit unassigned in Owned
@@ -52,7 +55,7 @@ console.log("rarity rolls", JSON.stringify(dist));
 for (let i = 0; i < 4; i++) await page.click("text=/Unlock Floor/");
 await page.waitForTimeout(1500);
 // floor detail sheet: stats table, arrows, swipe, keyboard, manager round trip
-await page.click(".floor .fnum >> nth=0");
+await page.click(".floor .lvl-btn >> nth=0");
 const title = () => page.locator("#sheet h2").innerText();
 const t1 = await title();
 const statRows = await page.locator("#sheet table.stats tbody tr").count();
@@ -80,6 +83,23 @@ await page.click("#sheet .mgr-hire");
 await page.click("#sheet .btn.use");
 if (!(await title()).startsWith("Floor 3")) errors.push("Use here did not return to the floor sheet: " + (await title()));
 await page.screenshot({ path: out + "/03b-detail-mgr.png" });
+await page.click('#sheet [aria-label="Close"]');
+// busy managers sit at the bottom of a slot's list and can't be assigned there
+await page.click(".floor-scene .seat >> nth=1");
+const busy = await page.evaluate(() => [...document.querySelectorAll("#sheet .owned")].map((li) => ({ busy: li.classList.contains("busy"), use: !!li.querySelector(".use") })));
+console.log("floor 2 list", JSON.stringify(busy));
+if (busy.some((b) => b.busy && b.use)) errors.push("A busy manager can be assigned");
+if (busy.findIndex((b) => b.busy) !== -1 && busy.slice(busy.findIndex((b) => b.busy)).some((b) => !b.busy)) errors.push("Busy managers are not at the bottom");
+await page.click('#sheet [aria-label="Close"]');
+// hold Upgrade to keep buying
+await page.evaluate(() => SVT.setBuy(1));
+await page.click(".floor .lvl-btn >> nth=1");
+const h0 = await page.evaluate(() => SVT.lab().floors[1].lvl);
+const ub = await page.locator("#sheet .btn.up").boundingBox();
+await page.mouse.move(ub.x + 20, ub.y + 10); await page.mouse.down(); await page.waitForTimeout(1500); await page.mouse.up();
+const h1 = await page.evaluate(() => SVT.lab().floors[1].lvl);
+console.log("hold-buy levels", h0, "->", h1);
+if (h1 - h0 < 5) errors.push("Holding Upgrade did not keep buying");
 await page.click('#sheet [aria-label="Close"]');
 const s = await page.evaluate(() => ({ floors: SVT.lab().floors.length, wall: !!document.querySelector(".floor.wall"), rates: SVT.rates(SVT.lab()) }));
 console.log("state", JSON.stringify(s));
