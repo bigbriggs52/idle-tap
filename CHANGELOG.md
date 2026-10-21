@@ -2,6 +2,10 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.10.1 (2026-10-21)
+
+- Removed the duplicate Update button from the bottom bar; Update stays at the top. Its spot is now a 🚧 Coming soon (under construction) button.
+
 ## v0.10.0 (2026-10-21)
 
 - Idle Miner-style panels: a blue panel with a chunky border, a red ✕, and big ‹ › arrows on the sides. Swipes and arrow keys still work.
