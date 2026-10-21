@@ -654,9 +654,10 @@ table.stats td.next.up { color: var(--good); font-weight: 700; }
 .bottom-nav { grid-template-columns: 1fr 1fr 1.25fr 1fr 1fr; align-items: end; background: linear-gradient(#3f8fd6, #2a6fb5); border-top: 3px solid #a9dcff; box-shadow: 0 -2px 0 #1b4e86, 0 -4px 14px #17252c33; overflow: visible; }
 .nav-btn { color: #fff; text-shadow: 0 1px 0 #1b4e86; }
 .nav-btn:active { background: #ffffff22; }
-.nav-btn.fund { margin-top: -22px; padding: 8px 2px 6px; border-radius: 16px; background: linear-gradient(#6ad866, #2fa83a); border: 3px solid #a9f0a0; box-shadow: 0 0 0 2px #1d6b25, 0 4px 0 2px #1d6b25; }
-.nav-btn.fund .nav-ic { font-size: 1.6rem; }
-.nav-btn.fund.ready { color: #fff; animation: fund-glow 1.4s ease-in-out infinite; }
+.nav-btn.center { margin-top: -22px; padding: 8px 2px 6px; border-radius: 16px; background: linear-gradient(#6ad866, #2fa83a); border: 3px solid #a9f0a0; box-shadow: 0 0 0 2px #1d6b25, 0 4px 0 2px #1d6b25; }
+.nav-btn.center .nav-ic { font-size: 1.6rem; }
+.nav-btn.fund.ready { color: #ffe36a; animation: none; }
+.nav-btn.fund.ready .nav-ic { animation: pulse 1.2s ease-in-out infinite; }
 @keyframes fund-glow { 50% { box-shadow: 0 0 0 2px #1d6b25, 0 4px 0 2px #1d6b25, 0 0 16px 4px #ffe36a; } }
 .lab-view { padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px)); }
 .building { padding-top: 34px; }

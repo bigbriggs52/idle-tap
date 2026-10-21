@@ -2,6 +2,10 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.10.4 (2026-10-21)
+
+- Bottom bar: Map and Funding swapped. Map is now the big green button in the middle, and Funding sits on the left, pulsing yellow when you can raise.
+
 ## v0.10.3 (2026-10-21)
 
 - The Level and manager panels keep one fixed size, so the x1/x10/x50/Max toggle, Level Up and Hire buttons stay in exactly the same spot when you swipe between floors, the lift and the warehouse.

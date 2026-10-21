@@ -142,11 +142,11 @@ window.SVT = window.SVT || {};
   function bottomNav() {
     const item = (icon, label, on, attrs) => h("button", Object.assign({ class: "nav-btn", onclick: on }, attrs), h("span", { class: "nav-ic", "aria-hidden": "true", text: icon }), h("span", { text: label }));
     const fund = bind(item("💰", "Funding", openFunding, { class: "nav-btn fund" }), (e) => toggle(e, "ready", SVT.canRaise(lab())));
-    // Funding sits in the middle as the big green button.
+    // Map sits in the middle as the big green button.
     return h("nav", { class: "bottom-nav", "aria-label": "Main" },
-      item("🗺", "Map", () => setView("map")),
-      item("👔", "Managers", () => openManagers("floor", null, 0), { "aria-label": "Owned managers" }),
       fund,
+      item("👔", "Managers", () => openManagers("floor", null, 0), { "aria-label": "Owned managers" }),
+      item("🗺", "Map", () => setView("map"), { class: "nav-btn center" }),
       item("🚧", "Soon", () => toast("🚧 Under construction: coming soon"), { class: "nav-btn soon", "aria-label": "Coming soon, under construction" }),
       item("⚙", "Settings", openSettings, { "aria-label": "Settings" }));
   }
