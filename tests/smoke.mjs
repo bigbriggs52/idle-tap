@@ -40,10 +40,15 @@ await page.click('button[aria-label="Owned managers"]');
 await page.click("#sheet .btn.fund-cta");
 const owned = await page.evaluate(() => { const L = SVT.lab(); return { total: Object.keys(L.managers).length, assigned: Object.keys(L.assign).length, order: SVT.owned(L, "floor").map((m) => m.rank) }; });
 console.log("owned", JSON.stringify(owned));
-const rankIdx = { vp: 0, senior: 1, junior: 2 };
+const rankIdx = await page.evaluate(() => SVT.RANK_ORDER);
 if (owned.order.some((r, i) => i && rankIdx[r] < rankIdx[owned.order[i - 1]])) errors.push("Owned list not sorted by rarity");
 if (owned.total !== 4 || owned.assigned !== 3) errors.push("Owned/assigned counts wrong");
 await page.click("#sheet .icon-btn");
+// rarity odds: 100k rolls should land near the stated odds
+const dist = await page.evaluate(() => { const c = {}; for (let i = 0; i < 100000; i++) { const k = SVT.rollRank(); c[k] = (c[k] || 0) + 1; } return c; });
+const want = { super: 500, legendary: 1000, epic: 3000, rare: 10000, uncommon: 30000, common: 55500 };
+for (const k in want) if (Math.abs((dist[k] || 0) - want[k]) > Math.max(150, want[k] * 0.06)) errors.push("Rarity odds off for " + k);
+console.log("rarity rolls", JSON.stringify(dist));
 for (let i = 0; i < 4; i++) await page.click("text=/Unlock Floor/");
 await page.waitForTimeout(1500);
 const s = await page.evaluate(() => ({ floors: SVT.lab().floors.length, wall: !!document.querySelector(".floor.wall"), rates: SVT.rates(SVT.lab()) }));

@@ -151,7 +151,7 @@ window.SVT = window.SVT || {};
       return h("li", { class: "owned r-" + m.rank },
         h("div", { class: "mgr-face", "aria-hidden": "true", text: m.name[0] }),
         h("div", { class: "owned-info" },
-          h("b", { text: m.name + " · " + r.name }), h("span", { class: "rarity", text: r.rarity }),
+          h("b", { text: m.name }), h("span", { class: "rarity", text: r.name }),
           h("span", { class: "muted", text: effectText(m) }),
           h("span", { class: "where" + (slot ? " busy" : ""), text: slot ? (slot === here ? "Working here" : "Working on " + SVT.slotName(slot)) : "Not working" })),
         h("div", { class: "owned-btns" }, btns));
@@ -160,7 +160,7 @@ window.SVT = window.SVT || {};
       (e) => { const c = SVT.hireCost(lab(), role); setText(e, "Hire " + B.ROLE_NAMES[role] + " · $" + fmt(c)); setDisabled(e, lab().cash < c); });
     sheet(here ? "Managers for " + SVT.slotName(here) : "Owned managers", h("div", { class: "sheet-body" },
       tabs,
-      h("p", { class: "muted small", text: "Sorted by rarity: VP (Epic), Senior (Rare), Junior (Common). Floor Leads can work any floor. Funding rounds send every manager away." }),
+      h("p", { class: "muted small", text: "Best first. Each hire rolls: Super 0.5%, Legendary 1%, Epic 3%, Rare 10%, Uncommon 30%, Common 55.5%. Floor Leads can work any floor. Funding rounds send every manager away." }),
       h("ul", { class: "owned-list" }, rows),
       hire));
     update();

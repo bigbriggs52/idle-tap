@@ -14,8 +14,11 @@
   --warn: #d4412f;
   --sky: #bfe3f6;
   --common: #8fa3ad;
+  --uncommon: #3aa05a;
   --rare: #2f86d6;
   --epic: #9a5ae0;
+  --legendary: #e0a21a;
+  --super: #e0457b;
   --f-display: "Chakra Petch", "Trebuchet MS", system-ui, sans-serif;
   --f-body: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   color-scheme: light;
@@ -135,8 +138,6 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--copper); outlin
 .mgr { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .mgr.none .btn { flex: 1; font-size: .85rem; }
 .mgr-face { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; font-family: var(--f-display); color: var(--bg); background: var(--common); flex: none; }
-.r-senior .mgr-face { background: var(--rare); }
-.r-vp .mgr-face { background: var(--epic); }
 .mgr-info { display: grid; flex: 1; min-width: 120px; font-size: .78rem; color: var(--muted); }
 .mgr-info b { color: var(--ink); font-size: .85rem; }
 .btn.ability { font-size: .82rem; padding: 8px 10px; border-color: var(--copper); color: var(--copper); background: transparent; font-variant-numeric: tabular-nums; }
@@ -146,8 +147,6 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--copper); outlin
 #toasts { position: fixed; left: 0; right: 0; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); display: grid; justify-items: center; gap: 6px; z-index: 50; pointer-events: none; padding: 0 16px; }
 .toast { background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; font-size: .88rem; max-width: 520px; box-shadow: 0 6px 24px #17252c33; transition: opacity .4s, transform .4s; }
 .toast.big { border-color: var(--copper); color: var(--copper); font-weight: 600; }
-.toast.r-senior { border-color: var(--rare); color: var(--rare); }
-.toast.r-vp { border-color: var(--epic); color: var(--epic); font-weight: 700; }
 .toast.out { opacity: 0; transform: translateY(8px); }
 
 /* sheets */
@@ -229,14 +228,9 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--copper); outlin
 .tab.on { background: var(--ink); color: var(--bg); border-color: var(--ink); }
 .sheet ul.owned-list { list-style: none; padding: 0; gap: 8px; }
 .owned { display: grid; grid-template-columns: 32px 1fr; gap: 6px 10px; align-items: start; border: 1px solid var(--line); border-left-width: 4px; border-radius: 10px; padding: 10px; background: var(--surface-2); }
-.owned.r-junior { border-left-color: var(--common); }
-.owned.r-senior { border-left-color: var(--rare); }
-.owned.r-vp { border-left-color: var(--epic); }
 .owned-info { display: grid; gap: 1px; min-width: 0; font-size: .82rem; }
 .owned-info b { font-size: .95rem; }
 .owned .rarity { font-size: .7rem; text-transform: uppercase; letter-spacing: .06em; font-weight: 700; color: var(--common); }
-.owned.r-senior .rarity { color: var(--rare); }
-.owned.r-vp .rarity { color: var(--epic); }
 .owned .where { color: var(--muted); }
 .owned .where.busy { color: var(--good); font-weight: 600; }
 .owned-btns { grid-column: 2; display: flex; gap: 6px; flex-wrap: wrap; }
@@ -245,3 +239,16 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--copper); outlin
 .top-row .btn { white-space: nowrap; }
 .top-btns .icon-btn { padding: 6px 5px; }
 @media (max-width: 400px) { .lab-title b { font-size: .95rem; } .lab-icon { font-size: 1.25rem; } }
+
+/* rarity colors: each manager element sets --rc from its rarity class */
+.r-common { --rc: var(--common); }
+.r-uncommon { --rc: var(--uncommon); }
+.r-rare { --rc: var(--rare); }
+.r-epic { --rc: var(--epic); }
+.r-legendary { --rc: var(--legendary); }
+.r-super { --rc: var(--super); }
+.mgr .mgr-face, .owned .mgr-face { background: var(--rc, var(--common)); }
+.owned { border-left-color: var(--rc, var(--common)); }
+.owned .rarity { color: var(--rc, var(--common)); }
+.toast[class*="r-"] { border-color: var(--rc); color: var(--rc); font-weight: 700; }
+.r-super .mgr-face { background: linear-gradient(135deg, var(--super), var(--legendary)); }

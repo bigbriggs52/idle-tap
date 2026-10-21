@@ -50,13 +50,16 @@ window.SVT = window.SVT || {};
     ],
 
     RANKS: [
-      { id: "junior", name: "Junior", rarity: "Common", odds: 0.70, boost: 3, discount: 0.50, cooldown: 15 * 60, passive: 0 },
-      { id: "senior", name: "Senior", rarity: "Rare", odds: 0.25, boost: 4, discount: 0.65, cooldown: 12 * 60, passive: 0.10 },
-      { id: "vp", name: "VP", rarity: "Epic", odds: 0.05, boost: 5, discount: 0.80, cooldown: 10 * 60, passive: 0.25 },
+      // Rarest first. Every hire rolls independently against these odds.
+      { id: "super", name: "Super", odds: 0.005, boost: 10, discount: 0.90, cooldown: 6 * 60, passive: 1.00 },
+      { id: "legendary", name: "Legendary", odds: 0.01, boost: 7, discount: 0.80, cooldown: 8 * 60, passive: 0.50 },
+      { id: "epic", name: "Epic", odds: 0.03, boost: 5, discount: 0.70, cooldown: 10 * 60, passive: 0.25 },
+      { id: "rare", name: "Rare", odds: 0.10, boost: 4, discount: 0.60, cooldown: 12 * 60, passive: 0.10 },
+      { id: "uncommon", name: "Uncommon", odds: 0.30, boost: 3, discount: 0.50, cooldown: 14 * 60, passive: 0.05 },
+      { id: "common", name: "Common", odds: 0.555, boost: 2, discount: 0.40, cooldown: 15 * 60, passive: 0 },
     ],
     BOOST_SECONDS: 60,
     DISCOUNT_SECONDS: 30,
-    PITY: 20,
     ABILITIES: {
       floor: [
         { id: "crunch", name: "Crunch Time", kind: "boost" },

@@ -38,7 +38,7 @@ window.SVT = window.SVT || {};
   const newNode = () => ({ lvl: 1, workUntil: 0 });
   function newLab() {
     return {
-      cash: B.START_CASH, lifetime: 0, round: 0, pity: 0,
+      cash: B.START_CASH, lifetime: 0, round: 0,
       floors: [newFloor()],
       // Owned managers by id, which slot each one works ("floor:3", "freight", "commercial"), hires this round by role.
       managers: {}, assign: {}, hires: { floor: 0, freight: 0, commercial: 0 }, nextMgr: 1,
@@ -84,7 +84,9 @@ window.SVT = window.SVT || {};
   };
   SVT.slotOfMgr = (lab, id) => Object.keys(lab.assign).find((k) => lab.assign[k] === id) || null;
   // Owned managers for a role, best rarity first, then newest.
-  const RANK_ORDER = { vp: 0, senior: 1, junior: 2 };
+  const RANK_ORDER = {};
+  B.RANKS.forEach((r, i) => (RANK_ORDER[r.id] = i));
+  SVT.RANK_ORDER = RANK_ORDER;
   SVT.owned = (lab, role) => Object.values(lab.managers).filter((m) => !role || m.role === role)
     .sort((a, b) => RANK_ORDER[a.rank] - RANK_ORDER[b.rank] || b.id - a.id);
   SVT.nodeOf = (lab, kind, n) => (kind === "floor" ? lab.floors[n - 1] : lab[kind]);
@@ -225,6 +227,12 @@ window.SVT = window.SVT || {};
     return true;
   };
 
+  // One independent roll per hire against the rarity odds (rarest first).
+  SVT.rollRank = (rnd) => {
+    let roll = rnd === undefined ? Math.random() : rnd;
+    for (const r of B.RANKS) { if (roll < r.odds) return r.id; roll -= r.odds; }
+    return "common";
+  };
   SVT.hireCost = (lab, role) => B.hireCost(role, lab.hires[role]);
   // Hiring adds a manager to the Owned list; the player chooses where it works.
   SVT.hire = (role) => {
@@ -232,11 +240,7 @@ window.SVT = window.SVT || {};
     const cost = SVT.hireCost(lab, role);
     if (lab.cash < cost) return false;
     lab.cash -= cost;
-    let roll = Math.random(), rank = "junior";
-    if (roll < B.RANKS[2].odds) rank = "vp";
-    else if (roll < B.RANKS[2].odds + B.RANKS[1].odds) rank = "senior";
-    lab.pity = rank === "vp" ? 0 : lab.pity + 1;
-    if (lab.pity >= B.PITY) { rank = "vp"; lab.pity = 0; }
+    const rank = SVT.rollRank();
     const list = B.ABILITIES[role];
     const ability = list[Math.floor(Math.random() * list.length)].id;
     const names = SVT.MANAGER_NAMES;
@@ -352,12 +356,14 @@ window.SVT = window.SVT || {};
     emit("switch");
   };
   // v0.2-v0.4 saves kept one manager per node; move them into the Owned list, still assigned.
+  const OLD_RANKS = { junior: "common", senior: "rare", vp: "epic" };
   function migrateV2(d) {
     for (const id in d.labs) {
       const lab = d.labs[id];
       lab.managers = {}; lab.assign = {}; lab.hires = { floor: 0, freight: 0, commercial: 0 }; lab.nextMgr = 1;
       const add = (m, role, key) => {
         if (!m) return;
+        m.rank = OLD_RANKS[m.rank] || m.rank;
         const mm = Object.assign({ id: lab.nextMgr++, role, name: SVT.MANAGER_NAMES[(lab.nextMgr * 7) % SVT.MANAGER_NAMES.length], paid: B.hireCost(role, 0) }, m);
         lab.managers[mm.id] = mm; lab.assign[key] = mm.id; lab.hires[role]++;
       };
