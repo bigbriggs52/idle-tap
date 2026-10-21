@@ -1,0 +1,20 @@
+# Changelog
+
+Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
+
+## v0.2.0 (2026-10-21)
+
+First playable build.
+
+- 30 R&D floors in Garage HQ, from a four-function calculator to an AI neural accelerator.
+- Freight & Data Hub and Commercial & Cloud Hub, with income limited by the slowest of the three. The slow one is marked **Bottleneck**.
+- Tap floors and hubs to work them; hire managers (Junior, Senior, VP) to automate them. Each manager has a timed ability with a cooldown.
+- An unlock every 5 levels: +10% on floors, +2% on hubs, with bigger milestones at levels 10, 25, 50, 100 and up.
+- Funding rounds (prestige): Seed, Series A, B, C and IPO. Floors 6, 11, 19 and 26 start new tech eras and stay locked until you raise the matching round. Raising resets the lab, keeps your managers and multiplies income for good.
+- Map with 30 locations. Five labs are playable (Garage HQ, Arcade District, Archive Library, Maker Workshop, Sound Studio); each one opens when the previous lab raises Seed. Locations 6–30 show a lock and "Coming soon".
+- Offline earnings for managed nodes, up to 2 hours.
+- Installable on your phone's home screen, works offline after the first load.
+
+## v0.1 (2026-10-21)
+
+Design document only: Idle Miner Tycoon research, the 30-floor plan, balance formulas, managers and prestige concept.

@@ -1,0 +1,16 @@
+{
+  "name": "Silicon Valley Tycoon",
+  "short_name": "SV Tycoon",
+  "description": "Idle tycoon game: run an underground R&D electronics lab.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0e1519",
+  "theme_color": "#0a1013",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
