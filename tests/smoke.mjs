@@ -17,10 +17,13 @@ await page.waitForTimeout(300);
 if (await page.locator(".floor-scene .tap-hint").isVisible()) errors.push("Tap to build still visible after tapping");
 if (!(await page.locator(".floor-scene .work-timer").isVisible())) errors.push("Work countdown not shown after tapping");
 await page.click(".hub-scene");
-await page.click("text=Tap to run lift");
+await page.click(".lift-scene");
+const order = await page.evaluate(() => [...document.querySelectorAll(".surface .hub")].map((h) => h.className));
+console.log("hub order", order.join(" | "));
+if (!order[0].includes("freight")) errors.push("Lift is not on the left");
 await page.waitForTimeout(2500);
 const cash1 = await page.evaluate(() => SVT.lab().cash);
-console.log("rack text", await page.locator(".rack").first().innerText(), "| waiting", await page.locator(".waiting b").innerText());
+console.log("rack text", await page.locator(".rack").first().innerText(), "| waiting", await page.locator(".freight .waiting b").innerText());
 console.log("cash after taps", cash1);
 await page.screenshot({ path: out + "/02-start.png" });
 // give money, buy upgrades, hire, unlock floors up to the Seed wall

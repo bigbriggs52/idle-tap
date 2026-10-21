@@ -64,7 +64,7 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--copper); outlin
 .chip.on { background: var(--ink); color: var(--bg); border-color: var(--ink); }
 
 /* surface hubs */
-.surface { display: grid; gap: 10px; padding-top: 12px; background: linear-gradient(var(--sky), transparent 220px); margin: 0 -12px; padding-left: 12px; padding-right: 12px; }
+.surface { display: grid; grid-template-columns: 1fr 1fr; align-items: start; gap: 8px; padding-top: 12px; background: linear-gradient(var(--sky), transparent 220px); margin: 0 -12px; padding-left: 12px; padding-right: 12px; }
 .hub { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 12px; display: grid; gap: 8px; }
 .hub-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 .stat { font-size: .85rem; color: var(--muted); font-variant-numeric: tabular-nums; }
@@ -126,7 +126,6 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--copper); outlin
 .work-timer .fill { display: block; height: 100%; background: var(--copper); transition: width .15s linear; }
 .work-timer.auto { color: var(--good); }
 .work-timer.auto .fill { background: var(--good); }
-.hub.freight .work-timer { position: static; justify-self: start; }
 .waiting { display: grid; grid-template-columns: 1fr auto; align-items: baseline; gap: 2px 8px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; }
 .waiting .label { font-size: .75rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
 .waiting b { font-family: var(--f-display); font-size: 1.35rem; font-variant-numeric: tabular-nums; }
@@ -193,3 +192,31 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--copper); outlin
 @keyframes glow { 50% { box-shadow: 0 0 0 6px #23905f33; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; } }
 .floor-scene .tap-hint { right: 98px; }
+
+/* compact side-by-side hub cards */
+.hub { padding: 10px; gap: 7px; min-width: 0; }
+.hub-head { align-items: flex-start; flex-wrap: wrap; gap: 4px; }
+.hub-title { display: grid; }
+.hub-title h3 { font-size: 1.05rem; }
+.hub-title .muted { font-size: .72rem; }
+.hub .scene { height: 64px; }
+.hub .stat { font-size: .78rem; }
+.hub .waiting { grid-template-columns: 1fr; padding: 6px 8px; }
+.hub .waiting b { font-size: 1.15rem; }
+.hub .waiting .muted { font-size: .74rem; }
+.hub .unlock { font-size: .7rem; gap: 6px; }
+.hub .ul-track { flex-basis: 28px; }
+.hub .btn.up { width: 100%; font-size: .9rem; padding: 9px 6px; }
+.hub .mgr { flex-direction: column; align-items: stretch; gap: 6px; }
+.hub .mgr .mgr-face { display: none; }
+.hub .mgr-info { min-width: 0; }
+.hub .mgr-info span { display: none; }
+.hub .mgr .btn { font-size: .78rem; padding: 7px 6px; }
+.hub .tap-hint { font-size: .9rem; }
+.lift-scene { background: linear-gradient(#cdebfa, #a9d8f0); }
+.lift-shaft { position: absolute; left: 50%; top: 4px; bottom: 4px; width: 30px; transform: translateX(-50%); background: repeating-linear-gradient(#e3ecf0 0 10px, #c3d1d8 10px 12px); border: 1px solid var(--line); border-radius: 4px; }
+.lift-car { position: absolute; left: 3px; right: 3px; bottom: 3px; height: 18px; border-radius: 3px; background: var(--copper); }
+.run .lift-car { animation: bob 2s ease-in-out infinite alternate; }
+.hub .work-timer { left: 6px; top: 6px; }
+@keyframes bob { from { transform: translateY(0); } to { transform: translateY(-34px); } }
+@media (max-width: 340px) { .surface { grid-template-columns: 1fr; } }

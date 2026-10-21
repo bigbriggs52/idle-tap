@@ -171,6 +171,13 @@ window.SVT = window.SVT || {};
   function totalWaiting(L) { return L.floors.reduce((a, f) => a + f.stock, 0); }
 
   // ---------- hubs ----------
+  // The two hubs sit side by side above ground: lift (Freight Hub) left, warehouse (Commercial Hub) right.
+  function hubHead(icon, title, sub, which) {
+    return h("div", { class: "hub-head" },
+      h("div", { class: "hub-title" }, h("h3", { text: icon + " " + title }), h("span", { class: "muted", text: sub })),
+      bottleneckPill(which));
+  }
+
   function commercialCard() {
     const kind = "commercial";
     const scene = h("div", { class: "scene hub-scene", onclick: () => SVT.tap(kind, 0) },
@@ -179,31 +186,35 @@ window.SVT = window.SVT || {};
       bind(h("div", { class: "tap-hint", text: "Tap to ship" }), (e) => { e.hidden = SVT.running(lab(), kind, 0); }),
       workTimer(kind, 0, "Shipping…"));
     bind(scene, (e) => toggle(e, "run", SVT.running(lab(), kind, 0)));
-    const info = bind(h("div", { class: "stat" }), (e) => {
-      const r = SVT.rates(lab());
-      setText(e, "Lv " + lab().commercial.lvl + " · ships $" + fmt(r.commercial) + "/s");
+    const total = bind(h("div", { class: "waiting" }), (e) => {
+      const L = lab();
+      e.replaceChildren(h("span", { class: "label", text: "Waiting to ship" }), h("b", { text: "$" + fmt(L.lobby) }));
     });
-    const lobby = bind(h("div", { class: "lobby" }), (e) => setText(e, "Lobby: $" + fmt(lab().lobby) + " waiting to ship"));
+    const info = bind(h("div", { class: "stat" }), (e) => setText(e, "Lv " + lab().commercial.lvl + " · ships $" + fmt(SVT.rates(lab()).commercial) + "/s"));
     return h("section", { class: "hub commercial" },
-      h("div", { class: "hub-head" }, h("h3", { text: "Commercial & Cloud Hub" }), bottleneckPill("commercial")),
-      scene, info, unlockBar(kind, 0), h("div", { class: "actions" }, upgradeBtn(kind, 0)), managerChip(kind, 0), lobby);
+      hubHead("🏬", "Warehouse", "Commercial Hub", "commercial"),
+      scene, total, info, unlockBar(kind, 0), upgradeBtn(kind, 0), managerChip(kind, 0));
   }
 
   function freightCard() {
     const kind = "freight";
-    const info = bind(h("div", { class: "stat" }), (e) => {
-      const L = lab(), r = SVT.rates(L);
-      setText(e, "Lv " + L.freight.lvl + " · moves $" + fmt(r.freight) + "/s · trip " + B.freightTrip(L.freight.lvl, L.floors.length).toFixed(1) + "s");
-    });
-    const hint = bind(h("button", { class: "btn small ghost", onclick: () => SVT.tap(kind, 0), text: "Tap to run lift" }), (e) => { e.hidden = SVT.running(lab(), kind, 0); });
+    const scene = h("div", { class: "scene lift-scene", onclick: () => SVT.tap(kind, 0) },
+      h("div", { class: "lift-shaft", "aria-hidden": "true" }, h("div", { class: "lift-car" })),
+      bind(h("div", { class: "tap-hint", text: "Tap to lift" }), (e) => { e.hidden = SVT.running(lab(), kind, 0); }),
+      workTimer(kind, 0, "Lifting…"));
+    bind(scene, (e) => toggle(e, "run", SVT.running(lab(), kind, 0)));
     const waiting = bind(h("div", { class: "waiting" }), (e) => {
       const L = lab();
       e.replaceChildren(h("span", { class: "label", text: "Waiting on floors" }), h("b", { text: "$" + fmt(totalWaiting(L)) }),
-        h("span", { class: "muted", text: "Lift carries $" + fmt(B.freightLoad(L.freight.lvl) * SVT.prestigeMult(L) * SVT.nodeMult(L, kind, 0)) + " per trip" }));
+        h("span", { class: "muted", text: "Carries $" + fmt(B.freightLoad(L.freight.lvl) * SVT.prestigeMult(L) * SVT.nodeMult(L, kind, 0)) + " a trip" }));
+    });
+    const info = bind(h("div", { class: "stat" }), (e) => {
+      const L = lab();
+      setText(e, "Lv " + L.freight.lvl + " · moves $" + fmt(SVT.rates(L).freight) + "/s");
     });
     return h("section", { class: "hub freight" },
-      h("div", { class: "hub-head" }, h("h3", { text: "Freight & Data Hub" }), bottleneckPill("freight")),
-      waiting, info, workTimer(kind, 0, "Lifting…"), unlockBar(kind, 0), h("div", { class: "actions" }, upgradeBtn(kind, 0), hint), managerChip(kind, 0));
+      hubHead("🛗", "Lift", "Freight Hub", "freight"),
+      scene, waiting, info, unlockBar(kind, 0), upgradeBtn(kind, 0), managerChip(kind, 0));
   }
 
   // ---------- floors ----------
@@ -298,7 +309,7 @@ window.SVT = window.SVT || {};
   function labView() {
     return h("main", { class: "lab-view" },
       header(),
-      h("div", { class: "surface" }, commercialCard(), freightCard()),
+      h("div", { class: "surface" }, freightCard(), commercialCard()),
       h("div", { class: "ground", "aria-hidden": "true" }, h("span", { text: "▼ Underground R&D" })),
       building(),
       h("footer", { class: "foot", text: "Silicon Valley Tycoon v" + B.VERSION }));
