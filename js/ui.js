@@ -661,6 +661,10 @@ window.SVT = window.SVT || {};
     if (type === "labUnlocked") toast("🗺 New location open on the map: " + d.lab.name, "big");
   });
 
+  // Long-press menus and selection (dictionary look-up) get in the way of rapid tapping.
+  document.addEventListener("contextmenu", (e) => e.preventDefault());
+  document.addEventListener("selectstart", (e) => e.preventDefault());
+
   SVT.boot = () => {
     const off = SVT.load();
     render();

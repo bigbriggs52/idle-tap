@@ -2,6 +2,10 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.7.1 (2026-10-21)
+
+- Tapping fast no longer highlights words or pops up a dictionary or long-press menu. Text selection, the tap flash and double-tap zoom are turned off so the game feels like an app.
+
 ## v0.7.0 (2026-10-21)
 
 Work animations: you can watch every floor make, pack and move its products.
