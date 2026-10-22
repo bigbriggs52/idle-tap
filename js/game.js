@@ -36,9 +36,9 @@ window.SVT = window.SVT || {};
   // ---------- state ----------
   const newFloor = () => ({ lvl: 1, stock: 0, left: 0 });
   const newNode = () => ({ lvl: 1, left: 0 });
-  function newLab() {
+  function newLab(id) {
     return {
-      cash: B.START_CASH, lifetime: 0, round: 0,
+      id, cash: B.START_CASH, lifetime: 0, round: 0,
       floors: [newFloor()],
       // Owned managers by id, which slot each one works ("floor:3", "freight", "commercial"), hires this round by role.
       managers: {}, assign: {}, hires: { floor: 0, freight: 0, commercial: 0 }, nextMgr: 1,
@@ -48,13 +48,13 @@ window.SVT = window.SVT || {};
   // The lift's trip: y is its depth in floors (0 = surface). It goes down floor by floor, loads, and turns back when full.
   function newLift() { return { phase: "idle", y: 0, load: 0, timer: 0, at: 0 }; }
   function newState() {
-    return { v: 3, activeLab: "garage", buy: 1, labs: { garage: newLab() }, lastSeen: Date.now(), seenIntro: false };
+    return { v: 3, activeLab: "garage", buy: "next", labs: { garage: newLab("garage") }, raid: { cleared: 0 }, lastSeen: Date.now(), seenIntro: false };
   }
 
   let S = newState();
   SVT.state = () => S;
   SVT.playableLabs = () => SVT.LABS.filter((l) => !l.soon);
-  SVT.labDef = (id) => SVT.LABS.find((l) => l.id === id);
+  SVT.labDef = (id) => (id === "raid" ? SVT.RAID.def(S.labs.raid ? S.labs.raid.stage : 1) : SVT.LABS.find((l) => l.id === id));
   SVT.lab = (id) => S.labs[id || S.activeLab];
 
   // A lab opens on the map once the previous lab has raised its Seed round.
@@ -64,6 +64,31 @@ window.SVT = window.SVT || {};
     const i = list.findIndex((l) => l.id === id);
     if (i <= 0) return null;
     return "Raise Seed funding in " + list[i - 1].name;
+  };
+
+  // ---------- difficulty ----------
+  // Each lab multiplies its prices: floor n costs scale x grow^(n-1), hubs and managers cost scale x.
+  SVT.labDiff = (lab) => (SVT.isRaid(lab) ? SVT.RAID.stage(lab.stage).diff : B.LAB_DIFF[lab && lab.id] || B.LAB_DIFF.garage);
+  SVT.costScale = (lab, kind, n) => {
+    const d = SVT.labDiff(lab);
+    return kind === "floor" ? d.scale * Math.pow(d.grow, n - 1) : d.scale;
+  };
+  SVT.newLab = newLab;
+
+  // ---------- Viking Raid ----------
+  SVT.isRaid = (lab) => !!lab && lab.id === "raid";
+  SVT.raidStage = (lab) => SVT.RAID.stage(lab.stage);
+  SVT.raidNext = () => Math.min(SVT.RAID.STAGES, S.raid.cleared + 1);
+  // Starts a stage from scratch. Only cleared stages and the next one can be raided.
+  SVT.startRaid = (s) => {
+    if (!(s >= 1 && s <= SVT.raidNext())) return false;
+    const lab = newLab("raid");
+    lab.stage = s; lab.won = false;
+    S.labs.raid = lab;
+    S.activeLab = "raid";
+    emit("switch");
+    save();
+    return true;
   };
 
   // ---------- derived values ----------
@@ -104,16 +129,19 @@ window.SVT = window.SVT || {};
   // Throughput multiplier from the node's manager: passive bonus x active boost.
   SVT.nodeMult = (lab, kind, n, t) => {
     const m = SVT.mgrOf(lab, kind, n);
-    if (!m) return 1;
+    // Viking Raid omens tilt each part of the mine; managers there only automate (no abilities).
+    const omen = SVT.isRaid(lab) ? SVT.raidStage(lab).mult[kind] : 1;
+    if (!m) return omen;
     const r = SVT.rank(m.rank);
-    let x = 1 + r.passive;
+    let x = (1 + r.passive) * omen;
+    if (SVT.isRaid(lab)) return x;
     const ab = SVT.ability(roleOf(kind), m.ability);
     if (ab.kind === "boost" && m.activeUntil > (t || now())) x *= r.boost;
     return x;
   };
   SVT.discount = (lab, kind, n, t) => {
     const m = SVT.mgrOf(lab, kind, n);
-    if (!m) return 0;
+    if (!m || SVT.isRaid(lab)) return 0;
     const ab = SVT.ability(roleOf(kind), m.ability);
     return ab.kind === "discount" && m.activeUntil > (t || now()) ? SVT.rank(m.rank).discount : 0;
   };
@@ -227,6 +255,11 @@ window.SVT = window.SVT || {};
     const earned = stepWarehouse(lab, dt, t);
     const a = Math.min(1, dt / 8); // income arrives per trip, so smooth over a few trips
     lab.rate = lab.rate * (1 - a) + (earned / dt) * a;
+    if (SVT.isRaid(lab) && !lab.won && lab.lifetime >= SVT.raidStage(lab).goal) {
+      lab.won = true;
+      S.raid.cleared = Math.max(S.raid.cleared, lab.stage);
+      emit("raidClear", { stage: lab.stage });
+    }
     return earned;
   }
   // Long gaps (app in background) are replayed in 1-second steps so nothing is lost.
@@ -272,10 +305,11 @@ window.SVT = window.SVT || {};
 
   // ×10 and ×50 round up to the next multiple, like Idle Miner: Lv 56 ×10 buys 4 (to 60), Lv 60 ×10 buys 10 (to 70).
   SVT.stepTo = (lv, step) => step - (lv % step);
-  SVT.buyAmount = (lv) => (S.buy === "max" ? Infinity : S.buy === 1 ? 1 : SVT.stepTo(lv || 0, S.buy));
+  // "next" buys up to the next unlock: unlocks come every 5 levels (and the big milestones 10, 25, 50... are on them).
+  SVT.buyAmount = (lv) => (S.buy === "max" ? Infinity : S.buy === "next" ? SVT.stepTo(lv || 0, 5) : S.buy === 1 ? 1 : SVT.stepTo(lv || 0, S.buy));
   SVT.quote = (lab, kind, n) => {
     const L = SVT.levelOf(lab, kind, n);
-    return B.bulk(kind, n, L, SVT.buyAmount(L), lab.cash, SVT.discount(lab, kind, n));
+    return B.bulk(kind, n, L, SVT.buyAmount(L), lab.cash, SVT.discount(lab, kind, n), SVT.costScale(lab, kind, n));
   };
 
   SVT.upgrade = (kind, n) => {
@@ -298,10 +332,10 @@ window.SVT = window.SVT || {};
 
   SVT.nextFloor = (lab) => {
     const n = lab.floors.length + 1;
-    if (n > B.FLOORS) return null;
-    const wall = B.WALLS[n];
+    if (n > (SVT.isRaid(lab) ? SVT.raidStage(lab).floors : B.FLOORS)) return null;
+    const wall = SVT.isRaid(lab) ? undefined : B.WALLS[n];
     const blocked = wall !== undefined && lab.round <= wall;
-    return { n, cost: B.unlockCost(n), blocked, round: blocked ? B.ROUNDS[wall] : null };
+    return { n, cost: B.unlockCost(n) * SVT.costScale(lab, "floor", n), blocked, round: blocked ? B.ROUNDS[wall] : null };
   };
 
   SVT.unlockFloor = () => {
@@ -321,7 +355,7 @@ window.SVT = window.SVT || {};
     for (const r of B.RANKS) { if (roll < r.odds) return r.id; roll -= r.odds; }
     return "common";
   };
-  SVT.hireCost = (lab, role) => B.hireCost(role, lab.hires[role]);
+  SVT.hireCost = (lab, role) => B.hireCost(role, lab.hires[role]) * SVT.costScale(lab, role, 1);
   // Hiring adds a manager to the Owned list; the player chooses where it works.
   SVT.hire = (role) => {
     const lab = SVT.lab();
@@ -377,7 +411,7 @@ window.SVT = window.SVT || {};
     const lab = SVT.lab();
     const m = SVT.mgrOf(lab, kind, n);
     const t = now();
-    if (!m || m.cdUntil > t) return false;
+    if (!m || m.cdUntil > t || SVT.isRaid(lab)) return false;
     const ab = SVT.ability(roleOf(kind), m.ability);
     const dur = ab.kind === "boost" ? B.BOOST_SECONDS : B.DISCOUNT_SECONDS;
     m.activeUntil = t + dur;
@@ -388,7 +422,7 @@ window.SVT = window.SVT || {};
   };
 
   // Funding rounds: the prestige reset. Each round needs a floor reached and resets the lab, managers included.
-  SVT.nextRound = (lab) => (lab.round < B.ROUNDS.length ? B.ROUNDS[lab.round] : null);
+  SVT.nextRound = (lab) => (!SVT.isRaid(lab) && lab.round < B.ROUNDS.length ? B.ROUNDS[lab.round] : null);
   SVT.canRaise = (lab) => {
     const r = SVT.nextRound(lab);
     return !!r && lab.floors.length >= r.needFloor;
@@ -413,7 +447,7 @@ window.SVT = window.SVT || {};
       const i = list.findIndex((l) => l.id === S.activeLab);
       const next = list[i + 1];
       if (next && !S.labs[next.id]) {
-        S.labs[next.id] = newLab();
+        S.labs[next.id] = newLab(next.id);
         emit("labUnlocked", { lab: next });
       }
     }
@@ -478,6 +512,9 @@ window.SVT = window.SVT || {};
       } catch (e) {}
     }
     if (S.buy === 100) S.buy = 50; // v0.6 buy chips are ×1, ×10, ×50, Max
+    if (!S.raid) S.raid = { cleared: 0 }; // v0.12 adds the Viking Raid island
+    for (const id in S.labs) S.labs[id].id = id;
+    if (!S.labs[S.activeLab]) S.activeLab = "garage";
     return applyOffline();
   };
 

@@ -165,7 +165,8 @@ if (cyc.lift !== "idle") errors.push("Lift moved without a tap");
 const tri = await page.evaluate(async () => {
   const L = SVT.lab(), out = [];
   const lv = L.floors[0].lvl, to = (k) => k - (lv % k);
-  for (const c of [0, SVT.B.bulk("floor", 1, lv, 1, 0, 0).cost, SVT.B.bulk("floor", 1, lv, to(10), 0, 0).cost, SVT.B.bulk("floor", 1, lv, to(50), 0, 0).cost]) {
+  const k = SVT.costScale(L, "floor", 1), cost = (n) => SVT.B.bulk("floor", 1, lv, n, 0, 0, k).cost;
+  for (const c of [0, cost(1), cost(to(10)), cost(to(50))]) {
     L.cash = c * 1.0001; await new Promise((r) => setTimeout(r, 400));
     out.push(document.querySelector(".floor .lvl-btn").dataset.tri);
   }
@@ -178,14 +179,65 @@ const steps = await page.evaluate(() => {
   const L = SVT.lab(), f = L.floors[0], out = [];
   L.cash = 1e30;
   for (const [lv, b] of [[56, 10], [60, 10], [56, 50], [100, 50]]) { f.lvl = lv; SVT.setBuy(b); out.push(lv + SVT.quote(L, "floor", 1).count); }
+  SVT.setBuy("next");
+  for (const lv of [56, 60, 9]) { f.lvl = lv; out.push(lv + SVT.quote(L, "floor", 1).count); }
   SVT.setBuy(1);
   return out.join(",");
 });
 console.log("step buys", steps);
-if (steps !== "60,70,100,150") errors.push("x10/x50 do not round to the next multiple: " + steps);
-// save + reload restores
+if (steps !== "60,70,100,150,60,65,10") errors.push("x10/x50 do not round to the next multiple: " + steps);
+// Viking Raid: island card on the map, stage sheet, a stage with no abilities, clearing opens the next stage
+await page.evaluate(() => SVT.setView("map"));
+await page.waitForTimeout(200);
+await page.click(".loc.island");
+await page.waitForTimeout(300);
+await page.screenshot({ path: out + "/10-raid-stages.png" });
+await page.click(".panel-foot .btn");
+await page.waitForTimeout(400);
+const raid = await page.evaluate(() => {
+  const L = SVT.lab();
+  SVT.debug.addCash(1e6); SVT.unlockFloor(); SVT.hire("floor");
+  const m = Object.values(L.managers)[0];
+  if (m) SVT.assign(m.id, "floor", 1);
+  return { id: L.id, stage: L.stage, title: document.querySelector(".lab-title").innerText.replace(/\n/g, " | "), activate: SVT.activate("floor", 1), nav: document.querySelector(".nav-btn.fund").innerText.replace(/\n/g, " ") };
+});
+await page.waitForTimeout(400);
+raid.boost = await page.locator(".floor .boost:not([hidden])").count();
+console.log("raid", JSON.stringify(raid));
+if (raid.id !== "raid" || raid.stage !== 1) errors.push("Raid stage 1 did not start");
+if (raid.activate !== false || raid.boost !== 0) errors.push("Manager abilities still usable in Viking Raid");
+await page.screenshot({ path: out + "/11-raid-stage.png" });
+await page.evaluate(() => { const L = SVT.lab(); L.lifetime = SVT.raidStage(L).goal; L.lobby = 10; L.commercial.left = 0; SVT.tap("commercial", 0); SVT.tick(3); });
+await page.waitForTimeout(400);
+await page.screenshot({ path: out + "/12-raid-clear.png" });
+const cleared = await page.evaluate(() => SVT.state().raid.cleared);
+if (cleared !== 1 || !(await page.locator("h2", { hasText: "Stage 1 cleared!" }).isVisible())) errors.push("Raid stage did not clear");
+await page.click("text=Raid stage 2");
+await page.waitForTimeout(300);
+if ((await page.evaluate(() => SVT.lab().stage)) !== 2) errors.push("Stage 2 did not open after clearing");
+await page.evaluate(() => SVT.switchLab("garage"));
+// opening a Level panel always starts on Next (up to the next unlock)
+const reopenBuy = await page.evaluate(async () => {
+  SVT.setBuy(50); document.querySelector(".floor .lvl-btn").click();
+  await new Promise((r) => setTimeout(r, 200));
+  const on = document.querySelector(".seg .chip.on");
+  return SVT.state().buy + "|" + (on && on.textContent);
+});
+console.log("reopen buy", reopenBuy);
+if (reopenBuy !== "next|Next") errors.push("Level panel did not reset to Next: " + reopenBuy);
+await page.screenshot({ path: out + "/13-next-chip.png" });
+await page.evaluate(() => document.querySelector("#sheet .x-btn").click());
+// save + reload restores, and the game reopens on the home screen
 await page.evaluate(() => SVT.save());
 await page.reload(); await page.waitForTimeout(400);
+await page.screenshot({ path: out + "/14-home.png" });
+const tiles = await page.locator(".home-tile").count();
+console.log("home tiles", tiles);
+if (tiles !== 5) errors.push("Home screen missing or wrong tile count: " + tiles);
+await page.click(".home-tile.t-play"); await page.waitForTimeout(200);
+if (!(await page.locator(".lab-view").isVisible())) errors.push("Play did not open the lab");
+await page.click(".home-btn"); await page.waitForTimeout(200);
+if (!(await page.locator(".home-view").isVisible())) errors.push("Home button did not return home");
 console.log("reload labs", await page.evaluate(() => Object.keys(SVT.state().labs).join(",") + " garage round=" + SVT.state().labs.garage.round));
 const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
 console.log("horizontal overflow", overflow);

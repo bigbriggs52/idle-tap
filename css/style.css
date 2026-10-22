@@ -735,3 +735,54 @@ button:active:not(:disabled) { filter: brightness(.9); transition-duration: 0s; 
 .node-card .av { width: 56px; height: 56px; flex: none; transform: none; margin: 0; }
 .portrait .av { width: 54px; height: 54px; flex: none; transform: none; }
 @media (max-width: 360px) { .portrait .av { width: 44px; height: 44px; } }
+
+/* v0.12 Viking Raid: a cold fjord sky, dark stone shafts, and the stage grid. */
+.lab-view.raid .surface-scene { background: linear-gradient(#5f7d99, #c9d9e6 75%); }
+.lab-view.raid .building { background: linear-gradient(#5d5650, #3f3a36); }
+.lab-view.raid .rock { background: radial-gradient(circle at 30% 30%, #2f2b28 0 3px, transparent 4px) 0 0 / 18px 18px, linear-gradient(90deg, #7a716a, #625a54); border-left-color: #4a433e; }
+.lab-view.raid .floor-scene { background: linear-gradient(#e9e4dc 0 60%, #b8ab9a 60%); }
+.lab-view.raid .top .badge { white-space: nowrap; }
+.loc.island { border-color: #6f8aa3; background: linear-gradient(90deg, #eef3f8, var(--surface)); }
+.raid-info { display: grid; gap: 4px; padding: 10px 12px; border-radius: 12px; background: var(--surface-2); border: 1px solid var(--line); margin: 10px 0; }
+.raid-title { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; font-family: var(--f-display); }
+.omens { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 2px; font-size: .85rem; }
+.omens li.good b { color: var(--good); }
+.omens li.bad b { color: var(--warn); }
+.stages { display: grid; grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); gap: 6px; padding-bottom: 6px; }
+.stage { aspect-ratio: 1; border-radius: 10px; border: 2px solid var(--line); background: var(--surface); font-family: var(--f-display); font-weight: 700; cursor: pointer; padding: 0; }
+.stage.done { background: #dff1e7; border-color: var(--good); color: var(--good); }
+.stage.open { border-color: var(--copper); color: var(--copper); }
+.stage.locked { opacity: .55; font-size: .8rem; }
+.stage.sel { box-shadow: 0 0 0 3px var(--copper); }
+.lab-view.raid .hills { background: linear-gradient(135deg, transparent 49.5%, #eef3f7 50% 58%, #8394a3 58%) 0 100% / 50% 100% no-repeat, linear-gradient(225deg, transparent 49.5%, #eef3f7 50% 58%, #6f8191 58%) 50% 100% / 50% 100% no-repeat, linear-gradient(135deg, transparent 49.5%, #dfe7ee 50% 56%, #7d8e9d 56%) 100% 100% / 40% 80% no-repeat; }
+.lab-view.raid .sun { background: radial-gradient(circle, #ffffff 0 35%, #e4eef7 50%, #e4eef700 72%); }
+.lab-view.raid .grass { background: linear-gradient(#f4f7fa 0 5px, #9a9f9f 5px 7px, #7b8287 7px 38px, #6a5d52 38px); }
+/* Stage goal bar under the header */
+.goal-bar { position: relative; margin: 6px 0 0; height: 24px; border-radius: 999px; background: #2b3a46; overflow: hidden; color: #fff; font: 700 .8rem var(--f-display); display: flex; align-items: center; justify-content: center; }
+.goal-bar .goal-fill { position: absolute; inset: 0; transform-origin: left; background: linear-gradient(90deg, #d0702f, #f0b44a); transition: transform .3s; }
+.goal-bar span { position: relative; text-shadow: 0 1px 2px #0008; }
+.goal-bar.won .goal-fill { background: var(--good); }
+.lab-view > .top .goal-bar { grid-column: 1 / -1; margin: 0; }
+/* v0.12 fifth buy chip: up to the next unlock */
+.seg .chip.next { white-space: nowrap; padding-left: 5px; padding-right: 5px; }
+.seg .chip { min-width: 32px; padding-left: 4px; padding-right: 4px; }
+.lvlup span { white-space: nowrap; }
+
+/* v0.12 home screen */
+.home-btn { justify-self: end; width: 44px; height: 44px; border-radius: 12px; border: 2px solid #1b4e86; background: linear-gradient(#5aa6e8, #2a6fb5); font-size: 1.3rem; cursor: pointer; box-shadow: inset 0 -3px 0 #1b4e86; }
+.home-btn:active { transform: scale(.92); }
+.home-view { min-height: 100vh; min-height: 100dvh; display: grid; align-content: start; gap: 18px; margin: 0 -12px; padding: calc(28px + env(safe-area-inset-top, 0px)) 16px 24px; background: linear-gradient(#a9dcf6, #e6f6fd 45%, var(--bg)); }
+.home-hero { text-align: center; display: grid; gap: 6px; justify-items: center; }
+.home-logo { font-size: 3.4rem; width: 92px; height: 92px; display: grid; place-items: center; border-radius: 26px; background: linear-gradient(#ffe36a, #f2b100); box-shadow: inset 0 -5px 0 #c98c00, 0 6px 16px #17252c33; }
+.home-hero h1 { font-family: var(--f-display); font-size: 1.9rem; margin: 6px 0 0; color: #1b4e86; text-shadow: 0 2px 0 #fff; }
+.home-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.home-tile { display: grid; justify-items: center; align-content: center; gap: 6px; min-height: 128px; padding: 14px 10px; border-radius: 18px; border: 3px solid #1b4e86; color: #fff; text-align: center; cursor: pointer; background: linear-gradient(#5aa6e8, #2a6fb5); box-shadow: inset 0 -5px 0 #1b4e86, 0 4px 10px #17252c26; }
+.home-tile:active { transform: scale(.95); }
+.home-tile.t-play { grid-column: 1 / -1; min-height: 96px; grid-template-columns: auto 1fr; justify-items: start; text-align: left; background: linear-gradient(#5fd06a, #23905f); border-color: #17643f; box-shadow: inset 0 -5px 0 #17643f, 0 4px 10px #17252c26; }
+.home-tile.t-raid { background: linear-gradient(#7d8e9d, #4a5560); border-color: #2f373e; box-shadow: inset 0 -5px 0 #2f373e, 0 4px 10px #17252c26; }
+.home-tile.t-soon { background: linear-gradient(#ffd45a, #e0a21a); border-color: #a5730a; color: #4a3300; box-shadow: inset 0 -5px 0 #a5730a, 0 4px 10px #17252c26; }
+.home-ic { font-size: 2.3rem; line-height: 1; }
+.home-txt { display: grid; gap: 2px; }
+.home-txt b { font: 700 1.15rem var(--f-display); text-shadow: 0 1px 2px #0005; }
+.home-tile.t-soon .home-txt b { text-shadow: none; }
+.home-txt span { font-size: .8rem; opacity: .92; }

@@ -42,6 +42,8 @@ window.SVT = window.SVT || {};
 
   function productName(n) { return def().products[n - 1]; }
   function teamName(n) { return def().teams[B.tierOf(n)]; }
+  function tierName(n) { const d = def(); return d.tiers ? d.tiers[B.tierOf(n)] : SVT.TIERS[B.tierOf(n)].name; }
+  const inRaid = () => SVT.isRaid(lab());
   function teamSize(L) {
     let c = 1;
     for (const k in B.FLOOR_MILESTONES) if (L >= +k) c++;
@@ -126,13 +128,29 @@ window.SVT = window.SVT || {};
     const cash = bind(h("b", { class: "cash" }), (e) => setText(e, "$" + fmt(lab().cash)));
     const rate = bind(h("span", { class: "rate" }), (e) => setText(e, "+$" + fmt(lab().rate) + "/s"));
     const roundBadge = bind(h("span", { class: "badge" }), (e) => {
-      const r = lab().round;
-      setText(e, r === 0 ? "Bootstrapped" : B.ROUNDS[r - 1].name + " ×" + SVT.prestigeMult(lab()));
+      const L = lab(), r = L.round;
+      if (SVT.isRaid(L)) {
+        setText(e, "Stage " + L.stage + " of " + SVT.RAID.STAGES);
+        return;
+      }
+      setText(e, r === 0 ? "Bootstrapped" : B.ROUNDS[r - 1].name + " ×" + SVT.prestigeMult(L));
     });
     return h("header", { class: "top" },
       h("div", { class: "lab-title" }, h("span", { class: "lab-icon", text: d.icon }), h("div", null, h("b", { text: d.name }), roundBadge)),
       h("div", { class: "cash-pill" }, h("span", { class: "coin big", "aria-hidden": "true", text: "$" }), h("div", null, h("span", { class: "cash-label", text: "Cash" }), cash, rate)),
-      h("span", { "aria-hidden": "true" })); // keeps the cash pill centred; Update lives in Settings
+      h("button", { class: "home-btn", "aria-label": "Home screen", onclick: () => setView("home"), text: "🏠" }),
+      inRaid() ? goalBar() : null);
+  }
+  // Viking Raid: gold earned this stage against the stage goal.
+  function goalBar() {
+    const fill = h("i", { class: "goal-fill" }), txt = h("span");
+    return bind(h("div", { class: "goal-bar" }, fill, txt), (e) => {
+      const L = lab(), g = SVT.raidStage(L).goal, p = Math.min(1, L.lifetime / g);
+      toggle(e, "won", L.won);
+      setText(txt, L.won ? "🎯 Stage cleared! Open Stages for the next raid" : "🎯 Goal $" + fmt(L.lifetime) + " / $" + fmt(g) + " · " + Math.floor(p * 100) + "%");
+      const v = "scaleX(" + p.toFixed(4) + ")";
+      if (fill.style.transform !== v) fill.style.transform = v;
+    });
   }
 
   // Saves, asks for a new service worker, then reloads. If a new version is installing, index.html reloads when it takes over.
@@ -151,7 +169,10 @@ window.SVT = window.SVT || {};
   // Bottom bar, like Idle Miner Tycoon's: the screens you jump to most.
   function bottomNav() {
     const item = (icon, label, on, attrs) => h("button", Object.assign({ class: "nav-btn", onclick: on }, attrs), h("span", { class: "nav-ic", "aria-hidden": "true", text: icon }), h("span", { text: label }));
-    const fund = bind(item("💰", "Funding", openFunding, { class: "nav-btn fund" }), (e) => toggle(e, "ready", SVT.canRaise(lab())));
+    // In Viking Raid there is no funding: the first button opens the stage list instead.
+    const fund = inRaid()
+      ? bind(item("🛡", "Stages", openRaid, { class: "nav-btn fund" }), (e) => toggle(e, "ready", !!lab().won))
+      : bind(item("💰", "Funding", openFunding, { class: "nav-btn fund" }), (e) => toggle(e, "ready", SVT.canRaise(lab())));
     // Map sits in the middle as the big green button.
     return h("nav", { class: "bottom-nav", "aria-label": "Main" },
       fund,
@@ -165,11 +186,13 @@ window.SVT = window.SVT || {};
   const roleOf = (kind) => kind;
   function effectText(m) {
     const r = SVT.rank(m.rank), ab = SVT.ability(m.role, m.ability);
+    if (inRaid()) return "Automates only: no abilities on Viking Raid" + (r.passive ? " · +" + r.passive * 100 + "% always" : "");
     return ab.name + ": " + (ab.kind === "boost" ? "×" + r.boost + " for " + B.BOOST_SECONDS + "s" : "−" + Math.round(r.discount * 100) + "% upgrades for " + B.DISCOUNT_SECONDS + "s") + (r.passive ? " · +" + r.passive * 100 + "% always" : "");
   }
 
   // Manager card: portrait, name, rarity, boost, timer and buttons (Idle Miner's manager list).
   function abilityTimer(m) {
+    if (inRaid()) return null;
     return bind(h("span", { class: "cd" }), (e) => {
       const t = SVT.now();
       setText(e, m.activeUntil > t ? "⚡ Active " + SVT.fmtTime(m.activeUntil - t) : m.cdUntil > t ? "⏱ " + SVT.fmtTime(m.cdUntil - t) : "⚡ Ready");
@@ -213,7 +236,7 @@ window.SVT = window.SVT || {};
           const t = SVT.now(), ready = !(current.activeUntil > t) && !(current.cdUntil > t);
           setText(e, ready ? "⚡ Use" : "⚡"); setDisabled(e, !ready);
         });
-        top = mgrCard(current, { assigned: true, buttons: [h("button", { class: "btn unassign", onclick: () => { SVT.unassign(current.id); reopen(); }, text: "Unassign" }), use] });
+        top = mgrCard(current, { assigned: true, buttons: [h("button", { class: "btn unassign", onclick: () => { SVT.unassign(current.id); reopen(); }, text: "Unassign" }), inRaid() ? null : use] });
       } else top = h("li", { class: "mcard empty-slot" }, h("div", { class: "portrait" }, h("span", { class: "plus", text: "+" })), h("div", { class: "minfo" }, h("b", { text: "Nobody yet" }), h("span", { class: "muted", text: "Assign one below or hire a new one." })));
       parts.push(h("div", { class: "sec-label", text: "Assigned manager:" }), h("ul", { class: "mlist" }, top));
     } else {
@@ -303,7 +326,8 @@ window.SVT = window.SVT || {};
   const nodeName = (kind, n) => (kind === "floor" ? "Floor " + n : kind === "freight" ? "Lift" : "Warehouse");
   function buySeg() {
     return h("div", { class: "seg", role: "group", "aria-label": "Buy amount" },
-      [1, 10, 50, "max"].map((b) => bind(h("button", { class: "chip", onclick: () => SVT.setBuy(b), text: b === "max" ? "Max" : "x" + b }),
+      [1, 10, 50, "max", "next"].map((b) => bind(h("button", { class: "chip" + (b === "next" ? " next" : ""), onclick: () => SVT.setBuy(b), text: b === "max" ? "Max" : b === "next" ? "Next" : "x" + b,
+        "aria-label": b === "next" ? "Buy up to the next unlock" : null }),
         (e) => toggle(e, "on", SVT.state().buy === b))));
   }
   // Big green Level Up button (hold to keep buying).
@@ -322,6 +346,8 @@ window.SVT = window.SVT || {};
   // The Level panel (Idle Miner's upgrade panel): manager card and unlock arrow on top, stat rows with value pills,
   // buy amount and Level Up pinned at the bottom. ‹ ›, swipes and arrow keys move through the lift, warehouse and floors.
   function openNode(kind, n, dir) {
+    // Opening the Level panel fresh always starts on Next (up to the next unlock); swiping between nodes keeps the choice.
+    if (!dir) SVT.state().buy = "next";
     const list = nodeList();
     const pos = list.findIndex(([k, m]) => k === kind && m === n) + 1;
     const lvNum = h("span", { class: "pop-num" });
@@ -351,7 +377,7 @@ window.SVT = window.SVT || {};
       return statRow(label, now, up);
     });
     const live = nodeLive(kind, n).map(([label, f]) => statRow(label, bind(h("b"), (e) => setText(e, f()))));
-    const sub = kind === "floor" ? productName(n) + " · " + SVT.TIERS[B.tierOf(n)].name : kind === "freight" ? "Freight Hub: brings products up from the floors" : "Commercial Hub: sells what the lift brings up";
+    const sub = kind === "floor" ? productName(n) + " · " + tierName(n) : kind === "freight" ? "Freight Hub: brings products up from the floors" : "Commercial Hub: sells what the lift brings up";
     sheet(title, h("div", { class: "sheet-body node-sheet" },
       h("div", { class: "node-top" }, card, h("div", { class: "prog" }, h("span", { class: "prog-bar" }, h("span", { class: "prog-arrow", "aria-hidden": "true" }), fill), prog, h("span", { class: "muted small", text: sub }))),
       h("ul", { class: "stat-list" }, stats),
@@ -472,8 +498,8 @@ window.SVT = window.SVT || {};
     const el = h("button", { class: "boost", "aria-label": "Use manager ability", onclick: (e) => { e.stopPropagation(); SVT.activate(kind, n); } });
     bind(el, () => {
       const m = SVT.mgrOf(lab(), kind, n);
-      el.hidden = !m;
-      if (!m) return;
+      el.hidden = !m || inRaid();
+      if (el.hidden) return;
       const t = SVT.now(), live = m.activeUntil > t, cd = !live && m.cdUntil > t;
       setText(el, live ? SVT.fmtTime(m.activeUntil - t) : cd ? SVT.fmtTime(m.cdUntil - t) : "⚡");
       setDisabled(el, live || cd); toggle(el, "live", live); toggle(el, "ready", !live && !cd);
@@ -489,7 +515,7 @@ window.SVT = window.SVT || {};
       const L = lab(), lv = SVT.levelOf(L, kind, n), max = lv >= B.maxLevel(kind);
       popText(num, max ? "MAX" : String(lv));
       // ▲ affords 1 level, ▲▲ affords up to the next ×10 level, ▲▲▲ up to the next ×50 level.
-      const m = max ? null : B.bulk(kind, n, lv, Infinity, L.cash, SVT.discount(L, kind, n));
+      const m = max ? null : B.bulk(kind, n, lv, Infinity, L.cash, SVT.discount(L, kind, n), SVT.costScale(L, kind, n));
       const can = m && L.cash >= m.cost ? m.count : 0, room = B.maxLevel(kind) - lv;
       const tri = can >= Math.min(room, SVT.stepTo(lv, 50)) ? 3 : can >= Math.min(room, SVT.stepTo(lv, 10)) ? 2 : can >= 1 ? 1 : 0;
       toggle(el, "afford", tri > 0);
@@ -623,7 +649,7 @@ window.SVT = window.SVT || {};
 
   function lockedRow() {
     const nf = SVT.nextFloor(lab());
-    if (!nf) return h("div", { class: "floor done" }, h("div", { class: "fbody" }, h("b", { text: "All 30 floors unlocked. Raise your IPO in Funding." })));
+    if (!nf) return h("div", { class: "floor done" }, h("div", { class: "fbody" }, h("b", { text: inRaid() ? "All " + lab().floors.length + " shafts open. Earn the stage goal to clear the raid." : "All 30 floors unlocked. Raise your IPO in Funding." })));
     const n = nf.n;
     if (nf.blocked) {
       return h("div", { class: "floor locked wall" },
@@ -634,12 +660,12 @@ window.SVT = window.SVT || {};
           h("div", { class: "actions" }, h("button", { class: "btn fund-cta", onclick: openFunding, text: "Raise " + nf.round.name + " in Funding" }))));
     }
     const btn = bind(h("button", { class: "btn up", onclick: () => SVT.unlockFloor() }), (e) => {
-      setText(e, "Unlock Floor " + n + " · $" + fmt(nf.cost)); setDisabled(e, lab().cash < nf.cost);
+      setText(e, (inRaid() ? "Unlock Shaft " : "Unlock Floor ") + n + " · $" + fmt(nf.cost)); setDisabled(e, lab().cash < nf.cost);
     });
     return h("div", { class: "floor locked" },
       h("div", { class: "fnum", text: n }),
       h("div", { class: "fbody" },
-        h("div", { class: "fname" }, h("b", { text: productName(n) }), h("span", { class: "muted", text: " · " + SVT.TIERS[B.tierOf(n)].name })),
+        h("div", { class: "fname" }, h("b", { text: productName(n) }), h("span", { class: "muted", text: " · " + tierName(n) })),
         h("div", { class: "actions" }, btn)));
   }
 
@@ -691,7 +717,7 @@ window.SVT = window.SVT || {};
 
   // ---------- views ----------
   function labView() {
-    return h("main", { class: "lab-view" },
+    return h("main", { class: "lab-view" + (inRaid() ? " raid" : "") },
       header(),
       surface(),
       building(),
@@ -725,16 +751,92 @@ window.SVT = window.SVT || {};
     });
     return h("main", { class: "map-view" },
       h("header", { class: "top" }, h("div", { class: "top-row" },
-        h("button", { class: "btn small", onclick: () => setView("lab"), text: "← Back" }),
+        h("button", { class: "btn small", onclick: () => setView("home"), text: "🏠 Home" }),
         h("div", { class: "lab-title" }, h("b", { text: "Silicon Valley Map" })),
         h("span", { class: "muted small", text: "5 of 30 open" }))),
       h("div", { class: "loc-list" }, h("h3", { text: "Your labs" }), list,
+        h("h3", { text: "Islands" }), raidCard(),
         h("p", { class: "muted small", text: "Each lab is its own company with 30 floors and its own cash. Raising Seed funding in a lab opens the next one. Locations 6–30 are coming in a later update." })),
       h("div", { class: "map-wrap" },
         h("div", { class: "map" },
           h("div", { class: "bay", "aria-hidden": "true" }),
           h("div", { class: "road r1", "aria-hidden": "true" }), h("div", { class: "road r2", "aria-hidden": "true" }), h("div", { class: "road r3", "aria-hidden": "true" }),
           pins)),
+      h("footer", { class: "foot", text: "Silicon Valley Tycoon " + buildTag() }));
+  }
+
+  // ---------- Viking Raid ----------
+  // The island card on the map: a separate place with 50 generated mines.
+  function raidCard() {
+    const S = SVT.state(), R = SVT.RAID;
+    const right = h("span", { class: "muted", text: S.raid.cleared >= R.STAGES ? "All 50 cleared" : "Stage " + SVT.raidNext() + " of " + R.STAGES });
+    return h("button", { class: "loc island", onclick: openRaid },
+      h("span", { class: "lab-icon", text: "⚔️" }),
+      h("span", { class: "loc-name" }, h("b", { text: "Viking Raid" }), h("span", { class: "muted", text: "50 mines · managers automate, no abilities" })), right);
+  }
+  function stageTime(s) { const t = SVT.RAID.time(s); return t < 3600 ? "~" + Math.round(t / 60) + " min" : "~" + (Math.round(t / 360) / 10) + " h"; }
+  // Stage list: cleared stages, the next one to raid, and the locked ones after it.
+  function openRaid() {
+    const S = SVT.state(), R = SVT.RAID, next = SVT.raidNext(), cur = S.labs.raid;
+    let pick = cur && !cur.won ? cur.stage : next;
+    const info = h("div", { class: "raid-info" });
+    const go = h("button", { class: "btn fund-cta big" });
+    const live = () => !!cur && cur.stage === pick && !cur.won;
+    const stages = h("div", { class: "stages" }, Array.from({ length: R.STAGES }, (_, i) => {
+      const s = i + 1, done = s <= S.raid.cleared, open = s <= next;
+      return h("button", {
+        class: "stage" + (done ? " done" : open ? " open" : " locked"), "data-s": s, "aria-label": "Stage " + s + (done ? ", cleared" : open ? "" : ", locked"),
+        onclick: () => { if (!open) { toast("🔒 Clear stage " + (s - 1) + " first"); return; } pick = s; show(); },
+      }, done ? "✓" : open ? String(s) : "🔒");
+    }));
+    const show = () => {
+      const st = R.stage(pick);
+      info.replaceChildren(
+        h("div", { class: "raid-title" }, h("b", { text: "Stage " + pick + ": " + st.name }), h("span", { class: "muted", text: stageTime(pick) })),
+        h("p", { class: "muted small", text: st.floors + " shafts · goal: earn $" + fmt(st.goal) }),
+        st.omens.length ? h("ul", { class: "omens" }, st.omens.map((o) => h("li", { class: o.mult > 1 === (o.stat !== "cost") ? "good" : "bad" }, h("b", { text: o.name }), " " + o.text))) : h("p", { class: "muted small", text: "No omens on this mine." }));
+      go.textContent = live() ? "Continue stage " + pick : pick <= S.raid.cleared ? "Raid stage " + pick + " again" : "Raid stage " + pick;
+      stages.querySelectorAll(".stage").forEach((b) => toggle(b, "sel", +b.dataset.s === pick));
+    };
+    let armed = 0;
+    go.addEventListener("click", () => {
+      // Starting another stage drops an unfinished one, so that takes a second tap.
+      if (!live() && cur && !cur.won && armed !== pick) { armed = pick; go.textContent = "Tap again: stage " + cur.stage + " progress is lost"; return; }
+      if (live()) SVT.switchLab("raid"); else SVT.startRaid(pick);
+      closeSheet(); setView("lab");
+    });
+    show();
+    sheet("Viking Raid", h("div", { class: "sheet-body raid-panel" },
+      h("p", { class: "muted", text: "A separate island of Viking mines. Dig the shafts, lift the loot and ship it like in your labs, but managers only automate: no abilities and no funding rounds. Earn a stage's gold goal to clear it and open the next. Each stage is harder, up to stage 50 at about 12 hours." }),
+      info, stages), { icon: "⚔️", foot: h("div", { class: "panel-foot" }, go) });
+  }
+  SVT.openRaid = openRaid;
+  function showRaidClear(s) {
+    const R = SVT.RAID, last = s >= R.STAGES;
+    sheet("Stage " + s + " cleared!", h("div", { class: "sheet-body" },
+      h("p", { text: last ? "You raided all 50 mines on the island. Skål!" : R.stage(s).name + " is yours. Stage " + (s + 1) + ", " + R.stage(s + 1).name + ", is open." }),
+      last ? null : h("button", { class: "btn fund-cta big", onclick: () => { closeSheet(); SVT.startRaid(s + 1); setView("lab"); }, text: "Raid stage " + (s + 1) }),
+      h("button", { class: "btn", onclick: closeSheet, text: "Keep playing here" })), { icon: "⚔️" });
+  }
+
+  // ---------- home screen ----------
+  // The title screen the game opens on: jump back into your lab, or pick the map, Viking Raid or Settings.
+  function homeView() {
+    const S = SVT.state(), d = def(), L = lab();
+    const tile = (cls, icon, title, sub, on) => h("button", { class: "home-tile " + cls, onclick: on },
+      h("span", { class: "home-ic", "aria-hidden": "true", text: icon }), h("span", { class: "home-txt" }, h("b", { text: title }), h("span", { text: sub })));
+    const raidSub = S.labs.raid && !S.labs.raid.won ? "Continue stage " + S.labs.raid.stage : "Stage " + SVT.raidNext() + " of " + SVT.RAID.STAGES;
+    return h("main", { class: "home-view" },
+      h("div", { class: "home-hero" },
+        h("div", { class: "home-logo", "aria-hidden": "true", text: "🏭" }),
+        h("h1", { text: "Silicon Valley Tycoon" }),
+        h("p", { class: "muted", text: "Build gadgets underground. Ship them for cash." })),
+      h("div", { class: "home-grid" },
+        tile("t-play", d.icon, "Play", (SVT.isRaid(L) ? "Viking Raid · " : "") + d.name + " · $" + fmt(L.cash), () => setView("lab")),
+        tile("t-map", "🗺", "Map", "Your labs in Silicon Valley", () => setView("map")),
+        tile("t-raid", "⚔️", "Viking Raid", raidSub, openRaid),
+        tile("t-settings", "⚙", "Settings", "Updates, help and reset", openSettings),
+        tile("t-soon", "🚧", "Coming soon", "Under construction", () => toast("🚧 Under construction: coming soon"))),
       h("footer", { class: "foot", text: "Silicon Valley Tycoon " + buildTag() }));
   }
 
@@ -747,7 +849,7 @@ window.SVT = window.SVT || {};
     const root = app();
     const y = window.scrollY;
     root.innerHTML = "";
-    root.append(view === "map" ? mapView() : labView());
+    root.append(view === "map" ? mapView() : view === "home" ? homeView() : labView());
     update();
     window.scrollTo(0, y);
   }
@@ -837,6 +939,10 @@ window.SVT = window.SVT || {};
     if (type === "hire") { const y = window.scrollY; render(); window.scrollTo(0, y); }
     if (type === "raise") { toast("💰 Raised " + d.round.name + "! Lab income now ×" + d.mult, "big"); render(); }
     if (type === "labUnlocked") toast("🗺 New location open on the map: " + d.lab.name, "big");
+    if (type === "raidClear") {
+      toast("⚔️ Viking Raid stage " + d.stage + " cleared!", "big");
+      if (inRaid() && !document.getElementById("sheet")) showRaidClear(d.stage);
+    }
   });
 
   // Reliable taps on phones. A press that lifts within 14px of where it started, within 700ms, counts as a tap on
@@ -867,6 +973,8 @@ window.SVT = window.SVT || {};
 
   SVT.boot = () => {
     const off = SVT.load();
+    // The game opens on the home screen; a brand-new player goes straight into the garage for the intro.
+    if (SVT.state().seenIntro) view = "home";
     render();
     SVT.start();
     // One loop: the game steps every animation frame so movement is smooth, moving parts redraw every frame,

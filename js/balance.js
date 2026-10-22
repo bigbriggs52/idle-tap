@@ -19,9 +19,9 @@ window.SVT = window.SVT || {};
   }
 
   const B = {
-    VERSION: "0.11.5",
+    VERSION: "0.12.0",
     // Release time in UTC, set with each release. Shown after the version in the player's local time.
-    BUILT: "2026-10-22T04:27Z",
+    BUILT: "2026-10-22T04:50Z",
     FLOORS: 30,
     FLOOR_MAX: 800,
     HUB_MAX: 2400,
@@ -107,9 +107,9 @@ window.SVT = window.SVT || {};
   B.maxLevel = (kind) => (kind === "floor" ? B.FLOOR_MAX : B.HUB_MAX);
 
   // Geometric-series bulk buy. Returns { count, cost } for buying up to `want` levels (Infinity = max affordable).
-  B.bulk = (kind, n, L, want, cash, discount) => {
+  B.bulk = (kind, n, L, want, cash, discount, scale) => {
     const r = B.growth(kind);
-    const first = B.levelCost(kind, n, L) * (1 - discount);
+    const first = B.levelCost(kind, n, L) * (1 - discount) * (scale || 1);
     const cap = B.maxLevel(kind) - L;
     if (cap <= 0) return { count: 0, cost: 0 };
     let k;
@@ -129,6 +129,16 @@ window.SVT = window.SVT || {};
     return h0 * Math.pow(2.5, k);
   };
   B.SELL_REFUND = 0.5;
+
+  // Per-lab price scaling (see SVT.costScale). Tuned with tests/pace.mjs.
+  B.LAB_DIFF = {
+    // Efficient-player time to IPO: about 2.2h, 2.9h, 4.3h, 7.6h, 13h.
+    garage: { scale: 0.05, grow: 0.55 },
+    arcade: { scale: 0.15, grow: 0.72 },
+    library: { scale: 0.3, grow: 0.8 },
+    maker: { scale: 0.5, grow: 0.85 },
+    studio: { scale: 0.7, grow: 0.87 },
+  };
 
   B.tierOf = (n) => SVT.TIERS.findIndex((t) => n >= t.from && n <= t.to);
 
