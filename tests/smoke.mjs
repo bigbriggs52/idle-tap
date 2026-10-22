@@ -32,12 +32,12 @@ await page.evaluate(() => SVT.setBuy(10));
 await page.click(".floor .lvl-btn >> nth=0");
 for (let i = 0; i < 3; i++) await page.click("#sheet .btn.up");
 await page.click('#sheet [aria-label="Close"]');
-// tap the empty manager seat -> Hire (pinned at the bottom) -> Assign, for each role; the panel stays open
+// tap the empty manager seat -> Hire (pinned at the bottom): the new manager is assigned there straight away
 for (const q of [".floor-scene .seat >> nth=0", ".lift-tower .seat", ".wh-tower .seat"]) {
   await page.click(q);
   await page.click("#sheet .btn.fund-cta");
-  await page.click("#sheet .btn.use");
-  if (!(await page.locator("#sheet .mcard.assigned").count())) errors.push("Assign did not show the assigned manager on top");
+  await page.waitForTimeout(100);
+  if (!(await page.locator("#sheet .mcard.assigned").count())) errors.push("Hiring from a slot did not auto-assign the manager");
   if (q.startsWith(".lift")) await page.screenshot({ path: out + "/02b-mgr-panel.png" });
   await page.click('#sheet [aria-label="Close"]');
 }

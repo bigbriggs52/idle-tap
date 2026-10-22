@@ -249,7 +249,16 @@ window.SVT = window.SVT || {};
       h("p", { class: "muted small odds", text: "Each hire rolls Super 0.5%, Legendary 1%, Epic 3%, Rare 10%, Uncommon 30% or Common 55.5%. Funding rounds send every manager away." }));
     // Children stay put (only their text changes), so a finger on the button never loses its target mid-tap.
     const hireCost = h("b");
-    const hire = bind(h("button", { class: "btn fund-cta big hire", onclick: () => { const m = SVT.hire(role); if (m) { toast("Hired " + SVT.rank(m.rank).name + " " + m.name, "r-" + m.rank); reopen(); } } },
+    const hire = bind(h("button", { class: "btn fund-cta big hire", onclick: () => {
+      const m = SVT.hire(role);
+      if (!m) return;
+      // Hiring from a slot's panel puts the new manager straight to work there, unless a rarer one already works it.
+      const cur = here ? SVT.mgrOf(lab(), kind, n) : null;
+      const put = here && (!cur || SVT.RANK_ORDER[m.rank] <= SVT.RANK_ORDER[cur.rank]);
+      if (put) SVT.assign(m.id, kind, n);
+      toast("Hired " + SVT.rank(m.rank).name + " " + m.name + (put ? " · now runs " + SVT.slotName(here) : ""), "r-" + m.rank);
+      reopen();
+    } },
       h("span", { text: "Hire manager" }), hireCost),
       (e) => { const c = SVT.hireCost(lab(), role); setText(hireCost, "$" + fmt(c)); setDisabled(e, lab().cash < c); });
     let nav = null;
