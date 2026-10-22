@@ -487,14 +487,20 @@ window.SVT = window.SVT || {};
     setState: (d) => { S = d; emit("switch"); },
   };
 
+  // SVT.step() advances the game by the real time since the last step. The UI calls it every animation frame;
+  // a slow timer keeps it going when frames stop (hidden tab).
+  let last = 0;
+  SVT.step = () => {
+    const t = performance.now();
+    if (!last) last = t;
+    const dt = Math.min(B.OFFLINE_CAP, (t - last) / 1000);
+    if (dt <= 0) return;
+    last = t;
+    SVT.tick(dt);
+  };
   SVT.start = () => {
-    let last = performance.now();
-    setInterval(() => {
-      const t = performance.now();
-      const dt = Math.min(B.OFFLINE_CAP, (t - last) / 1000);
-      last = t;
-      SVT.tick(dt);
-    }, 100);
+    last = performance.now();
+    setInterval(() => { if (performance.now() - last > 400) SVT.step(); }, 500);
     setInterval(save, 10000);
     document.addEventListener("visibilitychange", () => { if (document.hidden) save(); });
     window.addEventListener("pagehide", save);

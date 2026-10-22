@@ -2,6 +2,14 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.11.3 (2026-10-22)
+
+- Smoother animations throughout.
+  - The game now steps every screen frame instead of 10 times a second.
+  - The warehouse cart and the lift car move with GPU transforms every frame, instead of hopping on a slower timer. The cart also eases in and out at each end.
+  - The lift's gold fill and the cycle progress bars fill smoothly every frame.
+  - Layout is measured once a second instead of every update, so phones do less work.
+
 ## v0.11.2 (2026-10-22)
 
 - x10 and x50 now buy up to the next multiple, like Idle Miner. At level 56, x10 goes to 60. At 60, it goes to 70. At 56, x50 goes to 100. The Level Up label, the cost and the ▲▲ / ▲▲▲ badges follow these amounts.

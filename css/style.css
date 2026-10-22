@@ -706,3 +706,11 @@ body:has(#sheet) .toast:not(:last-child) { display: none; }
 .cart-tag b { font-size: .72rem; }
 .pusher.loaded .cart-tag { display: inline-flex; }
 @keyframes walk { from { transform: translateY(0); } to { transform: translateY(-2px); } }
+
+/* v0.11.3: smooth motion. Moving parts are driven every frame with transforms, so no CSS transitions on them. */
+.car { transition: none; will-change: transform; }
+.car-fill { height: 100%; transform: scaleY(0); transform-origin: bottom; transition: none; }
+.pusher { left: 0; transition: none; will-change: transform; }
+.pusher.back .cart-tag { transform: translateX(-50%) scaleX(-1); }
+.work-timer .fill { width: 100%; transform: scaleX(0); transform-origin: left; transition: none; will-change: transform; }
+.prog-bar .fill { transition: width .3s ease-out; }
