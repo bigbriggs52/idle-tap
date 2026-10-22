@@ -3,7 +3,7 @@ window.SVT = window.SVT || {};
 
 (function () {
   const B = SVT.B, fmt = SVT.fmt;
-  let binds = [];
+  let binds = [], frames = [];
   let view = "lab";
 
   // ---------- tiny DOM helpers ----------
@@ -22,6 +22,9 @@ window.SVT = window.SVT || {};
   }
   // bind(el, fn): fn(el) runs every UI frame; keep it cheap.
   const bind = (e, fn) => { binds.push({ e, fn }); return e; };
+  // onFrame(el, fn): fn(el) runs every animation frame, for things that move (lift car, cart, progress bars).
+  // Only write transforms here so the browser can move them without re-laying out the page.
+  const onFrame = (e, fn) => { frames.push({ e, fn }); return e; };
   const setText = (e, t) => { if (e.textContent !== t) e.textContent = t; };
   const setDisabled = (e, d) => { if (e.disabled !== d) e.disabled = d; };
   const toggle = (e, c, on) => e.classList.toggle(c, !!on);
@@ -413,7 +416,11 @@ window.SVT = window.SVT || {};
       toggle(box, "auto", auto);
       box.hidden = !auto && !(left > 0);
       setText(label, auto ? "Auto" : Math.ceil(left) + "s");
-      fill.style.width = (left > 0 ? 100 * (1 - left / T) : auto ? 0 : 100) + "%";
+    });
+    onFrame(fill, () => {
+      const L = lab(), left = SVT.nodeOf(L, kind, n).left || 0, T = SVT.cycleTime(kind);
+      const v = "scaleX(" + (left > 0 ? 1 - left / T : SVT.mgrOf(L, kind, n) ? 0 : 1).toFixed(3) + ")";
+      if (fill.style.transform !== v) fill.style.transform = v;
     });
     return box;
   }
@@ -516,11 +523,19 @@ window.SVT = window.SVT || {};
     const cartAmt = h("b"), cartTag = h("span", { class: "coin-tag cart-tag" }, h("span", { class: "coin", text: "$" }), cartAmt);
     const pusher = h("div", { class: "pusher" }, cartTag, h("span", { class: "cart" }, h("span", { class: "money" })), h("span", { class: "worker" }));
     const yard = h("div", { class: "yard cart-lane", "aria-hidden": "true" }, pusher);
+    let laneW = 0, laneAt = 0;
+    onFrame(yard, () => {
+      const c = lab().commercial, T = B.WH_TRIP, left = c.left || 0, p = left > 0 ? 1 - left / T : 0;
+      const raw = p < 0.45 ? p / 0.45 : p < 0.55 ? 1 : 1 - (p - 0.55) / 0.45;
+      const x = raw * raw * (3 - 2 * raw); // ease in and out at each end
+      const now = performance.now();
+      if (now - laneAt > 1000 || !laneW) { laneW = yard.clientWidth - 64; laneAt = now; } // measure rarely, not every frame
+      const back = p >= 0.55;
+      const v = "translate3d(" + (x * laneW).toFixed(1) + "px,0,0)" + (back ? " scaleX(-1)" : "");
+      if (pusher.style.transform !== v) pusher.style.transform = v;
+    });
     bind(yard, () => {
       const c = lab().commercial, T = B.WH_TRIP, left = c.left || 0, p = left > 0 ? 1 - left / T : 0;
-      const x = p < 0.45 ? p / 0.45 : p < 0.55 ? 1 : 1 - (p - 0.55) / 0.45;
-      const v = "calc(" + (x * 100).toFixed(1) + "% - " + (x * 64).toFixed(1) + "px)";
-      if (pusher.style.left !== v) pusher.style.left = v;
       toggle(pusher, "back", p >= 0.55);
       toggle(pusher, "loaded", c.carry > 0);
       toggle(pusher, "moving", left > 0 && (p < 0.45 || p >= 0.55));
@@ -624,20 +639,30 @@ window.SVT = window.SVT || {};
     // Numbered tags on the shaft, one beside each floor, like Idle Miner's mine shafts.
     const tags = floors.map((_, i) => h("span", { class: "shaft-num", text: i + 1 }));
     const shaft = h("div", { class: "shaft", "aria-hidden": "true" }, tags, car);
+    // Floor row centres are measured once a second (not every frame); the car glides between them every frame.
+    let centres = [0], carH = 64, measuredAt = 0;
+    const measure = () => {
+      const rows = list.children;
+      carH = car.offsetHeight || carH;
+      centres = [0];
+      for (let k = 1; k <= floors.length; k++) centres.push(rows[k - 1] ? rows[k - 1].offsetTop + rows[k - 1].offsetHeight / 2 - carH / 2 : 0);
+      tags.forEach((tg, i) => { const top = Math.round(centres[i + 1] + carH / 2) + "px"; if (tg.style.top !== top) tg.style.top = top; });
+    };
+    onFrame(car, () => {
+      const now = performance.now();
+      if (now - measuredAt > 1000) { measure(); measuredAt = now; }
+      const lift = lab().lift || { y: 0, load: 0 };
+      const k = Math.floor(lift.y), f = lift.y - k, c0 = centres[k] || 0, c1 = centres[k + 1] != null ? centres[k + 1] : c0;
+      const v = "translate3d(0," + (c0 + (c1 - c0) * f).toFixed(1) + "px,0)";
+      if (car.style.transform !== v) car.style.transform = v;
+      const cap = SVT.liftCapacity(lab()), fv = "scaleY(" + (cap > 0 ? Math.min(1, lift.load / cap) : 0).toFixed(3) + ")";
+      if (carFill.style.transform !== fv) carFill.style.transform = fv;
+    });
     bind(car, () => {
       const L = lab(), lift = L.lift || { y: 0, load: 0, phase: "idle" };
-      const rows = list.children, carH = car.offsetHeight || 30;
-      const centre = (k) => (k <= 0 ? 0 : rows[k - 1] ? rows[k - 1].offsetTop + rows[k - 1].offsetHeight / 2 - carH / 2 : 0);
-      const k = Math.floor(lift.y), f = lift.y - k;
-      const y = centre(k) + (centre(k + 1) - centre(k)) * f;
-      tags.forEach((tg, i) => { const top = Math.round(centre(i + 1) + carH / 2) + "px"; if (tg.style.top !== top) tg.style.top = top; });
-      const v = "translateY(" + y.toFixed(1) + "px)";
-      if (car.style.transform !== v) car.style.transform = v;
       toggle(car, "full", lift.load > 0);
       toggle(car, "run", lift.phase !== "idle");
       const cap = SVT.liftCapacity(L), pct = cap > 0 ? Math.min(100, Math.round(100 * lift.load / cap)) : 0;
-      const hgt = pct + "%";
-      if (carFill.style.height !== hgt) carFill.style.height = hgt;
       setText(carAmt, fmt(lift.load));
       setText(carPct, pct + "%");
     });
@@ -705,6 +730,7 @@ window.SVT = window.SVT || {};
 
   function render() {
     binds = binds.filter((b) => b.e.isConnected && b.e.closest("#sheet")); // an open sheet keeps its live numbers
+    frames = [];
     const root = app();
     const y = window.scrollY;
     root.innerHTML = "";
@@ -800,8 +826,12 @@ window.SVT = window.SVT || {};
     const off = SVT.load();
     render();
     SVT.start();
+    // One loop: the game steps every animation frame so movement is smooth, moving parts redraw every frame,
+    // and numbers and buttons refresh about 7 times a second.
     let lastUi = 0;
     (function loop(t) {
+      SVT.step();
+      for (let i = 0; i < frames.length; i++) { const f = frames[i]; if (f.e.isConnected) f.fn(f.e); }
       if (t - lastUi > 150) { update(); lastUi = t; }
       requestAnimationFrame(loop);
     })(0);
