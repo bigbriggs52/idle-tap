@@ -2,6 +2,15 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.11.4 (2026-10-22)
+
+- Taps register reliably. A press that lifts close to where it started counts as a tap, even if your finger slides slightly or the panel scrolls a hair. Nothing fires twice.
+- The Hire button no longer rebuilds itself while you press it, which used to swallow taps.
+- No lag after tapping. Buttons darken or squish the moment you touch them, and the screen updates on the very next frame instead of up to 150ms later.
+- Changes still animate. The buy-amount chip highlight slides over, and level numbers and stat values pop when they change.
+- Bigger touch targets for the x1/x10/x50/Max chips, the ✕ button, the filter tabs and manager buttons.
+- Long stat values in the Level panel wrap instead of covering the label.
+
 ## v0.11.3 (2026-10-22)
 
 - Smoother animations throughout.
