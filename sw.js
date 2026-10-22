@@ -1,5 +1,5 @@
 // Offline cache for the installed app. Bump CACHE with every release so phones pick up the new version.
-const CACHE = "svt-v0.14.2";
+const CACHE = "svt-v0.15.0";
 const FILES = ["./", "index.html", "css/style.css", "js/data.js", "js/balance.js", "js/raid.js", "js/art.js", "js/game.js", "js/ui.js",
   "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png"];
 

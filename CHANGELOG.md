@@ -2,6 +2,14 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.15.0 (2026-10-22)
+
+- Viking Raid: a stage is now cleared by maxing out the mine instead of earning a gold goal. Open every shaft, then take every shaft, the lift and the warehouse to the stage's max level.
+- Stage 1 has 5 shafts, and each stage adds one, up to 30 from stage 26.
+- Max level is 10 on stages 1–5 and rises by 5 every 5 stages, to 55 on stages 46–50. Upgrades stop at the max (the button shows MAX).
+- Raids are now quick: about 1.5 minutes for stage 1, rising to about 30 minutes for stage 50 (was 12 hours). Every shaft costs about the same, and prices per stage were fitted with the pacing sim (tests/raid-goals.mjs).
+- The goal bar, stage list and home screen show progress toward maxing the mine. Opening a raid shaft now says "New shaft".
+
 ## v0.14.2 (2026-10-22)
 
 - Fix: the box under the last floor or shaft ("All 5 shafts open…", "All 30 floors unlocked…") squeezed its text into a narrow column, one word per line. It has no floor number, so its text fell into the number column. It now spans the full width.
