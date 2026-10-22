@@ -82,11 +82,14 @@ window.SVT = window.SVT || {};
   // icon goes before the title; tools sit top right by the close button; foot stays pinned under the scrolling body; sticky hides the close button.
   let curNav = null;
   function sheet(title, body, opts) {
+    // Rebuilding a panel that is already open (hire, assign, sell, buy) swaps it in place with no spring, so the
+    // screen does not jump on every tap. Only a panel opened fresh, or swiped to, animates in.
+    const wasOpen = !!document.getElementById("sheet");
     closeSheet();
     opts = opts || {};
     const nav = opts.nav;
     const label = typeof title === "string" ? title : opts.label || "";
-    const box = h("div", { class: "sheet" + (nav && nav.dir ? (nav.dir > 0 ? " from-r" : " from-l") : ""), role: "dialog", "aria-label": label },
+    const box = h("div", { class: "sheet" + (nav && nav.dir ? (nav.dir > 0 ? " from-r" : " from-l") : wasOpen ? " still" : ""), role: "dialog", "aria-label": label },
       h("div", { class: "sheet-head" },
         opts.icon ? h("span", { class: "sheet-icon", "aria-hidden": "true", text: opts.icon }) : null,
         h("div", { class: "sheet-title" }, h("h2", null, title), nav && nav.pos ? h("span", { class: "muted small", text: nav.pos }) : null),
