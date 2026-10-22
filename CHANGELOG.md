@@ -2,6 +2,10 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.14.2 (2026-10-22)
+
+- Fix: the box under the last floor or shaft ("All 5 shafts open…", "All 30 floors unlocked…") squeezed its text into a narrow column, one word per line. It has no floor number, so its text fell into the number column. It now spans the full width.
+
 ## v0.14.1 (2026-10-22)
 
 - Fix: the Funding round list was drawn as scattered, tilted text across the screen. The new cartoon ladder on the home screen shared its style name, so the list picked up the ladder's position and tilt. The ladder now has its own name.
