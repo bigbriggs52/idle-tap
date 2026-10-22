@@ -2,6 +2,10 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.14.1 (2026-10-22)
+
+- Fix: the Funding round list was drawn as scattered, tilted text across the screen. The new cartoon ladder on the home screen shared its style name, so the list picked up the ladder's position and tilt. The ladder now has its own name.
+
 ## v0.14.0 (2026-10-22)
 
 A cartoon makeover, styled after polished casual mobile games.
