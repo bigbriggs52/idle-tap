@@ -1,17 +1,26 @@
-// Prints the Viking Raid gold goals: the pacing sim (tests/pace.mjs) plays each stage to its target time
-// and the gold earned by then becomes the goal. Paste the output into GOALS in js/raid.js.
+// Prints the Viking Raid price scale per stage: the pacing sim (tests/pace.mjs) plays each stage until every
+// shaft, the lift and the warehouse are at max level, and the scale is fitted so that takes the stage's target
+// time. Clear time is close to proportional to the scale, so a few rescaling passes converge. Paste the output
+// into SCALES in js/raid.js.
 import { loadGame, play } from "./pace.mjs";
 
 const SVT = loadGame();
-const R = SVT.RAID, goals = [];
-for (let s = 1; s <= R.STAGES; s++) {
+const R = SVT.RAID, scales = [];
+const clear = (s) => {
   const lab = SVT.newLab("raid");
   lab.stage = s;
-  const T = R.time(s);
-  const r = play(SVT, lab, (l, t) => t >= T, T);
-  // Two significant figures keep the goals readable.
-  const g = r.lab.lifetime, p = Math.pow(10, Math.floor(Math.log10(g)) - 1);
-  goals.push(Math.round(g / p) * p);
-  console.error("stage", s, R.stage(s).name, (T / 3600).toFixed(2) + "h", "floors", r.lab.floors.length + "/" + R.stage(s).floors, SVT.fmt(goals[s - 1]));
+  return play(SVT, lab, (l) => SVT.raidProgress(l).p >= 1, R.time(s) * 20).t;
+};
+for (let s = 1; s <= R.STAGES; s++) {
+  const st = R.stage(s), T = R.time(s), omen = st.diff.scale / (R.SCALES[s - 1] || 1);
+  let k = 0.05, t = 0;
+  for (let pass = 0; pass < 6; pass++) {
+    st.diff.scale = k * omen;
+    t = clear(s);
+    if (Math.abs(t / T - 1) < 0.03) break;
+    k *= T / t;
+  }
+  scales.push(Number(k.toPrecision(2)));
+  console.error("stage", s, st.name, st.floors + " shafts", "max Lv " + st.max, (T / 60).toFixed(1) + " min target", (t / 60).toFixed(1) + " min sim");
 }
-console.log("    GOALS: [" + goals.map((g) => Number(g.toPrecision(2)).toExponential(1).replace("e+", "e")).join(", ") + "],");
+console.log("    SCALES: [" + scales.join(", ") + "],");

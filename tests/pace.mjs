@@ -47,16 +47,16 @@ export function play(SVT, lab, stop, maxT = 1e7) {
       if (lab.cash < nf.cost && !wait(nf.cost)) continue;
       lab.cash -= nf.cost; lab.floors.push({ lvl: 1, stock: 0, left: 0 }); continue;
     }
-    let best = null;
+    let best = null, cheapest = null;
     const consider = (cost, gain, act) => {
-      if (!(gain > sbase * 1e-9)) return;
+      if (!(gain > sbase * 1e-9)) { if (!(cheapest && cheapest.cost <= cost)) cheapest = { cost, act, score: 0 }; return; }
       const score = cost / gain + Math.max(0, cost - lab.cash) / Math.max(base, 1e-9);
       if (!best || score < best.score) best = { cost, act, score };
     };
     const tryKind = (kind, n) => {
       const node = SVT.nodeOf(lab, kind, n);
-      if (node.lvl >= B.maxLevel(kind)) return;
-      const q = B.bulk(kind, n, node.lvl, 1, 0, 0, SVT.costScale(lab, kind, n));
+      if (node.lvl >= SVT.maxLevel(lab, kind)) return;
+      const q = B.bulk(kind, n, node.lvl, 1, 0, 0, SVT.costScale(lab, kind, n), SVT.maxLevel(lab, kind));
       node.lvl++; const g = soft() - sbase; node.lvl--;
       consider(q.cost, g, () => { lab.cash -= q.cost; node.lvl++; });
     };
@@ -66,6 +66,7 @@ export function play(SVT, lab, stop, maxT = 1e7) {
       lab.floors.push({ lvl: 1, stock: 0, left: 0 }); const g = soft() - sbase; lab.floors.pop();
       consider(nf.cost, g, () => { lab.cash -= nf.cost; lab.floors.push({ lvl: 1, stock: 0, left: 0 }); });
     }
+    if (!best) best = cheapest;
     if (!best) { wait(lab.cash + base * 60); continue; }
     if (lab.cash < best.cost && !wait(best.cost)) continue;
     best.act();

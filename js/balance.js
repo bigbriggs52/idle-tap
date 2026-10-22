@@ -19,9 +19,9 @@ window.SVT = window.SVT || {};
   }
 
   const B = {
-    VERSION: "0.14.2",
+    VERSION: "0.15.0",
     // Release time in UTC, set with each release. Shown after the version in the player's local time.
-    BUILT: "2026-10-22T16:28Z",
+    BUILT: "2026-10-22T18:27Z",
     FLOORS: 30,
     FLOOR_MAX: 800,
     HUB_MAX: 2400,
@@ -107,10 +107,10 @@ window.SVT = window.SVT || {};
   B.maxLevel = (kind) => (kind === "floor" ? B.FLOOR_MAX : B.HUB_MAX);
 
   // Geometric-series bulk buy. Returns { count, cost } for buying up to `want` levels (Infinity = max affordable).
-  B.bulk = (kind, n, L, want, cash, discount, scale) => {
+  B.bulk = (kind, n, L, want, cash, discount, scale, max) => {
     const r = B.growth(kind);
     const first = B.levelCost(kind, n, L) * (1 - discount) * (scale || 1);
-    const cap = B.maxLevel(kind) - L;
+    const cap = (max || B.maxLevel(kind)) - L;
     if (cap <= 0) return { count: 0, cost: 0 };
     let k;
     if (want === Infinity) {

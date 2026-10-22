@@ -141,13 +141,13 @@ window.SVT = window.SVT || {};
       h("button", { class: "home-btn", "aria-label": "Home screen", onclick: () => setView("home"), text: "🏠" }),
       inRaid() ? goalBar() : null);
   }
-  // Viking Raid: gold earned this stage against the stage goal.
+  // Viking Raid: upgrades bought this stage against everything needed to max the mine.
   function goalBar() {
     const fill = h("i", { class: "goal-fill" }), txt = h("span");
     return bind(h("div", { class: "goal-bar" }, fill, txt), (e) => {
-      const L = lab(), g = SVT.raidStage(L).goal, p = Math.min(1, L.lifetime / g);
+      const L = lab(), pr = SVT.raidProgress(L), p = Math.min(1, pr.p);
       toggle(e, "won", L.won);
-      setText(txt, L.won ? "🎯 Stage cleared! Open Stages for the next raid" : "🎯 Goal $" + fmt(L.lifetime) + " / $" + fmt(g) + " · " + Math.floor(p * 100) + "%");
+      setText(txt, L.won ? "🎯 Stage cleared! Open Stages for the next raid" : "🎯 Max the mine to Lv " + SVT.raidStage(L).max + " · " + Math.floor(p * 100) + "%");
       const v = "scaleX(" + p.toFixed(4) + ")";
       if (fill.style.transform !== v) fill.style.transform = v;
     });
@@ -351,7 +351,7 @@ window.SVT = window.SVT || {};
     const btn = h("button", { class: "btn up lvlup" }, top, cost);
     return bind(holdToRepeat(btn, up), (e) => {
       const L = lab(), lv = SVT.levelOf(L, kind, n);
-      if (lv >= B.maxLevel(kind)) { setText(top, "Level Up x0"); setText(cost, "MAX"); setDisabled(e, true); return; }
+      if (lv >= SVT.maxLevel(lab(), kind)) { setText(top, "Level Up x0"); setText(cost, "MAX"); setDisabled(e, true); return; }
       const q = SVT.quote(L, kind, n);
       setText(top, "Level Up x" + q.count); setText(cost, "$" + fmt(q.cost));
       setDisabled(e, L.cash < q.cost);
@@ -379,7 +379,7 @@ window.SVT = window.SVT || {};
     });
     const fill = h("span", { class: "fill" }), prog = h("span", { class: "prog-label" });
     bind(prog, () => {
-      const lv = SVT.levelOf(lab(), kind, n), u = nextUnlock(kind, lv), max = lv >= B.maxLevel(kind);
+      const lv = SVT.levelOf(lab(), kind, n), u = nextUnlock(kind, lv), max = lv >= SVT.maxLevel(lab(), kind);
       fill.style.width = (max ? 100 : Math.max(4, Math.min(100, ((lv - u.from) / 5) * 100))) + "%";
       setText(prog, max ? "Max level reached." : "Next at Lv " + u.lvl + ": " + multLabel(u.mult) + (u.big ? " milestone" : ""));
     });
@@ -387,7 +387,7 @@ window.SVT = window.SVT || {};
       const now = h("b"), up = h("small", { class: "up" });
       bind(now, () => {
         const lv = SVT.levelOf(lab(), kind, n), q = SVT.quote(lab(), kind, n);
-        const a = f(lv), b = lv >= B.maxLevel(kind) || !q.count ? a : f(lv + q.count);
+        const a = f(lv), b = lv >= SVT.maxLevel(lab(), kind) || !q.count ? a : f(lv + q.count);
         popText(now, a); setText(up, b !== a ? "→ " + b : ""); up.hidden = b === a;
       });
       return statRow(label, now, up);
@@ -430,7 +430,7 @@ window.SVT = window.SVT || {};
     return bind(holdToRepeat(h("button", { class: "btn up" }), () => SVT.upgrade(kind, n)), (e) => {
       const L = lab();
       const lv = SVT.levelOf(L, kind, n);
-      if (lv >= B.maxLevel(kind)) { setText(e, "Max level"); setDisabled(e, true); return; }
+      if (lv >= SVT.maxLevel(lab(), kind)) { setText(e, "Max level"); setDisabled(e, true); return; }
       const q = SVT.quote(L, kind, n);
       const disc = SVT.discount(L, kind, n);
       setText(e, "Upgrade ×" + q.count + " · $" + fmt(q.cost));
@@ -445,7 +445,7 @@ window.SVT = window.SVT || {};
     bind(label, () => {
       const lv = SVT.levelOf(lab(), kind, n);
       const u = nextUnlock(kind, lv);
-      setText(label, lv >= B.maxLevel(kind) ? "All unlocks earned" : "Next unlock Lv " + u.lvl + " · " + multLabel(u.mult) + (u.big ? " milestone" : ""));
+      setText(label, lv >= SVT.maxLevel(lab(), kind) ? "All unlocks earned" : "Next unlock Lv " + u.lvl + " · " + multLabel(u.mult) + (u.big ? " milestone" : ""));
       bar.style.width = Math.min(100, ((lv - u.from) / 5) * 100) + "%";
       toggle(label, "big", u.big);
     });
@@ -528,11 +528,11 @@ window.SVT = window.SVT || {};
     const el = h("button", { class: "lvl-btn", onclick: (e) => { e.stopPropagation(); openNode(kind, n); } },
       h("span", { text: "Level" }), num, badge);
     bind(el, () => {
-      const L = lab(), lv = SVT.levelOf(L, kind, n), max = lv >= B.maxLevel(kind);
+      const L = lab(), lv = SVT.levelOf(L, kind, n), max = lv >= SVT.maxLevel(lab(), kind);
       popText(num, max ? "MAX" : String(lv));
       // ▲ affords 1 level, ▲▲ affords up to the next ×10 level, ▲▲▲ up to the next ×50 level.
       const m = max ? null : B.bulk(kind, n, lv, Infinity, L.cash, SVT.discount(L, kind, n), SVT.costScale(L, kind, n));
-      const can = m && L.cash >= m.cost ? m.count : 0, room = B.maxLevel(kind) - lv;
+      const can = m && L.cash >= m.cost ? m.count : 0, room = SVT.maxLevel(lab(), kind) - lv;
       const tri = can >= Math.min(room, SVT.stepTo(lv, 50)) ? 3 : can >= Math.min(room, SVT.stepTo(lv, 10)) ? 2 : can >= 1 ? 1 : 0;
       toggle(el, "afford", tri > 0);
       setText(badge, "▲".repeat(tri || 1));
@@ -666,7 +666,7 @@ window.SVT = window.SVT || {};
 
   function lockedRow() {
     const nf = SVT.nextFloor(lab());
-    if (!nf) return h("div", { class: "floor done" }, h("div", { class: "fbody" }, h("b", { text: inRaid() ? "All " + lab().floors.length + " shafts open. Earn the stage goal to clear the raid." : "All 30 floors unlocked. Raise your IPO in Funding." })));
+    if (!nf) return h("div", { class: "floor done" }, h("div", { class: "fbody" }, h("b", { text: inRaid() ? "All " + lab().floors.length + " shafts open. Take every shaft, the lift and the warehouse to Lv " + SVT.raidStage(lab()).max + " to clear the raid." : "All 30 floors unlocked. Raise your IPO in Funding." })));
     const n = nf.n;
     if (nf.blocked) {
       return h("div", { class: "floor locked wall" },
@@ -840,7 +840,7 @@ window.SVT = window.SVT || {};
       const st = R.stage(pick);
       info.replaceChildren(
         h("div", { class: "raid-title" }, h("b", { text: "Stage " + pick + ": " + st.name }), h("span", { class: "muted", text: stageTime(pick) })),
-        h("p", { class: "muted small", text: st.floors + " shafts · goal: earn $" + fmt(st.goal) }),
+        h("p", { class: "muted small", text: "Goal: open all " + st.floors + " shafts and take every shaft, the lift and the warehouse to Lv " + st.max }),
         st.omens.length ? h("ul", { class: "omens" }, st.omens.map((o) => h("li", { class: o.mult > 1 === (o.stat !== "cost") ? "good" : "bad" }, h("b", { text: o.name }), " " + o.text))) : h("p", { class: "muted small", text: "No omens on this mine." }));
       go.textContent = live() ? "Continue stage " + pick : pick <= S.raid.cleared ? "Raid stage " + pick + " again" : "Raid stage " + pick;
       stages.querySelectorAll(".stage").forEach((b) => toggle(b, "sel", +b.dataset.s === pick));
@@ -854,7 +854,7 @@ window.SVT = window.SVT || {};
     });
     show();
     sheet("Viking Raid", h("div", { class: "sheet-body raid-panel" },
-      h("p", { class: "muted", text: "A separate island of Viking mines. Dig the shafts, lift the loot and ship it like in your labs, but managers only automate: no abilities and no funding rounds. Earn a stage's gold goal to clear it and open the next. Each stage is harder, up to stage 50 at about 12 hours." }),
+      h("p", { class: "muted", text: "A separate island of Viking mines. Dig the shafts, lift the loot and ship it like in your labs, but managers only automate: no abilities and no funding rounds. Max out the mine to clear a stage and open the next: open every shaft, then take every shaft, the lift and the warehouse to the stage's max level. Each stage adds a shaft, and the max level rises every 5 stages." }),
       info, stages), { icon: "⚔️", foot: h("div", { class: "panel-foot" }, go) });
   }
   SVT.openRaid = openRaid;
@@ -878,7 +878,7 @@ window.SVT = window.SVT || {};
     const beaten = SVT.LABS.filter((l) => SVT.labBeaten(S.labs[l.id])).length;
     const raidReady = !S.labs.raid || S.labs.raid.won; // a new stage is waiting
     // Progress toward beating this lab: funding rounds raised, or the raid stage goal.
-    const prog = raid ? Math.min(1, L.lifetime / SVT.raidStage(L).goal) : L.round / B.ROUNDS.length;
+    const prog = raid ? Math.min(1, SVT.raidProgress(L).p) : L.round / B.ROUNDS.length;
     const progText = raid ? "Stage " + L.stage + " goal " + Math.floor(prog * 100) + "%" : L.round + " / " + B.ROUNDS.length + " rounds";
     const nextName = raid ? d.name : SVT.nextRound(L) ? "Next: " + SVT.nextRound(L).name : "IPO raised";
     const cash = bind(h("b"), (e) => setText(e, fmt(lab().cash)));
@@ -1031,7 +1031,7 @@ window.SVT = window.SVT || {};
       if (big.length) toast("⭐ " + where + " Lv " + big[big.length - 1].lvl + " milestone: " + multLabel(big[big.length - 1].mult) + (d.kind === "floor" ? " output, new team member" : " capacity"), "big");
       else toast("🔓 " + where + " Lv " + last.lvl + ": " + tierList[(last.lvl / 5) % tierList.length] + " " + multLabel(last.mult));
     }
-    if (type === "floor") { toast("New floor: " + productName(d.n)); render(); }
+    if (type === "floor") { toast((inRaid() ? "New shaft: " : "New floor: ") + productName(d.n)); render(); }
     if (type === "assign" || type === "switch") render();
     if (type === "hire") { const y = window.scrollY; render(); window.scrollTo(0, y); }
     if (type === "raise") { toast("💰 Raised " + d.round.name + "! Lab income now ×" + d.mult, "big"); render(); }

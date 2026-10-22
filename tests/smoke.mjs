@@ -244,7 +244,17 @@ const doneW = await page.evaluate(() => { const b = document.querySelector(".flo
 await page.locator(".floor.done").scrollIntoViewIfNeeded();
 await page.screenshot({ path: out + "/11b-raid-all-shafts.png" });
 if (doneW < 200) errors.push("All-shafts-open box is squeezed (" + doneW + "px wide)");
-await page.evaluate(() => { const L = SVT.lab(); L.lifetime = SVT.raidStage(L).goal; L.lobby = 10; L.commercial.left = 0; SVT.tap("commercial", 0); SVT.tick(3); });
+const capped = await page.evaluate(() => {
+  const L = SVT.lab(), max = SVT.raidStage(L).max;
+  SVT.state().buy = "max";
+  const q = SVT.quote(L, "freight", 0);
+  SVT.upgrade("freight", 0); SVT.upgrade("commercial", 0);
+  L.floors.forEach((f, i) => SVT.upgrade("floor", i + 1));
+  SVT.tick(1);
+  return { max, lift: L.freight.lvl, quoteAtMax: SVT.quote(L, "freight", 0).count, first: q.count, won: L.won, p: SVT.raidProgress(L).p };
+});
+console.log("raid max", JSON.stringify(capped));
+if (capped.lift !== capped.max || capped.quoteAtMax !== 0 || !capped.won) errors.push("Raid max level or clear-by-maxing is wrong");
 await page.waitForTimeout(400);
 await page.screenshot({ path: out + "/12-raid-clear.png" });
 const cleared = await page.evaluate(() => SVT.state().raid.cleared);

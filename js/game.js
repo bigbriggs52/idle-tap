@@ -96,6 +96,15 @@ window.SVT = window.SVT || {};
   SVT.isRaid = (lab) => !!lab && lab.id === "raid";
   SVT.raidStage = (lab) => SVT.RAID.stage(lab.stage);
   SVT.raidNext = () => Math.min(SVT.RAID.STAGES, S.raid.cleared + 1);
+  // Raid shafts, lift and warehouse stop at the stage's max level; labs use the normal caps.
+  SVT.maxLevel = (lab, kind) => (SVT.isRaid(lab) ? SVT.raidStage(lab).max : B.maxLevel(kind));
+  // A stage is cleared by opening every shaft and taking every shaft, the lift and the warehouse to max level.
+  SVT.raidProgress = (lab) => {
+    const st = SVT.raidStage(lab), max = st.max, total = (st.floors + 2) * (max - 1) + (st.floors - 1);
+    let done = lab.floors.length - 1 + Math.min(max, lab.freight.lvl) - 1 + Math.min(max, lab.commercial.lvl) - 1;
+    lab.floors.forEach((f) => (done += Math.min(max, f.lvl) - 1));
+    return { done, total, p: done / total };
+  };
   // Starts a stage from scratch. Only cleared stages and the next one can be raided.
   SVT.startRaid = (s) => {
     if (!(s >= 1 && s <= SVT.raidNext())) return false;
@@ -275,7 +284,7 @@ window.SVT = window.SVT || {};
     const earned = stepWarehouse(lab, dt, t);
     const a = Math.min(1, dt / 8); // income arrives per trip, so smooth over a few trips
     lab.rate = lab.rate * (1 - a) + (earned / dt) * a;
-    if (SVT.isRaid(lab) && !lab.won && lab.lifetime >= SVT.raidStage(lab).goal) {
+    if (SVT.isRaid(lab) && !lab.won && SVT.raidProgress(lab).p >= 1) {
       lab.won = true;
       S.raid.cleared = Math.max(S.raid.cleared, lab.stage);
       emit("raidClear", { stage: lab.stage });
@@ -331,7 +340,7 @@ window.SVT = window.SVT || {};
   SVT.buyAmount = (lv) => (S.buy === "max" ? Infinity : S.buy === "next" ? SVT.stepTo(lv || 0, 5) : S.buy === 1 ? 1 : SVT.stepTo(lv || 0, S.buy));
   SVT.quote = (lab, kind, n) => {
     const L = SVT.levelOf(lab, kind, n);
-    return B.bulk(kind, n, L, SVT.buyAmount(L), lab.cash, SVT.discount(lab, kind, n), SVT.costScale(lab, kind, n));
+    return B.bulk(kind, n, L, SVT.buyAmount(L), lab.cash, SVT.discount(lab, kind, n), SVT.costScale(lab, kind, n), SVT.maxLevel(lab, kind));
   };
 
   SVT.upgrade = (kind, n) => {

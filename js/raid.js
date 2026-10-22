@@ -1,5 +1,6 @@
 // Viking Raid: a separate island of 50 generated mines. Same shafts, lift and warehouse, no manager abilities,
-// no funding rounds. Each stage is built from its number (same stage, same mine) and is cleared by earning its gold goal.
+// no funding rounds. Each stage is built from its number (same stage, same mine) and is cleared by opening every
+// shaft and taking every shaft, the lift and the warehouse to the stage's max level.
 window.SVT = window.SVT || {};
 
 (function () {
@@ -36,11 +37,16 @@ window.SVT = window.SVT || {};
 
   const R = {
     STAGES: 50,
-    // Target clear time for an efficient player: 3 minutes for stage 1, rising to 12 hours for stage 50.
-    time: (s) => 180 * Math.pow(240, (s - 1) / 49),
-    BASE: { scale: 0.05, grow: 0.6 },
-    // Gold goal per stage, from tests/raid-goals.mjs (the pacing sim run to each stage's target time).
-    GOALS: [3.9e2, 4.6e2, 7.9e2, 1.3e3, 2.0e3, 2.6e3, 5.4e3, 6.5e3, 1.6e4, 1.8e4, 8.5e4, 2.4e5, 8.7e5, 3.3e6, 4.6e6, 2.3e7, 2.0e8, 2.8e8, 1.2e9, 4.7e9, 3.2e12, 9.5e10, 4.0e15, 6.6e13, 1.8e17, 2.6e16, 3.9e15, 6.1e17, 6.0e17, 2.4e18, 8.1e18, 1.4e22, 9.6e21, 1.6e21, 9.6e23, 7.5e21, 3.7e22, 8.0e22, 4.6e23, 2.6e24, 3.9e26, 5.8e23, 6.8e24, 1.8e26, 6.5e25, 8.8e28, 1.3e27, 1.7e28, 1.9e28, 7.8e29],
+    // Stage 1 has 5 shafts, each stage one more, up to 30.
+    shafts: (s) => Math.min(30, 4 + s),
+    // Max level for every shaft, the lift and the warehouse on that stage.
+    max: (s) => 10 + 5 * Math.floor((s - 1) / 5),
+    // Target clear time for an efficient player: 90 seconds for stage 1, rising to 30 minutes for stage 50.
+    time: (s) => 90 * Math.pow(20, (s - 1) / 49),
+    // Every shaft costs about the same (grow cancels the 10x price step per shaft), so deep stages stay quick.
+    BASE: { grow: 0.1 },
+    // Price scale per stage, from tests/raid-goals.mjs (the pacing sim fitted to each stage's target time).
+    SCALES: [0.36, 0.32, 0.29, 0.27, 0.25, 0.19, 0.18, 0.13, 0.16, 0.12, 0.13, 0.13, 0.17, 0.16, 0.12, 0.12, 0.15, 0.095, 0.077, 0.077, 0.14, 0.058, 0.15, 0.075, 0.15, 0.096, 0.059, 0.12, 0.096, 0.09, 0.088, 0.19, 0.2, 0.12, 0.3, 0.12, 0.13, 0.14, 0.18, 0.21, 0.32, 0.16, 0.17, 0.25, 0.19, 0.53, 0.24, 0.34, 0.35, 0.5],
   };
 
   // 50 different mine names, drawn once in a fixed order.
@@ -54,7 +60,7 @@ window.SVT = window.SVT || {};
   R.stage = (s) => {
     if (cache[s]) return cache[s];
     const r = rng(s * 7919 + 13);
-    r(); r(); // the first two draws are spare; the goals below were tuned with the omens that follow
+    r(); r(); // the first two draws are spare; the price scales were tuned with the omens that follow
     const name = NAMES[s - 1];
     const omens = [];
     const count = s < 3 ? 0 : s < 20 ? 1 : 2;
@@ -65,11 +71,11 @@ window.SVT = window.SVT || {};
     const mult = (stat) => omens.reduce((m, o) => (o.stat === stat ? m * o.mult : m), 1);
     const st = {
       n: s, name, omens,
-      floors: Math.min(30, 5 + Math.round(((s - 1) * 25) / 49)),
-      goal: R.GOALS[s - 1] || Infinity,
+      floors: R.shafts(s),
+      max: R.max(s),
       time: R.time(s),
       mult: { floor: mult("floor"), freight: mult("freight"), commercial: mult("commercial") },
-      diff: { scale: R.BASE.scale * mult("cost"), grow: R.BASE.grow },
+      diff: { scale: (R.SCALES[s - 1] || 1) * mult("cost"), grow: R.BASE.grow },
     };
     return (cache[s] = st);
   };
