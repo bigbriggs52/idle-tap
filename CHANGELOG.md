@@ -2,6 +2,10 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.13.2 (2026-10-22)
+
+- New jump arrows at the bottom left, like Idle Miner. ⬆ appears once you scroll down and glides you back to the top of the mine. ⬇ appears when there is more mine below and glides you down to the deepest floor. You can watch it scroll, and touching the screen stops it.
+
 ## v0.13.1 (2026-10-22)
 
 - Hiring a manager from a floor's, the lift's or the warehouse's manager panel now puts them straight to work there. If a rarer manager already works that spot, they stay and the new hire goes to your Owned list. Hiring from the main Managers list still just adds them to Owned.

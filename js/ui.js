@@ -724,6 +724,30 @@ window.SVT = window.SVT || {};
     return h("section", { class: "building" }, capTag, shaft, list);
   }
 
+  // Idle Miner's jump arrows, bottom left: ⬆ glides back to the top of the mine, ⬇ down to the deepest floor.
+  // Each shows only when there is somewhere to go, and you see the page scroll.
+  let scrollAnim = 0;
+  const maxScroll = () => document.documentElement.scrollHeight - window.innerHeight;
+  function glideTo(target) {
+    cancelAnimationFrame(scrollAnim);
+    const y0 = window.scrollY, d = target - y0, t0 = performance.now(), dur = Math.min(900, 300 + Math.abs(d) / 4);
+    const stop = () => cancelAnimationFrame(scrollAnim);
+    window.addEventListener("touchstart", stop, { once: true, passive: true });
+    window.addEventListener("wheel", stop, { once: true, passive: true });
+    (function step(t) {
+      const k = Math.min(1, (t - t0) / dur), e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+      window.scrollTo(0, y0 + d * e);
+      if (k < 1) scrollAnim = requestAnimationFrame(step);
+    })(t0);
+  }
+  function jumpBtns() {
+    const up = bind(h("button", { class: "jump-btn up", "aria-label": "Back to the top", onclick: () => glideTo(0), text: "⬆" }),
+      (e) => toggle(e, "show", window.scrollY > 240));
+    const down = bind(h("button", { class: "jump-btn down", "aria-label": "Down to the bottom of the mine", onclick: () => glideTo(maxScroll()), text: "⬇" }),
+      (e) => toggle(e, "show", maxScroll() - window.scrollY > 240));
+    return h("div", { class: "jump-btns" }, up, down);
+  }
+
   // ---------- views ----------
   function labView() {
     return h("main", { class: "lab-view" + (inRaid() ? " raid" : "") },
@@ -731,7 +755,8 @@ window.SVT = window.SVT || {};
       surface(),
       building(),
       h("footer", { class: "foot", text: "Silicon Valley Tycoon " + buildTag() }),
-      bottomNav());
+      bottomNav(),
+      jumpBtns());
   }
 
   function mapView() {

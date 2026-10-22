@@ -186,6 +186,22 @@ const steps = await page.evaluate(() => {
 });
 console.log("step buys", steps);
 if (steps !== "60,70,100,150,60,65,10") errors.push("x10/x50 do not round to the next multiple: " + steps);
+// back-to-top arrow: hidden at the top, shows when scrolled down, glides back to the top
+await page.evaluate(() => { SVT.setView("lab"); const L = SVT.lab(); while (L.floors.length < 12) L.floors.push({ lvl: 1, stock: 0, left: 0 }); SVT.render(); });
+await page.waitForTimeout(200);
+const topHidden = await page.evaluate(() => document.querySelector(".jump-btn.up").classList.contains("show"));
+await page.click(".jump-btn.down.show");
+await page.waitForTimeout(1200);
+const bottomGap = await page.evaluate(() => document.documentElement.scrollHeight - window.innerHeight - window.scrollY);
+if (bottomGap > 2) errors.push("Down arrow did not reach the bottom: " + bottomGap);
+await page.evaluate(() => window.scrollTo(0, 1500));
+await page.waitForTimeout(400);
+await page.screenshot({ path: out + "/16-top-btn.png" });
+await page.click(".jump-btn.up.show");
+await page.waitForTimeout(1200);
+const topY = await page.evaluate(() => window.scrollY);
+console.log("top button", topHidden, topY);
+if (topHidden || topY > 2) errors.push("Back-to-top button wrong: shown at top=" + topHidden + ", y after=" + topY);
 // beating a lab (IPO) closes it and opens the lab five places on
 const beat = await page.evaluate(() => {
   SVT.switchLab("garage");
