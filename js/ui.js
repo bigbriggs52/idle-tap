@@ -342,7 +342,14 @@ window.SVT = window.SVT || {};
   // Big green Level Up button (hold to keep buying).
   function levelUpBtn(kind, n) {
     const top = h("span"), cost = h("b");
-    return bind(holdToRepeat(h("button", { class: "btn up lvlup" }, top, cost), () => SVT.upgrade(kind, n)), (e) => {
+    let lastBurst = 0;
+    const up = () => {
+      const ok = SVT.upgrade(kind, n);
+      if (ok && performance.now() - lastBurst > 180) { lastBurst = performance.now(); burst(btn); }
+      return ok;
+    };
+    const btn = h("button", { class: "btn up lvlup" }, top, cost);
+    return bind(holdToRepeat(btn, up), (e) => {
       const L = lab(), lv = SVT.levelOf(L, kind, n);
       if (lv >= B.maxLevel(kind)) { setText(top, "Level Up x0"); setText(cost, "MAX"); setDisabled(e, true); return; }
       const q = SVT.quote(L, kind, n);
@@ -591,6 +598,7 @@ window.SVT = window.SVT || {};
     });
     return h("section", { class: "surface-scene" },
       h("div", { class: "hills", "aria-hidden": "true" }), h("div", { class: "sun", "aria-hidden": "true" }),
+      h("span", { class: "cloud c1", "aria-hidden": "true" }), h("span", { class: "cloud c2", "aria-hidden": "true" }),
       yard, lift, wh, h("div", { class: "grass", "aria-hidden": "true" }));
   }
 
@@ -860,23 +868,48 @@ window.SVT = window.SVT || {};
 
   // ---------- home screen ----------
   // The title screen the game opens on: jump back into your lab, or pick the map, Viking Raid or Settings.
+  // Cartoon title screen, in the style of casual mobile games: a garden in front of the lab, Chip the robot holding
+  // up your floor count, round bubbles down the sides, and one big glossy Play button.
   function homeView() {
-    const S = SVT.state(), d = def(), L = lab();
-    const tile = (cls, icon, title, sub, on) => h("button", { class: "home-tile " + cls, onclick: on },
-      h("span", { class: "home-ic", "aria-hidden": "true", text: icon }), h("span", { class: "home-txt" }, h("b", { text: title }), h("span", { text: sub })));
-    const raidSub = S.labs.raid && !S.labs.raid.won ? "Continue stage " + S.labs.raid.stage : "Stage " + SVT.raidNext() + " of " + SVT.RAID.STAGES;
+    const S = SVT.state(), d = def(), L = lab(), raid = SVT.isRaid(L);
+    const bubble = (cls, icon, label, on, badge) => h("button", { class: "bubble " + cls, onclick: on, "aria-label": label },
+      h("span", { class: "bubble-ic", "aria-hidden": "true", text: icon }), h("span", { class: "bubble-label", text: label }),
+      badge ? h("span", { class: "bubble-badge", "aria-hidden": "true", text: "!" }) : null);
+    const beaten = SVT.LABS.filter((l) => SVT.labBeaten(S.labs[l.id])).length;
+    const raidReady = !S.labs.raid || S.labs.raid.won; // a new stage is waiting
+    // Progress toward beating this lab: funding rounds raised, or the raid stage goal.
+    const prog = raid ? Math.min(1, L.lifetime / SVT.raidStage(L).goal) : L.round / B.ROUNDS.length;
+    const progText = raid ? "Stage " + L.stage + " goal " + Math.floor(prog * 100) + "%" : L.round + " / " + B.ROUNDS.length + " rounds";
+    const nextName = raid ? d.name : SVT.nextRound(L) ? "Next: " + SVT.nextRound(L).name : "IPO raised";
+    const cash = bind(h("b"), (e) => setText(e, fmt(lab().cash)));
+    const floors = bind(h("b", { class: "sign-num" }), (e) => popText(e, String(lab().floors.length)));
+    const sign = h("div", { class: "sign" }, h("span", { class: "sign-label", text: raid ? "SHAFTS" : "FLOORS" }), floors);
     return h("main", { class: "home-view" },
-      h("div", { class: "home-hero" },
-        h("div", { class: "home-logo", "aria-hidden": "true", text: "🏭" }),
-        h("h1", { text: "Silicon Valley Tycoon" }),
-        h("p", { class: "muted", text: "Build gadgets underground. Ship them for cash." })),
-      h("div", { class: "home-grid" },
-        tile("t-play", d.icon, "Play", (SVT.isRaid(L) ? "Viking Raid · " : "") + d.name + " · $" + fmt(L.cash), () => setView("lab")),
-        tile("t-map", "🗺", "Map", "Your labs in Silicon Valley", () => setView("map")),
-        tile("t-raid", "⚔️", "Viking Raid", raidSub, openRaid),
-        tile("t-settings", "⚙", "Settings", "Updates, help and reset", openSettings),
-        tile("t-soon", "🚧", "Coming soon", "Under construction", () => toast("🚧 Under construction: coming soon"))),
-      h("footer", { class: "foot", text: "Silicon Valley Tycoon " + buildTag() }));
+      h("div", { class: "home-bg", "aria-hidden": "true" },
+        h("span", { class: "cloud c1" }), h("span", { class: "cloud c2" }), h("span", { class: "cloud c3" }),
+        h("span", { class: "hill h1" }), h("span", { class: "hill h2" }),
+        h("span", { class: "hq" }, h("span", { class: "hq-roof" }), h("span", { class: "hq-win" }), h("span", { class: "hq-door" })),
+        h("span", { class: "lawn" }), h("span", { class: "bush b1" }), h("span", { class: "bush b2" }),
+        h("span", { class: "mine-hole" }, h("span", { class: "ladder" }))),
+      h("div", { class: "home-top" },
+        h("button", { class: "avatar-badge", "aria-label": "Chip says hi", onclick: () => toast("🤖 Chip: Let's build something big!"), html: SVT.mascot("head") }),
+        h("div", { class: "cur-pill" }, h("span", { class: "cur-ic coin3d", "aria-hidden": "true", text: "$" }), cash),
+        h("div", { class: "cur-pill" }, h("span", { class: "cur-ic", "aria-hidden": "true", text: "🏆" }), h("b", { text: String(beaten) })),
+        h("button", { class: "gear-btn", "aria-label": "Settings", onclick: openSettings, text: "⚙" })),
+      h("div", { class: "goal-track" },
+        h("span", { class: "goal-ic", "aria-hidden": "true", text: d.icon }),
+        h("div", { class: "goal-rail" }, h("i", { class: "goal-rail-fill", style: "transform:scaleX(" + prog.toFixed(3) + ")" }), h("b", { text: progText })),
+        h("span", { class: "goal-sub", text: nextName })),
+      h("div", { class: "home-stage" },
+        h("div", { class: "side left" },
+          bubble("b-map", "🗺", "Map", () => setView("map")),
+          bubble("b-raid", "⚔️", "Viking Raid", openRaid, raidReady)),
+        h("div", { class: "hero" }, sign, h("div", { class: "hero-bot", html: SVT.mascot("hold") })),
+        h("div", { class: "side right" },
+          bubble("b-soon", "🚧", "Soon", () => toast("🚧 Under construction: coming soon")))),
+      h("button", { class: "play-btn", onclick: () => setView("lab") },
+        h("span", { class: "play-tab", text: raid ? "Viking Raid" : d.name }), h("span", { class: "play-word", text: "Play" })),
+      h("footer", { class: "home-foot", text: buildTag() }));
   }
 
   function setView(v) { view = v; render(); window.scrollTo(0, 0); }
@@ -963,6 +996,23 @@ window.SVT = window.SVT || {};
       h("button", { class: "btn fund-cta big", onclick: closeSheet, text: "Collect" })));
   }
 
+  // A little shower of stars from an element (level ups).
+  function burst(el) {
+    const r = el.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height / 2;
+    for (let i = 0; i < 6; i++) {
+      const a = -Math.PI / 2 + (i - 2.5) * 0.5, d = 46 + Math.random() * 26;
+      const s = h("span", { class: "burst", "aria-hidden": "true", text: i % 2 ? "⭐" : "✨",
+        style: "left:" + (x - 9) + "px;top:" + (y - 9) + "px;--dx:" + (Math.cos(a) * d).toFixed(0) + "px;--dy:" + (Math.sin(a) * d).toFixed(0) + "px;--r:" + ((Math.random() - 0.5) * 120).toFixed(0) + "deg" });
+      document.body.append(s);
+      setTimeout(() => s.remove(), 750);
+    }
+  }
+  // Squash and stretch on whatever you tapped.
+  function squish(el) {
+    if (!el) return;
+    el.classList.remove("squish"); void el.offsetWidth; el.classList.add("squish");
+  }
+
   // ---------- events ----------
   // Any change refreshes the screen on the very next frame instead of waiting for the regular refresh.
   let dirty = false;
@@ -985,6 +1035,7 @@ window.SVT = window.SVT || {};
     if (type === "assign" || type === "switch") render();
     if (type === "hire") { const y = window.scrollY; render(); window.scrollTo(0, y); }
     if (type === "raise") { toast("💰 Raised " + d.round.name + "! Lab income now ×" + d.mult, "big"); render(); }
+    if (type === "tap") squish(document.querySelector(d.kind === "floor" ? '.floor[data-floor="' + d.n + '"] .scene' : d.kind === "freight" ? ".lift-tower" : ".wh-tower"));
     if (type === "labUnlocked") toast("🗺 New location open on the map: " + d.lab.name, "big");
     if (type === "labBeaten") { toast("🏆 You beat " + d.lab.name + "! It closes and a new lab opens.", "big"); setView("map"); }
     if (type === "raidClear") {
