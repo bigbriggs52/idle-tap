@@ -468,6 +468,7 @@ table.stats td.next.up { color: var(--good); font-weight: 700; }
 .floor-scene .work-timer { left: auto; right: 82px; top: 4px; }
 .floor-scene .tap-hint { left: calc(50% + 10px); }
 .floor.locked, .floor.done { background: #fff8ef; border: 2px dashed #8a5d3b; }
+.floor.done .fbody { grid-column: 1 / -1; } /* no floor number on the last box, so span the whole row */
 .owned.busy { opacity: .55; filter: grayscale(.6); }
 .owned.busy .where { color: var(--warn); font-weight: 700; }
 
