@@ -57,14 +57,31 @@ window.SVT = window.SVT || {};
   SVT.labDef = (id) => (id === "raid" ? SVT.RAID.def(S.labs.raid ? S.labs.raid.stage : 1) : SVT.LABS.find((l) => l.id === id));
   SVT.lab = (id) => S.labs[id || S.activeLab];
 
-  // A lab opens on the map once the previous lab has raised its Seed round.
+  // Five labs are open at a time. Labs 2-5 open when the lab before raises Seed; from lab 6 on, beating a lab
+  // (raising its IPO) opens the lab five places after it, so a finished lab hands its slot on.
+  SVT.OPEN_LABS = 5;
   SVT.labUnlocked = (id) => !!S.labs[id];
-  SVT.labRequirement = (id) => {
-    const list = SVT.playableLabs();
-    const i = list.findIndex((l) => l.id === id);
+  SVT.labIndex = (id) => SVT.LABS.findIndex((l) => l.id === id);
+  SVT.labBeaten = (lab) => !!lab && !SVT.isRaid(lab) && lab.round >= B.ROUNDS.length;
+  SVT.labGate = (id) => {
+    const i = SVT.labIndex(id);
     if (i <= 0) return null;
-    return "Raise Seed funding in " + list[i - 1].name;
+    return i < SVT.OPEN_LABS ? { from: SVT.LABS[i - 1], round: 1 } : { from: SVT.LABS[i - SVT.OPEN_LABS], round: B.ROUNDS.length };
   };
+  SVT.labRequirement = (id) => {
+    const g = SVT.labGate(id);
+    if (!g) return null;
+    return g.round === 1 ? "Raise Seed funding in " + g.from.name : "Beat " + g.from.name + " (raise its IPO)";
+  };
+  // Opens every lab whose gate is met. Returns the labs it opened.
+  function openLabs() {
+    const opened = [];
+    SVT.LABS.forEach((l) => {
+      const g = SVT.labGate(l.id), from = g && S.labs[g.from.id];
+      if (g && !S.labs[l.id] && from && from.round >= g.round) { S.labs[l.id] = newLab(l.id); opened.push(l); }
+    });
+    return opened;
+  }
 
   // ---------- difficulty ----------
   // Each lab multiplies its prices: floor n costs scale x grow^(n-1), hubs and managers cost scale x.
@@ -269,6 +286,7 @@ window.SVT = window.SVT || {};
   SVT.tick = (dt) => {
     const t = now();
     for (const id in S.labs) {
+      if (SVT.labBeaten(S.labs[id])) continue; // beaten labs are closed
       for (let s = dt; s > 0; s -= 1) tickLab(S.labs[id], Math.min(1, s), t - s + Math.min(1, s));
     }
     S.lastSeen = Date.now();
@@ -282,6 +300,7 @@ window.SVT = window.SVT || {};
     const step = 5, t0 = now() - away;
     for (const id in S.labs) {
       const lab = S.labs[id];
+      if (SVT.labBeaten(lab)) continue;
       let earned = 0;
       for (let s = 0; s < away; s += step) earned += tickLab(lab, Math.min(step, away - s), t0 + s);
       lab.rate = 0;
@@ -444,15 +463,13 @@ window.SVT = window.SVT || {};
     lab.managers = {}; lab.assign = {}; lab.hires = { floor: 0, freight: 0, commercial: 0 };
     lab.rate = 0;
     emit("raise", { round: r, mult: SVT.prestigeMult(lab) });
-    // Seed round in one lab opens the next location on the map.
-    if (lab.round === 1) {
-      const list = SVT.playableLabs();
-      const i = list.findIndex((l) => l.id === S.activeLab);
-      const next = list[i + 1];
-      if (next && !S.labs[next.id]) {
-        S.labs[next.id] = newLab(next.id);
-        emit("labUnlocked", { lab: next });
-      }
+    // Seed (labs 1-4) or IPO (any lab) can open a new location on the map.
+    openLabs().forEach((l) => emit("labUnlocked", { lab: l }));
+    // Raising the IPO beats the lab: it closes for good (🏆 on the map) and play moves to another open lab.
+    if (SVT.labBeaten(lab)) {
+      const next = SVT.LABS.find((l) => S.labs[l.id] && !SVT.labBeaten(S.labs[l.id]));
+      if (next) S.activeLab = next.id;
+      emit("labBeaten", { lab: SVT.labDef(lab.id) });
     }
     emit("change");
     save();
@@ -460,7 +477,7 @@ window.SVT = window.SVT || {};
   };
 
   SVT.switchLab = (id) => {
-    if (!S.labs[id]) return false;
+    if (!S.labs[id] || SVT.labBeaten(S.labs[id])) return false;
     S.activeLab = id;
     emit("switch");
     save();
@@ -522,6 +539,8 @@ window.SVT = window.SVT || {};
       if (lab.commercial.carry > 0 && lab.commercial.loaded === undefined) lab.commercial.loaded = true; // pre-v0.12.1 trip in flight
     }
     if (!S.labs[S.activeLab]) S.activeLab = "garage";
+    openLabs();
+    if (SVT.labBeaten(S.labs[S.activeLab])) { const l = SVT.LABS.find((x) => S.labs[x.id] && !SVT.labBeaten(S.labs[x.id])); if (l) S.activeLab = l.id; }
     return applyOffline();
   };
 

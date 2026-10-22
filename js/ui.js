@@ -728,35 +728,40 @@ window.SVT = window.SVT || {};
   function mapView() {
     const S = SVT.state();
     const pins = SVT.LABS.map((l, i) => {
-      const unlocked = !l.soon && SVT.labUnlocked(l.id);
-      const state = l.soon ? "soon" : unlocked ? "open" : "locked";
+      const unlocked = SVT.labUnlocked(l.id), beaten = SVT.labBeaten(S.labs[l.id]);
+      const state = beaten ? "open done" : unlocked ? "open" : "locked";
       const active = S.activeLab === l.id;
       return h("button", {
         class: "pin " + state + (active ? " active" : ""), style: "left:" + l.x + "%;top:" + l.y + "%",
-        "aria-label": l.name + (l.soon ? ", coming soon" : unlocked ? "" : ", locked"),
+        "aria-label": l.name + (beaten ? ", beaten" : unlocked ? "" : ", locked"),
         onclick: () => {
-          if (l.soon) toast(l.name + ": coming soon");
+          if (beaten) toast("🏆 You beat " + l.name + ". It's closed now.");
           else if (!unlocked) toast("🔒 " + l.name + ": " + SVT.labRequirement(l.id));
           else { SVT.switchLab(l.id); setView("lab"); }
         },
       },
-        h("span", { class: "pin-dot" }, h("span", { class: "pin-icon", text: l.icon }), l.soon || !unlocked ? h("span", { class: "pin-lock", text: "🔒" }) : null),
+        h("span", { class: "pin-dot" }, h("span", { class: "pin-icon", text: l.icon }), !unlocked ? h("span", { class: "pin-lock", text: "🔒" }) : beaten ? h("span", { class: "pin-lock", text: "🏆" }) : null),
         h("span", { class: "pin-label", text: (i + 1) + ". " + l.name }));
     });
-    const list = SVT.playableLabs().map((l) => {
+    // Your open labs first, then the labs you have beaten, then the next ones you can open.
+    const nextUp = (l) => { const g = SVT.labGate(l.id); return !S.labs[l.id] && g && S.labs[g.from.id]; };
+    const rows = (pick) => SVT.LABS.filter(pick).map((l) => {
       const L = S.labs[l.id];
-      const right = L ? bind(h("span", { class: "muted" }), (e) => setText(e, "$" + fmt(L.cash) + " · " + L.floors.length + (L.floors.length === 1 ? " floor" : " floors"))) : h("span", { "aria-hidden": "true", text: "🔒" });
-      return h("button", { class: "loc" + (L ? "" : " locked"), onclick: () => { if (L) { SVT.switchLab(l.id); setView("lab"); } else toast("🔒 " + SVT.labRequirement(l.id)); } },
+      const right = L && SVT.labBeaten(L) ? h("span", { class: "muted", text: "🏆 Beaten" }) : L ? bind(h("span", { class: "muted" }), (e) => setText(e, "$" + fmt(L.cash) + " · " + L.floors.length + (L.floors.length === 1 ? " floor" : " floors"))) : h("span", { "aria-hidden": "true", text: "🔒" });
+      return h("button", { class: "loc" + (L ? "" : " locked") + (SVT.labBeaten(L) ? " beaten" : ""), onclick: () => { if (SVT.labBeaten(L)) toast("🏆 You beat " + l.name + ". It's closed now."); else if (L) { SVT.switchLab(l.id); setView("lab"); } else toast("🔒 " + SVT.labRequirement(l.id)); } },
         h("span", { class: "lab-icon", text: l.icon }), h("span", { class: "loc-name" }, h("b", { text: l.name }), h("span", { class: "muted", text: L ? l.theme : l.theme + " · " + SVT.labRequirement(l.id) })), right);
     });
+    const active = rows((l) => S.labs[l.id] && !SVT.labBeaten(S.labs[l.id])), beatenRows = rows((l) => SVT.labBeaten(S.labs[l.id])), upcoming = rows(nextUp);
     return h("main", { class: "map-view" },
       h("header", { class: "top" }, h("div", { class: "top-row" },
         h("button", { class: "btn small", onclick: () => setView("home"), text: "🏠 Home" }),
         h("div", { class: "lab-title" }, h("b", { text: "Silicon Valley Map" })),
-        h("span", { class: "muted small", text: "5 of 30 open" }))),
-      h("div", { class: "loc-list" }, h("h3", { text: "Your labs" }), list,
+        h("span", { class: "muted small", text: active.length + " open · " + beatenRows.length + " beaten" }))),
+      h("div", { class: "loc-list" }, h("h3", { text: "Your labs (" + active.length + " of " + SVT.OPEN_LABS + " open)" }), active,
+        upcoming.length ? [h("h3", { text: "Next to open" }), ...upcoming] : null,
+        beatenRows.length ? [h("h3", { text: "Beaten" }), ...beatenRows] : null,
         h("h3", { text: "Islands" }), raidCard(),
-        h("p", { class: "muted small", text: "Each lab is its own company with 30 floors and its own cash. Raising Seed funding in a lab opens the next one. Locations 6–30 are coming in a later update." })),
+        h("p", { class: "muted small", text: "Each lab is its own company with 30 floors and its own cash. Up to 5 labs are open at a time: Seed funding opens labs 2 to 5, and beating a lab (raising its IPO) opens a new one, all the way to lab 30." })),
       h("div", { class: "map-wrap" },
         h("div", { class: "map" },
           h("div", { class: "bay", "aria-hidden": "true" }),
@@ -875,13 +880,21 @@ window.SVT = window.SVT || {};
     else if (!can) { btn.textContent = "Reach Floor " + next.needFloor + " to raise " + next.name; btn.disabled = true; }
     else btn.textContent = "Raise " + next.name;
     btn.addEventListener("click", () => {
-      if (!armed) { armed = true; btn.textContent = "Tap again to confirm: this lab resets"; btn.classList.add("armed"); return; }
+      const ipo = next === B.ROUNDS[B.ROUNDS.length - 1];
+      if (!armed) { armed = true; btn.textContent = ipo ? "Tap again: beat this lab and close it" : "Tap again to confirm: this lab resets"; btn.classList.add("armed"); return; }
       if (SVT.raise()) closeSheet();
     });
     sheet("Funding", h("div", { class: "sheet-body" },
       h("p", { text: "Current multiplier: ×" + SVT.prestigeMult(L) }),
       h("p", { class: "muted", text: "Some floors start a new tech era and need funding before you can afford them. Raising a round resets this lab's floors, hubs, cash and managers. You will need to hire new managers, but the whole lab earns more forever." }),
-      ladder, btn));
+      ladder,
+      h("p", { class: "muted small", text: "Raising the IPO beats this lab: it closes for good with a 🏆" + (opensOnIpo(L) ? " and " + opensOnIpo(L).name + " opens on the map." : ".") }),
+      btn));
+  }
+  // The lab that beating this one opens (five places further on the map), if any.
+  function opensOnIpo(L) {
+    const i = SVT.labIndex(L.id) + SVT.OPEN_LABS;
+    return i < SVT.LABS.length ? SVT.LABS[i] : null;
   }
 
   function openSettings() {
@@ -939,6 +952,7 @@ window.SVT = window.SVT || {};
     if (type === "hire") { const y = window.scrollY; render(); window.scrollTo(0, y); }
     if (type === "raise") { toast("💰 Raised " + d.round.name + "! Lab income now ×" + d.mult, "big"); render(); }
     if (type === "labUnlocked") toast("🗺 New location open on the map: " + d.lab.name, "big");
+    if (type === "labBeaten") { toast("🏆 You beat " + d.lab.name + "! It closes and a new lab opens.", "big"); setView("map"); }
     if (type === "raidClear") {
       toast("⚔️ Viking Raid stage " + d.stage + " cleared!", "big");
       if (inRaid() && !document.getElementById("sheet")) showRaidClear(d.stage);
