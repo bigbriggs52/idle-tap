@@ -2,6 +2,10 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.12.1 (2026-10-22)
+
+- The warehouse worker now starts at the warehouse, pushes the empty cart over to the lift, loads the money there, and pushes it back. You get paid when the cart is back at the warehouse.
+
 ## v0.12.0 (2026-10-22)
 
 - Easier start, steady ramp. Each lab now has its own price level. Times below are for a player who keeps managers on everything (from a new pacing sim, `tests/pace.mjs`):

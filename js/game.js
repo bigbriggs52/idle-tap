@@ -231,23 +231,26 @@ window.SVT = window.SVT || {};
         if (!mgr || !(lab.lobby > 0)) return earned;
         SVT.startShip(lab, t);
       }
-      // The cart reaches the warehouse halfway through the trip and is paid there, then rolls back empty.
+      // The empty cart reaches the lift halfway through the trip and loads there, then is paid back at the warehouse.
       const half = B.WH_TRIP / 2;
-      if (c.carry > 0 && c.left > half) {
+      if (!c.loaded && c.left > half) {
         if (c.left - half > dt) { c.left -= dt; return earned; }
         dt -= c.left - half; c.left = half;
-        earned += c.carry; lab.cash += c.carry; lab.lifetime += c.carry; c.carry = 0;
+        const take = Math.min(lab.lobby, SVT.shipLoad(lab, t));
+        lab.lobby -= take; c.carry = take; c.loaded = true;
         continue;
       }
       if (c.left > dt) { c.left -= dt; return earned; }
       dt -= c.left; c.left = 0;
+      earned += c.carry || 0; lab.cash += c.carry || 0; lab.lifetime += c.carry || 0; c.carry = 0;
     }
     return earned;
   }
   SVT.shipLoad = (lab, t) => B.commercialCap(lab.commercial.lvl) * SVT.prestigeMult(lab) * SVT.nodeMult(lab, "commercial", 0, t) * B.WH_TRIP;
-  SVT.startShip = (lab, t) => {
-    const c = lab.commercial, take = Math.min(lab.lobby, SVT.shipLoad(lab, t));
-    lab.lobby -= take; c.carry = take; c.left = B.WH_TRIP;
+  // A trip starts at the warehouse: the worker pushes the empty cart to the lift, loads up, and pushes it back.
+  SVT.startShip = (lab) => {
+    const c = lab.commercial;
+    c.carry = 0; c.loaded = false; c.left = B.WH_TRIP;
   };
   function tickLab(lab, dt, t) {
     lab.floors.forEach((f, i) => stepFloor(lab, f, i + 1, dt, t));
@@ -437,7 +440,7 @@ window.SVT = window.SVT || {};
     lab.lobby = 0;
     lab.lift = newLift();
     lab.freight.lvl = 1; lab.freight.left = 0;
-    lab.commercial.lvl = 1; lab.commercial.left = 0; lab.commercial.carry = 0;
+    lab.commercial.lvl = 1; lab.commercial.left = 0; lab.commercial.carry = 0; lab.commercial.loaded = false;
     lab.managers = {}; lab.assign = {}; lab.hires = { floor: 0, freight: 0, commercial: 0 };
     lab.rate = 0;
     emit("raise", { round: r, mult: SVT.prestigeMult(lab) });
@@ -513,7 +516,11 @@ window.SVT = window.SVT || {};
     }
     if (S.buy === 100) S.buy = 50; // v0.6 buy chips are ×1, ×10, ×50, Max
     if (!S.raid) S.raid = { cleared: 0 }; // v0.12 adds the Viking Raid island
-    for (const id in S.labs) S.labs[id].id = id;
+    for (const id in S.labs) {
+      const lab = S.labs[id];
+      lab.id = id;
+      if (lab.commercial.carry > 0 && lab.commercial.loaded === undefined) lab.commercial.loaded = true; // pre-v0.12.1 trip in flight
+    }
     if (!S.labs[S.activeLab]) S.activeLab = "garage";
     return applyOffline();
   };
