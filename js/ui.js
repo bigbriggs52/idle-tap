@@ -782,38 +782,40 @@ window.SVT = window.SVT || {};
   function mapView() {
     const S = SVT.state();
     const pins = SVT.LABS.map((l, i) => {
-      const unlocked = SVT.labUnlocked(l.id), beaten = SVT.labBeaten(S.labs[l.id]);
+      const unlocked = SVT.labUnlocked(l.id), beaten = SVT.labBeaten(S.labs[l.id]), replaying = SVT.labReplaying(S.labs[l.id]);
       const state = beaten ? "open done" : unlocked ? "open" : "locked";
       const active = S.activeLab === l.id;
       return h("button", {
-        class: "pin " + state + (active ? " active" : ""), style: "left:" + l.x + "%;top:" + l.y + "%",
-        "aria-label": l.name + (beaten ? ", beaten" : unlocked ? "" : ", locked"),
+        class: "pin " + state + (active ? " active" : "") + (replaying ? " replaying" : ""), style: "left:" + l.x + "%;top:" + l.y + "%",
+        "aria-label": l.name + (beaten ? ", beaten" : replaying ? ", replaying" : unlocked ? "" : ", locked"),
         onclick: () => {
-          if (beaten) toast("🏆 You beat " + l.name + ". It's closed now.");
+          if (beaten) openReplay(l);
           else if (!unlocked) toast("🔒 " + l.name + ": " + SVT.labRequirement(l.id));
           else { SVT.switchLab(l.id); setView("lab"); }
         },
       },
-        h("span", { class: "pin-dot" }, h("span", { class: "pin-icon", text: l.icon }), !unlocked ? h("span", { class: "pin-lock", text: "🔒" }) : beaten ? h("span", { class: "pin-lock", text: "🏆" }) : null),
+        h("span", { class: "pin-dot" }, h("span", { class: "pin-icon", text: l.icon }), !unlocked ? h("span", { class: "pin-lock", text: "🔒" }) : beaten ? h("span", { class: "pin-lock", text: "🏆" }) : replaying ? h("span", { class: "pin-lock", text: "🔁" }) : null),
         h("span", { class: "pin-label", text: (i + 1) + ". " + l.name }));
     });
     // Your open labs first, then the labs you have beaten, then the next ones you can open.
     const nextUp = (l) => { const g = SVT.labGate(l.id); return !S.labs[l.id] && g && S.labs[g.from.id]; };
     const rows = (pick) => SVT.LABS.filter(pick).map((l) => {
       const L = S.labs[l.id];
-      const right = L && SVT.labBeaten(L) ? h("span", { class: "muted", text: "🏆 Beaten" }) : L ? bind(h("span", { class: "muted" }), (e) => setText(e, "$" + fmt(L.cash) + " · " + L.floors.length + (L.floors.length === 1 ? " floor" : " floors"))) : h("span", { "aria-hidden": "true", text: "🔒" });
-      return h("button", { class: "loc" + (L ? "" : " locked") + (SVT.labBeaten(L) ? " beaten" : ""), onclick: () => { if (SVT.labBeaten(L)) toast("🏆 You beat " + l.name + ". It's closed now."); else if (L) { SVT.switchLab(l.id); setView("lab"); } else toast("🔒 " + SVT.labRequirement(l.id)); } },
-        h("span", { class: "lab-icon", text: l.icon }), h("span", { class: "loc-name" }, h("b", { text: l.name }), h("span", { class: "muted", text: L ? l.theme : l.theme + " · " + SVT.labRequirement(l.id) })), right);
+      const coins = SVT.vaultCoins(l.id);
+      const right = L && SVT.labBeaten(L) ? h("span", { class: "muted", text: "🏆 ×" + (S.vault.beats[l.id] || 1) + (coins ? " · 🪙 " + coins : "") + " · Replay ›" }) : L ? bind(h("span", { class: "muted" }), (e) => setText(e, "$" + fmt(L.cash) + " · " + L.floors.length + (L.floors.length === 1 ? " floor" : " floors"))) : h("span", { "aria-hidden": "true", text: "🔒" });
+      return h("button", { class: "loc" + (L ? "" : " locked") + (SVT.labBeaten(L) ? " beaten" : "") + (SVT.labReplaying(L) ? " replaying" : ""), onclick: () => { if (SVT.labBeaten(L)) openReplay(l); else if (L) { SVT.switchLab(l.id); setView("lab"); } else toast("🔒 " + SVT.labRequirement(l.id)); } },
+        h("span", { class: "lab-icon", text: l.icon }), h("span", { class: "loc-name" }, h("b", { text: l.name + (SVT.labReplaying(L) ? " 🔁" : "") }), h("span", { class: "muted", text: L ? (SVT.labReplaying(L) ? "Replay for another coin · " : "") + l.theme : l.theme + " · " + SVT.labRequirement(l.id) })), right);
     });
-    const active = rows((l) => S.labs[l.id] && !SVT.labBeaten(S.labs[l.id])), beatenRows = rows((l) => SVT.labBeaten(S.labs[l.id])), upcoming = rows(nextUp);
+    const active = rows((l) => S.labs[l.id] && !SVT.labBeaten(S.labs[l.id]) && !SVT.labReplaying(S.labs[l.id])), replayRows = rows((l) => SVT.labReplaying(S.labs[l.id])), beatenRows = rows((l) => SVT.labBeaten(S.labs[l.id])), upcoming = rows(nextUp);
     return h("main", { class: "map-view" },
       h("header", { class: "top" }, h("div", { class: "top-row" },
         h("button", { class: "btn small", onclick: () => setView("home"), text: "🏠 Home" }),
         h("div", { class: "lab-title" }, h("b", { text: "Silicon Valley Map" })),
-        h("span", { class: "muted small", text: active.length + " open · " + beatenRows.length + " beaten" }))),
+        h("button", { class: "btn small vault-btn", onclick: SVT.openVault, text: "🎁 Vault · 🪙 " + SVT.vaultCoins() }))),
       h("div", { class: "loc-list" }, h("h3", { text: "Your labs (" + active.length + " of " + SVT.OPEN_LABS + " open)" }), active,
+        replayRows.length ? [h("h3", { text: "Replaying (bonus slot)" }), ...replayRows] : null,
         upcoming.length ? [h("h3", { text: "Next to open" }), ...upcoming] : null,
-        beatenRows.length ? [h("h3", { text: "Beaten" }), ...beatenRows] : null,
+        beatenRows.length ? [h("h3", { text: "Beaten · tap to replay for another 🪙" }), ...beatenRows] : null,
         h("h3", { text: "Islands" }), raidCard(),
         h("p", { class: "muted small", text: "Each lab is its own company with 30 floors and its own cash. Up to 5 labs are open at a time: Seed funding opens labs 2 to 5, and beating a lab (raising its IPO) opens a new one, all the way to lab 30." })),
       h("div", { class: "map-wrap" },
@@ -822,6 +824,20 @@ window.SVT = window.SVT || {};
           h("div", { class: "road r1", "aria-hidden": "true" }), h("div", { class: "road r2", "aria-hidden": "true" }), h("div", { class: "road r3", "aria-hidden": "true" }),
           pins)),
       h("footer", { class: "foot", text: "Silicon Valley Tycoon " + buildTag() }));
+  }
+
+  // ---------- lab replay (Tech Vault coins) ----------
+  // A beaten lab keeps its trophy. Replaying starts it over from scratch in a bonus slot (one replay at a time),
+  // and raising its IPO again pays another coin for the Vault.
+  function openReplay(l) {
+    const S = SVT.state(), busy = S.vault.replay && SVT.labReplaying(S.labs[S.vault.replay]) ? SVT.labDef(S.vault.replay) : null;
+    const go = h("button", { class: "btn fund-cta big", disabled: !!busy, onclick: () => { if (SVT.replayLab(l.id)) { closeSheet(); setView("lab"); toast("🔁 " + l.name + " starts over. Raise its IPO for another 🪙 coin.", "big"); } }, text: busy ? "Finish " + busy.name + " first" : "Replay " + l.name });
+    sheet(l.name, h("div", { class: "sheet-body" },
+      h("p", { text: "🏆 Beaten " + (S.vault.beats[l.id] || 1) + (S.vault.beats[l.id] === 1 ? " time" : " times") + ". You have 🪙 " + SVT.vaultCoins(l.id) + " " + l.name + (SVT.vaultCoins(l.id) === 1 ? " coin" : " coins") + " to roll in the Vault." }),
+      h("p", { class: "muted", text: "Replay it for another coin: the lab starts over from floor 1 with $0, no managers and no funding rounds, in its own bonus slot beside your 5 open labs. Raising its IPO again pays 1 more coin. One replay runs at a time." }),
+      busy ? h("p", { class: "muted small", text: "🔁 " + busy.name + " is being replayed right now." }) : null,
+      SVT.vaultCoins(l.id) ? h("button", { class: "btn", onclick: () => { closeSheet(); SVT.openVault(); }, text: "🎁 Open the Vault" }) : null),
+      { icon: l.icon, foot: h("div", { class: "panel-foot" }, go) });
   }
 
   // ---------- Viking Raid ----------
@@ -887,7 +903,7 @@ window.SVT = window.SVT || {};
     const bubble = (cls, icon, label, on, badge) => h("button", { class: "bubble " + cls, onclick: on, "aria-label": label },
       h("span", { class: "bubble-ic", "aria-hidden": "true", text: icon }), h("span", { class: "bubble-label", text: label }),
       badge ? h("span", { class: "bubble-badge", "aria-hidden": "true", text: "!" }) : null);
-    const beaten = SVT.LABS.filter((l) => SVT.labBeaten(S.labs[l.id])).length;
+    const beaten = SVT.labsDone();
     const raidReady = !S.labs.raid || S.labs.raid.won; // a new stage is waiting
     // Progress toward beating this lab: funding rounds raised, or the raid stage goal.
     const prog = raid ? Math.min(1, SVT.raidProgress(L).p) : L.round / B.ROUNDS.length;
@@ -916,12 +932,18 @@ window.SVT = window.SVT || {};
         h("div", { class: "side left" },
           bubble("b-map", "🗺", "Map", () => setView("map")),
           bubble("b-raid", "⚔️", "Viking Raid", openRaid, raidReady)),
-        h("div", { class: "hero" }, sign, h("div", { class: "hero-bot", html: SVT.mascot("hold") })),
+        h("div", { class: "hero" }, sign, h("div", { class: "hero-bot", html: SVT.mascot("hold") }), wornItems()),
         h("div", { class: "side right" },
-          rushBubble(bubble("b-rush", "🏭", "Rush", SVT.openRush, true)))),
+          rushBubble(bubble("b-rush", "🏭", "Rush", SVT.openRush, true)),
+          bubble("b-vault", "🎁", "Vault", SVT.openVault, SVT.vaultCoins() > 0))),
       h("button", { class: "play-btn", onclick: () => setView("lab") },
         h("span", { class: "play-tab", text: raid ? "Viking Raid" : d.name }), h("span", { class: "play-word", text: "Play" })),
       h("footer", { class: "home-foot", text: buildTag() }));
+  }
+
+  // Chip's collectibles from the Tech Vault, pinned to his slots (hands, hat, neck, and the floor beside him).
+  function wornItems() {
+    return SVT.vaultWorn().map(({ slot, item }) => h("button", { class: "worn worn-" + slot.id, "aria-label": slot.name + ": " + SVT.itemName(item), onclick: () => { toast(SVT.itemName(item) + " · " + item.rarity, "big"); SVT.openGallery(); } }, SVT.itemArt(item, "mini")));
   }
 
   // The Rush bubble shows the boost countdown, and its "!" badge only while a run is ready.
@@ -1059,7 +1081,7 @@ window.SVT = window.SVT || {};
     if (type === "raise") { toast("💰 Raised " + d.round.name + "! Lab income now ×" + d.mult, "big"); render(); }
     if (type === "tap") squish(document.querySelector(d.kind === "floor" ? '.floor[data-floor="' + d.n + '"] .scene' : d.kind === "freight" ? ".lift-tower" : ".wh-tower"));
     if (type === "labUnlocked") toast("🗺 New location open on the map: " + d.lab.name, "big");
-    if (type === "labBeaten") { toast("🏆 You beat " + d.lab.name + "! It closes and a new lab opens.", "big"); setView("map"); }
+    if (type === "labBeaten") { toast("🏆 You beat " + d.lab.name + "! +1 🪙 " + d.lab.name + " coin for the Vault" + (d.replay ? "." : ", and a new lab opens."), "big"); setView("map"); }
     if (type === "raidClear") {
       toast("⚔️ Viking Raid stage " + d.stage + " cleared!", "big");
       if (inRaid() && !document.getElementById("sheet")) showRaidClear(d.stage);

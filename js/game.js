@@ -48,8 +48,12 @@ window.SVT = window.SVT || {};
   // The lift's trip: y is its depth in floors (0 = surface). It goes down floor by floor, loads, and turns back when full.
   function newLift() { return { phase: "idle", y: 0, load: 0, timer: 0, at: 0 }; }
   function newRush() { return { mult: 1, until: 0, next: 0, best: 0, runs: 0 }; }
+  // Tech Vault: coins per lab (earned by beating it), how many times each lab was beaten, the items rolled so far,
+  // the pity counter (coins spent since the last Legendary or better), the lab being replayed, and the items Chip
+  // wears on the home screen (slot -> item id).
+  function newVault() { return { coins: {}, beats: {}, items: [], pity: 0, spent: 0, serial: 0, replay: null, show: {} }; }
   function newState() {
-    return { v: 3, activeLab: "garage", buy: "next", labs: { garage: newLab("garage") }, raid: { cleared: 0 }, rush: newRush(), lastSeen: Date.now(), seenIntro: false };
+    return { v: 3, activeLab: "garage", buy: "next", labs: { garage: newLab("garage") }, raid: { cleared: 0 }, rush: newRush(), vault: newVault(), lastSeen: Date.now(), seenIntro: false };
   }
 
   let S = newState();
@@ -64,6 +68,10 @@ window.SVT = window.SVT || {};
   SVT.labUnlocked = (id) => !!S.labs[id];
   SVT.labIndex = (id) => SVT.LABS.findIndex((l) => l.id === id);
   SVT.labBeaten = (lab) => !!lab && !SVT.isRaid(lab) && lab.round >= B.ROUNDS.length;
+  // Ever beaten (a replay in progress still counts); labBeaten means closed right now.
+  SVT.labDone = (id) => (S.vault.beats[id] || 0) > 0;
+  SVT.labReplaying = (lab) => !!lab && !!lab.replay && !SVT.labBeaten(lab);
+  SVT.labsDone = () => SVT.LABS.filter((l) => SVT.labDone(l.id)).length;
   SVT.labGate = (id) => {
     const i = SVT.labIndex(id);
     if (i <= 0) return null;
@@ -79,7 +87,8 @@ window.SVT = window.SVT || {};
     const opened = [];
     SVT.LABS.forEach((l) => {
       const g = SVT.labGate(l.id), from = g && S.labs[g.from.id];
-      if (g && !S.labs[l.id] && from && from.round >= g.round) { S.labs[l.id] = newLab(l.id); opened.push(l); }
+      // A lab being replayed has started over, but it already met the gate once.
+      if (g && !S.labs[l.id] && from && (from.round >= g.round || (g.round > 1 && SVT.labDone(from.id)))) { S.labs[l.id] = newLab(l.id); opened.push(l); }
     });
     return opened;
   }
@@ -112,6 +121,28 @@ window.SVT = window.SVT || {};
     emit("rush", { score, tier, applied });
     save();
     return { tier, applied };
+  };
+
+  // ---------- Tech Vault coins and lab replay ----------
+  SVT.vaultCoins = (id) => (id ? S.vault.coins[id] || 0 : Object.values(S.vault.coins).reduce((a, b) => a + b, 0));
+  // Beating a lab pays one coin stamped with that lab. Labs beaten before the Vault existed pay theirs on load.
+  function payCoin(id) {
+    S.vault.coins[id] = (S.vault.coins[id] || 0) + 1;
+    S.vault.beats[id] = (S.vault.beats[id] || 0) + 1;
+  }
+  // Replay: a beaten lab starts over from scratch in its own bonus slot (one replay at a time) and pays another
+  // coin when its IPO is raised again. The trophy stays: the lab counts as done the whole time.
+  SVT.canReplay = (id) => SVT.labBeaten(S.labs[id]) && (!S.vault.replay || !SVT.labReplaying(S.labs[S.vault.replay]));
+  SVT.replayLab = (id) => {
+    if (!SVT.canReplay(id)) return false;
+    const lab = newLab(id);
+    lab.replay = true;
+    S.labs[id] = lab;
+    S.vault.replay = id;
+    S.activeLab = id;
+    emit("switch");
+    save();
+    return true;
   };
 
   // ---------- Viking Raid ----------
@@ -498,9 +529,13 @@ window.SVT = window.SVT || {};
     openLabs().forEach((l) => emit("labUnlocked", { lab: l }));
     // Raising the IPO beats the lab: it closes for good (🏆 on the map) and play moves to another open lab.
     if (SVT.labBeaten(lab)) {
+      const replay = !!lab.replay;
+      delete lab.replay;
+      if (S.vault.replay === lab.id) S.vault.replay = null;
+      payCoin(lab.id);
       const next = SVT.LABS.find((l) => S.labs[l.id] && !SVT.labBeaten(S.labs[l.id]));
       if (next) S.activeLab = next.id;
-      emit("labBeaten", { lab: SVT.labDef(lab.id) });
+      emit("labBeaten", { lab: SVT.labDef(lab.id), replay, coins: SVT.vaultCoins(lab.id) });
     }
     emit("change");
     save();
@@ -565,12 +600,17 @@ window.SVT = window.SVT || {};
     if (S.buy === 100) S.buy = 50; // v0.6 buy chips are ×1, ×10, ×50, Max
     if (!S.raid) S.raid = { cleared: 0 }; // v0.12 adds the Viking Raid island
     if (!S.rush) S.rush = newRush(); // v0.16 adds Assembly Line Rush
+    if (!S.vault) S.vault = newVault(); // v0.17 adds the Tech Vault
+    if (!S.vault.show || typeof S.vault.show !== "object") S.vault.show = {};
     for (const id in S.labs) {
       const lab = S.labs[id];
       lab.id = id;
       if (lab.commercial.carry > 0 && lab.commercial.loaded === undefined) lab.commercial.loaded = true; // pre-v0.12.1 trip in flight
     }
     if (!S.labs[S.activeLab]) S.activeLab = "garage";
+    // Labs beaten before v0.17 pay their coin now.
+    for (const id in S.labs) if (SVT.labBeaten(S.labs[id]) && !SVT.labDone(id)) payCoin(id);
+    if (S.vault.replay && !SVT.labReplaying(S.labs[S.vault.replay])) S.vault.replay = null;
     openLabs();
     if (SVT.labBeaten(S.labs[S.activeLab])) { const l = SVT.LABS.find((x) => S.labs[x.id] && !SVT.labBeaten(S.labs[x.id])); if (l) S.activeLab = l.id; }
     return applyOffline();

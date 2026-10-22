@@ -280,7 +280,7 @@ await page.reload(); await page.waitForTimeout(400);
 await page.screenshot({ path: out + "/14-home.png" });
 const tiles = await page.locator(".bubble, .play-btn, .gear-btn").count();
 console.log("home tiles", tiles);
-if (tiles !== 5) errors.push("Home screen missing or wrong tile count: " + tiles);
+if (tiles !== 6) errors.push("Home screen missing or wrong tile count: " + tiles);
 await page.click(".play-btn", { force: true }); await page.waitForTimeout(200);
 if (!(await page.locator(".lab-view").isVisible())) errors.push("Play did not open the lab");
 await page.click(".home-btn"); await page.waitForTimeout(200);
@@ -315,6 +315,65 @@ if (!(boost.wait > 800) || !boost.applied || boost.mult !== 5 || Math.abs(boost.
 await page.click("#rush .btn.fund-cta"); await page.waitForTimeout(200);
 if (await page.locator("#rush").count()) errors.push("Rush did not close");
 await page.screenshot({ path: out + "/18-home-boosted.png" });
+// Tech Vault: beating the garage earlier paid a coin; replay runs in a bonus slot; rolls follow the odds; every
+// item is unique in the save; items only go in slots they fit; Chip wears them on the home screen.
+const vault = await page.evaluate(() => {
+  const S = SVT.state(), V = SVT.B.VAULT, out = {};
+  out.coin = SVT.vaultCoins("garage");
+  out.done = SVT.labDone("garage") && SVT.labBeaten(S.labs.garage);
+  out.canReplay = SVT.canReplay("garage");
+  SVT.replayLab("garage");
+  out.replaying = SVT.labReplaying(S.labs.garage) && S.labs.garage.round === 0 && S.vault.replay === "garage" && SVT.labDone("garage");
+  out.canReplayAgain = SVT.canReplay("garage");
+  // the replay does not use one of the 5 slots: the open-lab count on the map leaves it out
+  SVT.setView("map");
+  out.mapTitle = document.querySelector(".loc-list h3").textContent;
+  out.replayRow = !!document.querySelector(".loc.replaying");
+  // beat the replay: another coin, lab closed again, replay cleared
+  const L = S.labs.garage; S.activeLab = "garage";
+  for (let r = 0; r < SVT.B.ROUNDS.length; r++) { while (L.floors.length < SVT.B.ROUNDS[r].needFloor) L.floors.push({ lvl: 1, stock: 0, left: 0 }); SVT.raise(); }
+  out.coin2 = SVT.vaultCoins("garage"); out.beats = S.vault.beats.garage; out.closed = SVT.labBeaten(S.labs.garage) && !S.vault.replay;
+  // odds: 1 coin vs 5 coins, and pity
+  const sim = (coins, pity, n) => { const c = [0, 0, 0, 0, 0, 0]; for (let i = 0; i < n; i++) c[SVT.vaultRollRarity(coins, pity)]++; return c.map((x) => x / n); };
+  out.p1 = sim(1, 0, 50000); out.p5 = sim(5, 0, 50000); out.hard = sim(1, V.PITY.HARD - 1, 2000); out.soft = SVT.vaultOdds(1, 12);
+  // uniqueness: 400 rolls at one lab, all different looks
+  S.vault.coins.garage = 400;
+  const keys = new Set(), ids = new Set();
+  for (let i = 0; i < 400; i++) { const it = SVT.vaultRoll("garage", 1); keys.add([it.product, it.color, it.finish, it.size, it.mods.slice().sort().join()].join("|")); ids.add(it.dna + it.id); }
+  out.unique = keys.size; out.dnas = ids.size; out.items = S.vault.items.length; out.firstRare = S.vault.items[0].rar >= V.FIRST_ROLL_MIN;
+  out.coinsLeft = SVT.vaultCoins("garage");
+  // slots: a giant item cannot go in a hand; a keychain can
+  const giant = S.vault.items.find((x) => x.size === 5), key = S.vault.items.find((x) => x.size === 0);
+  out.fit = giant && key ? { giantHand: SVT.vaultFits(giant, "hand_l"), giantFloor: SVT.vaultFits(giant, "floor_l"), keyHand: SVT.vaultFits(key, "hand_r") } : null;
+  if (giant) { SVT.vaultWear("hand_l", giant.id); out.giantInHand = SVT.vaultSlotOf(giant.id); SVT.vaultWear("floor_r", giant.id); out.giantOnFloor = SVT.vaultSlotOf(giant.id); }
+  out.worn = SVT.vaultWorn().length;
+  return out;
+});
+console.log("vault", JSON.stringify(vault));
+if (vault.coin !== 1 || !vault.done || !vault.canReplay || !vault.replaying || vault.canReplayAgain) errors.push("Vault: coin on beat or replay start wrong");
+if (!vault.mapTitle.includes("of 5 open") || !vault.replayRow) errors.push("Vault: replay row or slot count wrong: " + vault.mapTitle);
+if (vault.coin2 !== 2 || vault.beats !== 2 || !vault.closed) errors.push("Vault: beating the replay did not pay a second coin");
+if (Math.abs(vault.p1[0] - 0.5) > 0.02 || Math.abs(vault.p1[4] - 0.018) > 0.004 || vault.p5[0] !== 0 || Math.abs(vault.p5[4] - 0.15) > 0.01) errors.push("Vault: odds off " + JSON.stringify([vault.p1, vault.p5]));
+if (vault.hard[0] + vault.hard[1] + vault.hard[2] + vault.hard[3] !== 0 || !(vault.soft[4] > 0.018)) errors.push("Vault: pity is not applied");
+if (vault.unique !== 400 || vault.dnas !== 400 || vault.items !== 400 || !vault.firstRare || vault.coinsLeft !== 0) errors.push("Vault: items not unique or coins not spent");
+if (!vault.fit || vault.fit.giantHand || !vault.fit.giantFloor || !vault.fit.keyHand || vault.giantInHand || vault.giantOnFloor !== "floor_r") errors.push("Vault: slot fitting wrong " + JSON.stringify(vault));
+if (vault.worn < 4) errors.push("Vault: Chip is not wearing the first items");
+await page.evaluate(() => SVT.setView("home")); await page.waitForTimeout(300);
+const wornEls = await page.locator(".worn").count();
+if (wornEls !== vault.worn) errors.push("Vault: worn items not drawn on the home screen: " + wornEls);
+await page.screenshot({ path: out + "/19-home-worn.png" });
+await page.click(".bubble.b-vault", { force: true }); await page.waitForTimeout(300);
+await page.screenshot({ path: out + "/20-vault.png" });
+if (!(await page.locator(".vault-odds").isVisible())) errors.push("Vault: odds table not shown");
+await page.evaluate(() => { SVT.state().vault.coins.garage = 5; SVT.openVault(); });
+await page.click(".vault-stake >> nth=3"); await page.click(".vault-roll"); await page.waitForTimeout(1200);
+await page.screenshot({ path: out + "/21-vault-roll.png" });
+await page.waitForTimeout(4500);
+await page.screenshot({ path: out + "/22-vault-reveal.png" });
+if (!(await page.locator(".vault-reveal .vault-card").isVisible())) errors.push("Vault: reveal card missing");
+await page.evaluate(() => SVT.openGallery()); await page.waitForTimeout(300);
+await page.screenshot({ path: out + "/23-vault-gallery.png" });
+await page.evaluate(() => SVT.closeVault());
 const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
 console.log("horizontal overflow", overflow);
 console.log("errors", JSON.stringify(errors));
