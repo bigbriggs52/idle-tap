@@ -890,7 +890,7 @@ window.SVT = window.SVT || {};
         h("span", { class: "hill h1" }), h("span", { class: "hill h2" }),
         h("span", { class: "hq" }, h("span", { class: "hq-roof" }), h("span", { class: "hq-win" }), h("span", { class: "hq-door" })),
         h("span", { class: "lawn" }), h("span", { class: "bush b1" }), h("span", { class: "bush b2" }),
-        h("span", { class: "mine-hole" }, h("span", { class: "ladder" }))),
+        h("span", { class: "mine-hole" }, h("span", { class: "mine-ladder" }))),
       h("div", { class: "home-top" },
         h("button", { class: "avatar-badge", "aria-label": "Chip says hi", onclick: () => toast("🤖 Chip: Let's build something big!"), html: SVT.mascot("head") }),
         h("div", { class: "cur-pill" }, h("span", { class: "cur-ic coin3d", "aria-hidden": "true", text: "$" }), cash),

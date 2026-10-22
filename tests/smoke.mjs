@@ -115,6 +115,8 @@ await page.screenshot({ path: out + "/04-wall.png" });
 // raise seed
 await page.click(".nav-btn.fund");
 await page.screenshot({ path: out + "/05-funding.png" });
+const ladderPos = await page.evaluate(() => getComputedStyle(document.querySelector("#sheet ol.ladder")).position);
+if (ladderPos !== "static") errors.push("Funding round list is positioned " + ladderPos + " (style clash)");
 await page.click("#sheet .btn.fund-cta");
 await page.click("#sheet .btn.fund-cta");
 const after = await page.evaluate(() => ({ round: SVT.lab().round, mult: SVT.prestigeMult(SVT.lab()), labs: Object.keys(SVT.state().labs), managers: Object.keys(SVT.lab().managers).length }));
