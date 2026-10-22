@@ -270,10 +270,12 @@ window.SVT = window.SVT || {};
     emit("tap", { kind, n });
   };
 
-  SVT.buyAmount = () => (S.buy === "max" ? Infinity : S.buy);
+  // ×10 and ×50 round up to the next multiple, like Idle Miner: Lv 56 ×10 buys 4 (to 60), Lv 60 ×10 buys 10 (to 70).
+  SVT.stepTo = (lv, step) => step - (lv % step);
+  SVT.buyAmount = (lv) => (S.buy === "max" ? Infinity : S.buy === 1 ? 1 : SVT.stepTo(lv || 0, S.buy));
   SVT.quote = (lab, kind, n) => {
     const L = SVT.levelOf(lab, kind, n);
-    return B.bulk(kind, n, L, SVT.buyAmount(), lab.cash, SVT.discount(lab, kind, n));
+    return B.bulk(kind, n, L, SVT.buyAmount(L), lab.cash, SVT.discount(lab, kind, n));
   };
 
   SVT.upgrade = (kind, n) => {

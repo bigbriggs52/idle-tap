@@ -164,7 +164,8 @@ if (cyc.lift !== "idle") errors.push("Lift moved without a tap");
 // upgrade badge: ▲ / ▲▲ / ▲▲▲ for 1 / 10 / 50 affordable levels
 const tri = await page.evaluate(async () => {
   const L = SVT.lab(), out = [];
-  for (const c of [0, SVT.B.bulk("floor", 1, L.floors[0].lvl, 1, 0, 0).cost, SVT.B.bulk("floor", 1, L.floors[0].lvl, 10, 0, 0).cost, SVT.B.bulk("floor", 1, L.floors[0].lvl, 50, 0, 0).cost]) {
+  const lv = L.floors[0].lvl, to = (k) => k - (lv % k);
+  for (const c of [0, SVT.B.bulk("floor", 1, lv, 1, 0, 0).cost, SVT.B.bulk("floor", 1, lv, to(10), 0, 0).cost, SVT.B.bulk("floor", 1, lv, to(50), 0, 0).cost]) {
     L.cash = c * 1.0001; await new Promise((r) => setTimeout(r, 400));
     out.push(document.querySelector(".floor .lvl-btn").dataset.tri);
   }
@@ -172,6 +173,16 @@ const tri = await page.evaluate(async () => {
 });
 console.log("badge tiers", tri);
 if (tri !== "0123") errors.push("Upgrade badge tiers wrong: " + tri);
+// ×10 / ×50 round up to the next multiple: Lv 56 ×10 -> 60, Lv 60 ×10 -> 70, Lv 56 ×50 -> 100
+const steps = await page.evaluate(() => {
+  const L = SVT.lab(), f = L.floors[0], out = [];
+  L.cash = 1e30;
+  for (const [lv, b] of [[56, 10], [60, 10], [56, 50], [100, 50]]) { f.lvl = lv; SVT.setBuy(b); out.push(lv + SVT.quote(L, "floor", 1).count); }
+  SVT.setBuy(1);
+  return out.join(",");
+});
+console.log("step buys", steps);
+if (steps !== "60,70,100,150") errors.push("x10/x50 do not round to the next multiple: " + steps);
 // save + reload restores
 await page.evaluate(() => SVT.save());
 await page.reload(); await page.waitForTimeout(400);
