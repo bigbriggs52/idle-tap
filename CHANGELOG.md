@@ -2,6 +2,12 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.18.0 (2026-10-22)
+
+- Tech Vault coins: a new player starts with 50 wild coins that roll at any open lab (existing saves get them once). Beating a lab, first time or on a replay, now pays 10 of its coins instead of 1; labs you beat earlier are topped up to 10 per win.
+- Stakes are now 1, 3, 5 or 10 coins per roll (same odds ladder as before: 10 coins is 18% Legendary or better and never Common). Pity now guarantees a Legendary or better within 75 coins, with rising odds from the 50th.
+- New Trophies tab in the Vault: every lab you have beaten with its win count and coins, your inventory totals by rarity, coins spent, and what Chip has in each of his six slots. The Gallery tab is now called Items.
+
 ## v0.17.1 (2026-10-22)
 
 - Fix: the screen shook every time you hired, assigned, unassigned or sold a manager. The manager panel was rebuilt after each tap and replayed its spring-in animation. A panel that is already open now swaps in place with no animation. The same fix covers every other panel that rebuilds itself after a tap.

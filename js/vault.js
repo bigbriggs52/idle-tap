@@ -79,10 +79,8 @@ window.SVT = window.SVT || {};
   // Spends `coins` of one lab and rolls an item. Returns the item (null if the coins are not there).
   SVT.vaultRoll = (labId, coins) => {
     const v = S();
-    if (!V.ODDS[coins] || (v.coins[labId] || 0) < coins) return null;
     const def = SVT.LABS.find((l) => l.id === labId);
-    if (!def) return null;
-    v.coins[labId] -= coins;
+    if (!V.ODDS[coins] || !def || !SVT.vaultSpend(labId, coins)) return null;
     let rar = SVT.vaultRollRarity(coins, v.pity);
     if (v.serial === 0) rar = Math.max(rar, V.FIRST_ROLL_MIN);
     v.pity = rar >= 4 ? 0 : v.pity + coins;
@@ -162,7 +160,8 @@ window.SVT = window.SVT || {};
         h("button", { class: "x-btn", "aria-label": "Close", onclick: close, text: "✕" })),
       h("div", { class: "vault-tabs" },
         h("button", { class: "vault-tab" + (tab === "roll" ? " on" : ""), onclick: () => { tab = "roll"; openVault(); }, text: "Roll" }),
-        h("button", { class: "vault-tab" + (tab === "gallery" ? " on" : ""), onclick: () => { tab = "gallery"; openVault(); }, text: "Gallery (" + S().items.length + ")" })),
+        h("button", { class: "vault-tab" + (tab === "gallery" ? " on" : ""), onclick: () => { tab = "gallery"; openVault(); }, text: "Items (" + S().items.length + ")" }),
+        h("button", { class: "vault-tab" + (tab === "trophies" ? " on" : ""), onclick: () => { tab = "trophies"; openVault(); }, text: "Trophies" })),
       ...kids);
     document.body.append(box);
     document.addEventListener("keydown", onKey);
@@ -179,17 +178,20 @@ window.SVT = window.SVT || {};
     close();
     const v = S();
     if (tab === "gallery") return gallery();
-    const labs = SVT.LABS.filter((l) => (v.coins[l.id] || 0) > 0);
+    if (tab === "trophies") return trophies();
+    // Labs you can roll at: ones with their own coins, plus any open lab while you have wild coins.
+    const labs = SVT.LABS.filter((l) => SVT.vaultSpendable(l.id) > 0);
     if (!labs.find((l) => l.id === labPick)) labPick = labs.length ? labs[0].id : null;
-    const have = labPick ? v.coins[labPick] : 0;
+    const have = labPick ? SVT.vaultSpendable(labPick) : 0;
     if (!V.STAKES.includes(stake) || stake > have) stake = V.STAKES.filter((s) => s <= have).pop() || 1;
     const pityLeft = Math.max(0, V.PITY.HARD - v.pity);
     const body = h("div", { class: "vault-body" },
-      h("p", { class: "vault-lede", text: "Beat a lab to earn its coin. A coin rolls one of that lab's 30 products as a one-of-a-kind collectible: product, rarity, color, finish, size and mods. Put more coins into one roll for better odds." }),
+      h("p", { class: "vault-lede", text: "Beating a lab pays " + V.COIN_PER_BEAT + " of its coins. A coin rolls one of that lab's 30 products as a one-of-a-kind collectible: product, rarity, color, finish, size and mods. Put more coins into one roll for better odds." }),
+      SVT.vaultWild() ? h("p", { class: "muted small", text: "🪙 " + SVT.vaultWild() + " wild starter " + (SVT.vaultWild() === 1 ? "coin rolls" : "coins roll") + " at any open lab. Lab coins are spent first." }) : null,
       labs.length
         ? h("div", { class: "vault-labs" }, labs.map((l) => h("button", { class: "vault-lab" + (l.id === labPick ? " on" : ""), onclick: () => { labPick = l.id; openVault(); } },
-          h("span", { text: l.icon + " " + l.name }), h("b", { text: "🪙 " + v.coins[l.id] }))))
-        : h("p", { class: "vault-empty", text: "No coins yet. Raise a lab's IPO to earn its coin, then replay a beaten lab from the map for another." }),
+          h("span", { text: l.icon + " " + l.name }), h("b", { text: "🪙 " + (v.coins[l.id] || 0) + (SVT.vaultWild() ? " +" + SVT.vaultWild() + " wild" : "") }))))
+        : h("p", { class: "vault-empty", text: "No coins yet. Raise a lab's IPO to earn " + V.COIN_PER_BEAT + " coins, then replay a beaten lab from the map for " + V.COIN_PER_BEAT + " more." }),
       labPick ? h("div", { class: "vault-stakes" }, V.STAKES.map((s) => h("button", { class: "vault-stake" + (s === stake ? " on" : ""), disabled: s > have, onclick: () => { stake = s; openVault(); } }, h("b", { text: "🪙 " + s }), h("small", { text: s === 1 ? "1 coin" : s + " coins" })))) : null,
       labPick ? oddsTable(stake) : oddsTable(1),
       h("p", { class: "muted small", text: v.pity >= V.PITY.SOFT ? "🔥 Pity: " + v.pity + " coins since your last Legendary. Legendary or better is guaranteed within " + pityLeft + " more." : "Pity: a Legendary or better is guaranteed within " + pityLeft + " coins (" + v.pity + " spent since your last one)." + (v.serial === 0 ? " Your first roll is at least Rare." : "") }));
@@ -268,6 +270,28 @@ window.SVT = window.SVT || {};
       byLab.map((l) => h("div", { class: "vault-shelf" },
         h("h3", { text: l.icon + " " + l.name }),
         v.items.filter((x) => x.lab === l.id).sort((a, b) => b.rar - a.rar || b.id - a.id).map((x) => itemCard(x))))));
+  }
+
+  // Trophies: every lab beaten (with how often and its coins), the inventory totals by rarity, and Chip's slots.
+  function trophies() {
+    const { h } = SVT.ui;
+    const v = S(), beaten = SVT.LABS.filter((l) => SVT.labDone(l.id));
+    const counts = RAR.map((r) => v.items.filter((x) => x.rarity === r.id).length);
+    shell(h("div", { class: "vault-body" },
+      h("h3", { class: "vault-h", text: "🏆 Trophies (" + beaten.length + " of " + SVT.LABS.length + " labs)" }),
+      beaten.length
+        ? h("div", { class: "vault-labs" }, beaten.map((l) => h("div", { class: "vault-lab trophy" },
+          h("span", { text: l.icon + " " + l.name }),
+          h("b", { text: "🏆 ×" + v.beats[l.id] + " · 🪙 " + (v.coins[l.id] || 0) + " · " + v.items.filter((x) => x.lab === l.id).length + " items" }))))
+        : h("p", { class: "vault-empty", text: "No trophies yet. Raise a lab's IPO to beat it." }),
+      h("h3", { class: "vault-h", text: "📦 Inventory (" + v.items.length + " items)" }),
+      h("div", { class: "vault-odds" }, RAR.map((r, i) => h("div", { class: "vault-odd r-" + r.id }, h("b", { text: r.name }), h("span", { text: String(counts[i]) })))),
+      h("p", { class: "muted small", text: v.spent + " coins spent so far · " + v.pity + " since your last Legendary." }),
+      h("h3", { class: "vault-h", text: "🤖 Chip's slots" }),
+      h("div", { class: "vault-labs" }, SLOTS.map((sl) => { const it = v.show[sl.id] ? SVT.vaultItem(v.show[sl.id]) : null;
+        return h("button", { class: "vault-lab slot" + (it ? " r-" + it.rarity : ""), onclick: () => { tab = "gallery"; openVault(); } },
+          h("span", { text: sl.icon + " " + sl.name }), it ? h("b", { class: "r-" + it.rarity, text: SVT.itemName(it) }) : h("span", { class: "muted small", text: "empty" })); })),
+      v.items.length ? h("button", { class: "btn", onclick: () => { tab = "gallery"; openVault(); }, text: "Open the item shelves" }) : null));
   }
 
   SVT.openVault = () => { tab = "roll"; openVault(); };
