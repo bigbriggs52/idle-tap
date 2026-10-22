@@ -99,6 +99,7 @@ await page.click('#sheet [aria-label="Close"]');
 // hold Upgrade to keep buying
 await page.evaluate(() => SVT.setBuy(1));
 await page.click(".floor .lvl-btn >> nth=1");
+await page.waitForTimeout(500); // let the panel finish springing in
 const h0 = await page.evaluate(() => SVT.lab().floors[1].lvl);
 const ub = await page.locator("#sheet .btn.up").boundingBox();
 await page.mouse.move(ub.x + 20, ub.y + 10); await page.mouse.down(); await page.waitForTimeout(1500); await page.mouse.up();
@@ -259,10 +260,10 @@ await page.evaluate(() => document.querySelector("#sheet .x-btn").click());
 await page.evaluate(() => SVT.save());
 await page.reload(); await page.waitForTimeout(400);
 await page.screenshot({ path: out + "/14-home.png" });
-const tiles = await page.locator(".home-tile").count();
+const tiles = await page.locator(".bubble, .play-btn, .gear-btn").count();
 console.log("home tiles", tiles);
 if (tiles !== 5) errors.push("Home screen missing or wrong tile count: " + tiles);
-await page.click(".home-tile.t-play"); await page.waitForTimeout(200);
+await page.click(".play-btn", { force: true }); await page.waitForTimeout(200);
 if (!(await page.locator(".lab-view").isVisible())) errors.push("Play did not open the lab");
 await page.click(".home-btn"); await page.waitForTimeout(200);
 if (!(await page.locator(".home-view").isVisible())) errors.push("Home button did not return home");

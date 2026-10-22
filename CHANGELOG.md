@@ -2,6 +2,28 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.14.0 (2026-10-22)
+
+A cartoon makeover, styled after polished casual mobile games.
+
+- Meet Chip, the game's robot mascot. He's drawn in code, so he stays sharp at any size. He breathes, blinks, wobbles his antenna and nods.
+- New home screen:
+  - A garden in front of the lab HQ, with drifting clouds and the mine entrance.
+  - Pills at the top for cash and labs beaten, plus a settings gear.
+  - A purple progress bar for your funding rounds.
+  - Chip holding up a sign with your floor count.
+  - Round bobbing bubbles for Map, Viking Raid (with a red ! when a new stage is waiting) and Coming soon.
+  - A big glossy green Play button with your lab's name on a purple tab.
+- New fonts: Lilita One for headings, numbers and buttons, and Fredoka for everything else. Big labels get white text with a thick outline.
+- Glossy, chunky buttons everywhere: Level buttons, Level Up, Unlock, Hire, the bottom bar's round icon badges and the header's cash pill.
+- More life in the animations:
+  - Floors, the lift and the warehouse squash and stretch when you tap them.
+  - Level Up throws out a little burst of stars.
+  - "Tap" hints bounce, and upgrade badges wiggle when you can afford them.
+  - Panels and toasts spring in.
+  - The header coin flips now and then, and the sun pulses while clouds drift by.
+- If your phone is set to reduce motion, the idle animations are switched off.
+
 ## v0.13.2 (2026-10-22)
 
 - New jump arrows at the bottom left, like Idle Miner. ⬆ appears once you scroll down and glides you back to the top of the mine. ⬇ appears when there is more mine below and glides you down to the deepest floor. You can watch it scroll, and touching the screen stops it.
