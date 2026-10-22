@@ -286,6 +286,35 @@ if (!(await page.locator(".lab-view").isVisible())) errors.push("Play did not op
 await page.click(".home-btn"); await page.waitForTimeout(200);
 if (!(await page.locator(".home-view").isVisible())) errors.push("Home button did not return home");
 console.log("reload labs", await page.evaluate(() => Object.keys(SVT.state().labs).join(",") + " garage round=" + SVT.state().labs.garage.round));
+// Assembly Line Rush: start screen from the home bubble, a run sorted with the arrow keys, results, and the boost.
+await page.click(".bubble.b-rush", { force: true }); await page.waitForTimeout(300);
+await page.screenshot({ path: out + "/15-rush-start.png" });
+await page.click(".rush-play");
+const keyFor = { left: "ArrowLeft", down: "ArrowDown", right: "ArrowRight" };
+for (let i = 0; i < 40; i++) {
+  await page.waitForTimeout(150);
+  if (i === 20) await page.screenshot({ path: out + "/16-rush-run.png" });
+  const dir = await page.evaluate(() => { const p = document.querySelector(".rush-part.next"); return p && p.dataset.dir; });
+  if (dir && i < 36) await page.keyboard.press(keyFor[dir]);
+}
+const run = await page.evaluate(() => ({ score: SVT.rushGame().score, lives: SVT.rushGame().lives }));
+console.log("rush run", JSON.stringify(run));
+if (!(run.score >= 3)) errors.push("Rush: sorting with the keys did not score");
+await page.evaluate(() => SVT.rushGame().end()); await page.waitForTimeout(700);
+await page.screenshot({ path: out + "/17-rush-result.png" });
+if (!(await page.locator(".rush-big").isVisible())) errors.push("Rush results screen missing");
+const boost = await page.evaluate(() => {
+  const S = SVT.state(), L = S.labs.arcade, before = SVT.rates(L).income, raidBefore = S.labs.raid ? SVT.rates(S.labs.raid).income : 0;
+  const wait = SVT.rushWait();
+  S.rush.next = 0;
+  const r = SVT.finishRush(45);
+  return { wait, applied: r.applied, mult: SVT.rushMult(), ratio: SVT.rates(L).income / before, raidSame: !S.labs.raid || SVT.rates(S.labs.raid).income === raidBefore, again: SVT.finishRush(20).applied };
+});
+console.log("rush boost", JSON.stringify(boost));
+if (!(boost.wait > 800) || !boost.applied || boost.mult !== 5 || Math.abs(boost.ratio - 5) > 1e-6 || !boost.raidSame || boost.again) errors.push("Rush boost or cooldown is wrong");
+await page.click("#rush .btn.fund-cta"); await page.waitForTimeout(200);
+if (await page.locator("#rush").count()) errors.push("Rush did not close");
+await page.screenshot({ path: out + "/18-home-boosted.png" });
 const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
 console.log("horizontal overflow", overflow);
 console.log("errors", JSON.stringify(errors));

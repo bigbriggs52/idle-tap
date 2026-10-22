@@ -2,6 +2,19 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.16.0 (2026-10-22)
+
+- New mini game, Assembly Line Rush (🏭 Rush), in the old "Coming soon" spot on the home screen and the bottom bar.
+- Parts (🔋 batteries, 💾 chips, ⚙️ gears) ride down a conveyor. Swipe each one into its bin (left, down or right) before it drops off the end. Tapping the bins or using the arrow keys also works.
+- A run lasts 45 seconds, and the belt speeds up as it goes. A wrong bin or a dropped part costs one of your 3 lives.
+- The score earns a timed income boost for every lab. Viking Raid is not included.
+  - 15+ parts: ×2 for 10 minutes
+  - 25+ parts: ×3 for 15 minutes
+  - 35+ parts: ×4 for 20 minutes
+  - 45+ parts: ×5 for 30 minutes
+- You get one run every 15 minutes. A new boost replaces the current one only if it is bigger, or the same size with more time left.
+- While a boost is running, the Rush button and the home bubble show it with a countdown (for example ×4 12:30).
+
 ## v0.15.0 (2026-10-22)
 
 - Viking Raid: a stage is now cleared by maxing out the mine instead of earning a gold goal. Open every shaft, then take every shaft, the lift and the warehouse to the stage's max level.

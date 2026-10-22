@@ -19,9 +19,9 @@ window.SVT = window.SVT || {};
   }
 
   const B = {
-    VERSION: "0.15.0",
+    VERSION: "0.16.0",
     // Release time in UTC, set with each release. Shown after the version in the player's local time.
-    BUILT: "2026-10-22T18:27Z",
+    BUILT: "2026-10-22T18:35Z",
     FLOORS: 30,
     FLOOR_MAX: 800,
     HUB_MAX: 2400,
@@ -62,6 +62,19 @@ window.SVT = window.SVT || {};
       { id: "common", name: "Common", odds: 0.555, boost: 2, discount: 0.40, cooldown: 15 * 60, passive: 0 },
     ],
     BOOST_SECONDS: 60,
+    // Assembly Line Rush (mini game): a 45-second sorting run with 3 lives. The score picks a timed income boost
+    // for every lab (not Viking Raid). One run per cooldown; a new boost replaces the old one only if it is bigger.
+    RUSH: {
+      SECONDS: 45,
+      LIVES: 3,
+      COOLDOWN: 15 * 60,
+      TIERS: [
+        { score: 15, mult: 2, minutes: 10 },
+        { score: 25, mult: 3, minutes: 15 },
+        { score: 35, mult: 4, minutes: 20 },
+        { score: 45, mult: 5, minutes: 30 },
+      ],
+    },
     DISCOUNT_SECONDS: 30,
     ABILITIES: {
       floor: [

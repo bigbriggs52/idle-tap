@@ -75,6 +75,7 @@ window.SVT = window.SVT || {};
     setTimeout(() => t.remove(), 2600);
   }
   SVT.toast = toast;
+  SVT.ui = { h, toast };
 
   // ---------- sheets (modals) ----------
   // Idle Miner-style panel. opts: nav { prev, next, pos, dir } adds side arrows, swipes and arrow keys;
@@ -167,6 +168,17 @@ window.SVT = window.SVT || {};
   SVT.checkUpdate = checkUpdate;
 
   // Bottom bar, like Idle Miner Tycoon's: the screens you jump to most.
+  // Assembly Line Rush button: shows the boost countdown while one is running, and glows when a run is ready.
+  function rushNav(item) {
+    const b = item("🏭", "Rush", SVT.openRush, { class: "nav-btn rush-nav", "aria-label": "Assembly Line Rush mini game" });
+    const label = b.lastChild;
+    return bind(b, (e) => {
+      const left = SVT.rushLeft();
+      setText(label, left > 0 ? "×" + SVT.state().rush.mult + " " + SVT.rushClock(left) : "Rush");
+      toggle(e, "ready", !SVT.rushWait() && !left);
+      toggle(e, "boosted", left > 0);
+    });
+  }
   function bottomNav() {
     const item = (icon, label, on, attrs) => h("button", Object.assign({ class: "nav-btn", onclick: on }, attrs), h("span", { class: "nav-ic", "aria-hidden": "true", text: icon }), h("span", { text: label }));
     // In Viking Raid there is no funding: the first button opens the stage list instead.
@@ -178,7 +190,7 @@ window.SVT = window.SVT || {};
       fund,
       item("👔", "Managers", () => openManagers("floor", null, 0), { "aria-label": "Owned managers" }),
       item("🗺", "Map", () => setView("map"), { class: "nav-btn center" }),
-      item("🚧", "Soon", () => toast("🚧 Under construction: coming soon"), { class: "nav-btn soon", "aria-label": "Coming soon, under construction" }),
+      rushNav(item),
       item("⚙", "Settings", openSettings, { "aria-label": "Settings" }));
   }
 
@@ -906,10 +918,20 @@ window.SVT = window.SVT || {};
           bubble("b-raid", "⚔️", "Viking Raid", openRaid, raidReady)),
         h("div", { class: "hero" }, sign, h("div", { class: "hero-bot", html: SVT.mascot("hold") })),
         h("div", { class: "side right" },
-          bubble("b-soon", "🚧", "Soon", () => toast("🚧 Under construction: coming soon")))),
+          rushBubble(bubble("b-rush", "🏭", "Rush", SVT.openRush, true)))),
       h("button", { class: "play-btn", onclick: () => setView("lab") },
         h("span", { class: "play-tab", text: raid ? "Viking Raid" : d.name }), h("span", { class: "play-word", text: "Play" })),
       h("footer", { class: "home-foot", text: buildTag() }));
+  }
+
+  // The Rush bubble shows the boost countdown, and its "!" badge only while a run is ready.
+  function rushBubble(b) {
+    const label = b.querySelector(".bubble-label"), badge = b.querySelector(".bubble-badge");
+    return bind(b, () => {
+      const left = SVT.rushLeft();
+      setText(label, left > 0 ? "×" + SVT.state().rush.mult + " " + SVT.rushClock(left) : "Rush");
+      badge.hidden = SVT.rushWait() > 0 || left > 0;
+    });
   }
 
   function setView(v) { view = v; render(); window.scrollTo(0, 0); }
