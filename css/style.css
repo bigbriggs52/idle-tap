@@ -714,3 +714,20 @@ body:has(#sheet) .toast:not(:last-child) { display: none; }
 .pusher.back .cart-tag { transform: translateX(-50%) scaleX(-1); }
 .work-timer .fill { width: 100%; transform: scaleX(0); transform-origin: left; transition: none; will-change: transform; }
 .prog-bar .fill { transition: width .3s ease-out; }
+
+/* v0.11.4: bigger touch targets */
+.seg .chip { min-width: 38px; min-height: 42px; padding: 10px 6px; }
+.panel-foot .btn.lvlup { min-width: 0; flex: 1 1 auto; }
+.sheet { min-width: 0; }
+.x-btn { width: 40px; height: 40px; }
+.filter { min-height: 48px; }
+.mbtns .btn { min-height: 38px; }
+/* v0.11.4: instant press feedback, then a quick settle, so taps feel immediate but still show the change */
+button { transition: transform .15s ease-out, filter .15s ease-out, background-color .15s, color .15s, box-shadow .15s; }
+button:active:not(:disabled) { filter: brightness(.9); transition-duration: 0s; }
+.seg .chip:active, .nav-btn:active, .filter:active, .seat:active, .node-card:active, .loc:active, .side-arrow:active { transform: scale(.92); transition-duration: 0s; }
+.seg .chip { transition: background .18s ease-out, color .18s ease-out, transform .15s ease-out, box-shadow .18s; }
+.seg .chip.on { transform: scale(1.06); }
+.lvl-btn b, .pop-num, .stat-pill b { display: inline-block; }
+.stat-row { grid-template-columns: 28px minmax(72px, 1fr) minmax(0, auto); }
+.stat-pill { white-space: normal; flex-wrap: wrap; justify-content: flex-end; text-align: right; row-gap: 0; }

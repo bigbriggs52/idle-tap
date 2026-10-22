@@ -26,6 +26,13 @@ window.SVT = window.SVT || {};
   // Only write transforms here so the browser can move them without re-laying out the page.
   const onFrame = (e, fn) => { frames.push({ e, fn }); return e; };
   const setText = (e, t) => { if (e.textContent !== t) e.textContent = t; };
+  // popText: like setText, but a changed value gives a quick pop so you see it change (skipped on first fill).
+  const popText = (e, t) => {
+    if (e.textContent === t) return;
+    const had = e.textContent !== "";
+    e.textContent = t;
+    if (had && e.animate) e.animate([{ transform: "scale(1.3)" }, { transform: "scale(1)" }], { duration: 220, easing: "cubic-bezier(.2,.8,.3,1.2)" });
+  };
   const setDisabled = (e, d) => { if (e.disabled !== d) e.disabled = d; };
   const toggle = (e, c, on) => e.classList.toggle(c, !!on);
 
@@ -217,8 +224,11 @@ window.SVT = window.SVT || {};
     parts.push(h("div", { class: "sec-label", text: here ? "Your " + B.ROLE_NAMES[role] + "s:" : B.ROLE_NAMES[role] + "s:" }),
       h("ul", { class: "mlist" }, cards.length ? cards : h("li", { class: "muted empty", text: here && current ? "No other " + B.ROLE_NAMES[role] + "s yet." : "None yet. Hire one below." })),
       h("p", { class: "muted small odds", text: "Each hire rolls Super 0.5%, Legendary 1%, Epic 3%, Rare 10%, Uncommon 30% or Common 55.5%. Funding rounds send every manager away." }));
-    const hire = bind(h("button", { class: "btn fund-cta big hire", onclick: () => { const m = SVT.hire(role); if (m) { toast("Hired " + SVT.rank(m.rank).name + " " + m.name, "r-" + m.rank); reopen(); } } }),
-      (e) => { const c = SVT.hireCost(lab(), role); e.replaceChildren(h("span", { text: "Hire manager" }), h("b", { text: "$" + fmt(c) })); setDisabled(e, lab().cash < c); });
+    // Children stay put (only their text changes), so a finger on the button never loses its target mid-tap.
+    const hireCost = h("b");
+    const hire = bind(h("button", { class: "btn fund-cta big hire", onclick: () => { const m = SVT.hire(role); if (m) { toast("Hired " + SVT.rank(m.rank).name + " " + m.name, "r-" + m.rank); reopen(); } } },
+      h("span", { text: "Hire manager" }), hireCost),
+      (e) => { const c = SVT.hireCost(lab(), role); setText(hireCost, "$" + fmt(c)); setDisabled(e, lab().cash < c); });
     let nav = null;
     if (here) {
       const slots = nodeList(), i = Math.max(0, slots.findIndex(([k, m]) => k === kind && m === n));
@@ -314,7 +324,8 @@ window.SVT = window.SVT || {};
   function openNode(kind, n, dir) {
     const list = nodeList();
     const pos = list.findIndex(([k, m]) => k === kind && m === n) + 1;
-    const title = bind(h("span"), (e) => setText(e, nodeName(kind, n) + " Level " + SVT.levelOf(lab(), kind, n)));
+    const lvNum = h("span", { class: "pop-num" });
+    const title = bind(h("span", null, nodeName(kind, n) + " Level ", lvNum), () => popText(lvNum, String(SVT.levelOf(lab(), kind, n))));
     const card = h("button", { class: "node-card", "aria-label": "Manager", onclick: () => openManagers(kind, kind, n) });
     let cardKey = null;
     bind(card, () => {
@@ -335,7 +346,7 @@ window.SVT = window.SVT || {};
       bind(now, () => {
         const lv = SVT.levelOf(lab(), kind, n), q = SVT.quote(lab(), kind, n);
         const a = f(lv), b = lv >= B.maxLevel(kind) || !q.count ? a : f(lv + q.count);
-        setText(now, a); setText(up, b !== a ? "→ " + b : ""); up.hidden = b === a;
+        popText(now, a); setText(up, b !== a ? "→ " + b : ""); up.hidden = b === a;
       });
       return statRow(label, now, up);
     });
@@ -360,10 +371,12 @@ window.SVT = window.SVT || {};
     let timer = null, held = false;
     const stop = () => { clearTimeout(timer); timer = null; held = false; };
     const loop = (gap) => { timer = setTimeout(() => { if (!fn()) return stop(); loop(Math.max(35, gap * 0.75)); }, gap); };
+    el.dataset.hold = "1"; // handles its own presses; the tap helper below leaves it alone
     el.addEventListener("pointerdown", (e) => {
       if (e.button > 0 || el.disabled) return;
       held = true;
       fn();
+      dirty = true;
       loop(320);
     });
     ["pointerup", "pointerleave", "pointercancel", "blur"].forEach((t) => el.addEventListener(t, stop));
@@ -474,7 +487,7 @@ window.SVT = window.SVT || {};
       h("span", { text: "Level" }), num, badge);
     bind(el, () => {
       const L = lab(), lv = SVT.levelOf(L, kind, n), max = lv >= B.maxLevel(kind);
-      setText(num, max ? "MAX" : String(lv));
+      popText(num, max ? "MAX" : String(lv));
       // ▲ affords 1 level, ▲▲ affords up to the next ×10 level, ▲▲▲ up to the next ×50 level.
       const m = max ? null : B.bulk(kind, n, lv, Infinity, L.cash, SVT.discount(L, kind, n));
       const can = m && L.cash >= m.cost ? m.count : 0, room = B.maxLevel(kind) - lv;
@@ -802,6 +815,14 @@ window.SVT = window.SVT || {};
   }
 
   // ---------- events ----------
+  // Any change refreshes the screen on the very next frame instead of waiting for the regular refresh.
+  let dirty = false;
+  SVT.on(() => { dirty = true; });
+  document.addEventListener("pointerup", () => { dirty = true; }, true);
+  document.addEventListener("click", () => { dirty = true; }, true);
+  // iOS only shows :active press styles when a touch listener exists.
+  document.addEventListener("touchstart", () => {}, { passive: true });
+
   SVT.on((type, d) => {
     if (type === "unlock") {
       const last = d.crossed[d.crossed.length - 1];
@@ -818,6 +839,28 @@ window.SVT = window.SVT || {};
     if (type === "labUnlocked") toast("🗺 New location open on the map: " + d.lab.name, "big");
   });
 
+  // Reliable taps on phones. A press that lifts within 14px of where it started, within 700ms, counts as a tap on
+  // that control even if the browser would have dropped the click (a tiny drag inside a scrolling panel, or the
+  // contents changing under the finger). The browser's own click that may follow is swallowed so nothing fires twice.
+  const TAPPABLE = "button, .scene, .tower";
+  let press = null, swallowUntil = 0;
+  document.addEventListener("pointerdown", (e) => {
+    const el = e.isPrimary && e.button <= 0 && e.target.closest ? e.target.closest(TAPPABLE) : null;
+    press = el && !el.disabled && !el.dataset.hold ? { el, x: e.clientX, y: e.clientY, t: performance.now() } : null;
+  }, true);
+  document.addEventListener("pointercancel", () => { press = null; }, true);
+  document.addEventListener("pointerup", (e) => {
+    const p = press;
+    press = null;
+    if (!p || !p.el.isConnected || p.el.disabled) return;
+    if (Math.hypot(e.clientX - p.x, e.clientY - p.y) > 14 || performance.now() - p.t > 700) return;
+    swallowUntil = performance.now() + 500;
+    p.el.click();
+  }, true);
+  document.addEventListener("click", (e) => {
+    if (e.isTrusted && e.detail > 0 && performance.now() < swallowUntil) { swallowUntil = 0; e.stopPropagation(); e.preventDefault(); }
+  }, true);
+
   // Long-press menus and selection (dictionary look-up) get in the way of rapid tapping.
   document.addEventListener("contextmenu", (e) => e.preventDefault());
   document.addEventListener("selectstart", (e) => e.preventDefault());
@@ -832,7 +875,7 @@ window.SVT = window.SVT || {};
     (function loop(t) {
       SVT.step();
       for (let i = 0; i < frames.length; i++) { const f = frames[i]; if (f.e.isConnected) f.fn(f.e); }
-      if (t - lastUi > 150) { update(); lastUi = t; }
+      if (dirty || t - lastUi > 150) { dirty = false; update(); lastUi = t; }
       requestAnimationFrame(loop);
     })(0);
     if (!SVT.state().seenIntro) showIntro();
