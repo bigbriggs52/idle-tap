@@ -2,6 +2,18 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.17.0 (2026-10-22)
+
+- New mini game, the Tech Vault (🎁 Vault on the home screen and the map): a collectible roll.
+- Beating a lab (raising its IPO) now pays a 🪙 coin stamped with that lab. Labs beaten before this update get their coin when the game loads.
+- A coin rolls one of that lab's 30 products as a one-of-a-kind collectible, revealed slot-machine style in six parts: product ✱ rarity ✱ color + finish ✱ size ✱ mods ✱ serial. Rarity goes Common, Uncommon, Rare, Epic, Legendary, Mythic, each with its own color hue.
+- Put 1, 2, 3 or 5 coins from the same lab into one roll for better odds (1 coin: 2% Legendary or better; 5 coins: 18%, and never Common). The odds table is always shown.
+- Pity: a Legendary or better is guaranteed within 15 coins, with rising odds from the 10th. Your first roll ever is at least Rare.
+- No two items in your Vault ever share a look (the game rerolls the look if it is taken), and every item carries a random 6-character DNA tag.
+- Replay: a beaten lab keeps its 🏆 and now has a Replay button on the map. It starts over from floor 1 in its own bonus slot beside your 5 open labs (one replay at a time), and raising its IPO again pays another coin.
+- Chip wears your collectibles on the home screen in six slots: left hand, right hand, hat, neck, floor left and floor right. Keychain and pocket items fit hands, hat or neck; standard and jumbo items fit hands or the floor; desk and giant items fit the floor only; wearables (watches, headsets, glasses...) also fit hat or neck. New items go onto Chip automatically while he has a free slot.
+- Gallery tab in the Vault: a shelf per lab with every item you have rolled, rarest first.
+
 ## v0.16.0 (2026-10-22)
 
 - New mini game, Assembly Line Rush (🏭 Rush), in the old "Coming soon" spot on the home screen and the bottom bar.

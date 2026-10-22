@@ -1010,3 +1010,105 @@ button:active:not(:disabled) { filter: brightness(.9); transition-duration: 0s; 
 .rush-miss { margin: 0; font: 1.05rem var(--f-display); color: #c0392b; }
 @media (prefers-reduced-motion: reduce) { .rush-belt { animation: none; } .rush, .rush-tier.hit, .rush-score.pop, .rush-big { animation: none; } }
 .bubble-badge[hidden] { display: none; }
+
+/* ---------- Tech Vault (collectible roll) ---------- */
+:root { --mythic: #ff2d75; }
+.vault-btn { white-space: nowrap; }
+.bubble.b-vault { background: radial-gradient(circle at 35% 30%, #ffc6e6, #c43fa0 70%); animation-delay: -1.5s; }
+.vault { position: fixed; inset: 0; z-index: 60; display: flex; flex-direction: column; color: #fff; overflow: hidden;
+  background: radial-gradient(circle at 50% -10%, #b47cff, #5b2fb3 45%, #2a1458); padding: max(10px, env(safe-area-inset-top, 0px)) 16px max(14px, env(safe-area-inset-bottom, 0px)); animation: toast-in .35s cubic-bezier(.3,1.5,.5,1); }
+.vault-head { display: flex; align-items: center; gap: 8px; max-width: 480px; width: 100%; margin: 0 auto; }
+.vault-head h2 { flex: 1; font-size: 1.3rem; color: #fff; text-shadow: 0 2px 0 #2a1458; }
+.vault-logo { font-size: 1.8rem; filter: drop-shadow(0 2px 0 #2a1458); }
+.vault-coins { font: 1rem var(--f-display); padding: 4px 10px; border-radius: 99px; background: #ffd84d; color: #5a3a00; border: 2px solid #fff; box-shadow: 0 2px 0 #2a1458; }
+.vault-tabs { display: flex; gap: 6px; max-width: 480px; width: 100%; margin: 10px auto 0; }
+.vault-tab { flex: 1; padding: 8px; border-radius: 12px; border: 3px solid #fff8; background: #ffffff22; color: #fff; font: 1rem var(--f-display); cursor: pointer; }
+.vault-tab.on { background: #fff; color: #5b2fb3; border-color: #fff; box-shadow: 0 3px 0 #2a1458; }
+.vault-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; display: grid; align-content: start; gap: 12px; max-width: 480px; width: 100%; margin: 10px auto 0; padding: 14px; border-radius: 20px; background: #faf6ff; color: #2b1d4a; border: 4px solid #dcc8ff; box-shadow: 0 5px 0 #2a1458; }
+.vault-lede, .vault-empty { margin: 0; }
+.vault-empty { color: #6b5a8a; }
+.vault-foot { max-width: 480px; width: 100%; margin: 0 auto; padding-top: 12px; }
+.vault-labs { display: grid; gap: 6px; }
+.vault-lab { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border-radius: 12px; border: 3px solid #dcc8ff; background: #fff; font-weight: 700; cursor: pointer; }
+.vault-lab.on { border-color: #8e44ad; background: #f3e8ff; box-shadow: 0 0 0 3px #8e44ad33; }
+.vault-lab b { color: #7a4f00; }
+.vault-stakes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.vault-stake { display: grid; justify-items: center; gap: 2px; padding: 8px 4px; border-radius: 14px; border: 3px solid #e0a21a; background: linear-gradient(#fff6d6, #ffe08a); color: #6a4300; cursor: pointer; box-shadow: 0 3px 0 #b07a0c; }
+.vault-stake b { font: 1.15rem var(--f-display); }
+.vault-stake small { font-size: .7rem; font-weight: 700; }
+.vault-stake.on { background: linear-gradient(#eaffe0, #9fe88a); border-color: #3dbb4a; box-shadow: 0 3px 0 #23803a; color: #18562a; }
+.vault-stake:disabled { opacity: .4; cursor: default; box-shadow: none; }
+.vault-odds { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; }
+.vault-odd { display: grid; justify-items: center; gap: 2px; padding: 6px 2px; border-radius: 10px; background: var(--rc); color: #fff; font-size: .72rem; }
+.vault-odd b { font-size: .62rem; text-transform: uppercase; letter-spacing: .04em; }
+.vault-odd span { font: .95rem var(--f-display); }
+.r-common { --rc: var(--common); } .r-uncommon { --rc: var(--uncommon); } .r-rare { --rc: var(--rare); } .r-epic { --rc: var(--epic); } .r-legendary { --rc: var(--legendary); } .r-mythic { --rc: var(--mythic); }
+.vault-roll { box-shadow: 0 4px 0 #1f6b35; }
+
+/* the roll: six segments, each in its own color, lock in one by one */
+.vault-rolling { align-content: center; min-height: 260px; }
+.vault-spin { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 4px; }
+.vault-star { color: #b89cf0; font-size: 1.2rem; }
+.vault-seg { padding: 8px 10px; border-radius: 12px; border: 3px solid #0002; color: #fff; font: .95rem var(--f-display); min-width: 70px; text-align: center; opacity: .75; transform: scale(.95); transition: transform .2s, opacity .2s; }
+.vault-seg[data-i="0"] { background: #2f86d6; } .vault-seg[data-i="1"] { background: #8fa3ad; } .vault-seg[data-i="2"] { background: #e0249a; }
+.vault-seg[data-i="3"] { background: #17a2a8; } .vault-seg[data-i="4"] { background: #ff8c1a; } .vault-seg[data-i="5"] { background: #5d6d7e; }
+.vault-seg.lock { opacity: 1; transform: scale(1.06); border-color: #fff; box-shadow: 0 0 0 3px #0002, 0 4px 0 #0003; animation: score-pop .3s cubic-bezier(.3,1.6,.5,1); }
+.vault-seg.lock.r-common { background: var(--common); } .vault-seg.lock.r-uncommon { background: var(--uncommon); } .vault-seg.lock.r-rare { background: var(--rare); }
+.vault-seg.lock.r-epic { background: var(--epic); } .vault-seg.lock.r-legendary { background: var(--legendary); } .vault-seg.lock.r-mythic { background: var(--mythic); }
+.vault-spin.r-legendary .vault-star, .vault-spin.r-mythic .vault-star { color: #ffd84d; animation: pulse 1s ease-in-out infinite; }
+
+/* item cards: the rarity sets the hue of the frame; the item's own color fills the device */
+.vault-reveal { justify-items: center; text-align: center; }
+.vault-got { margin: 0; font: 1.5rem var(--f-display); color: var(--rc, #5b2fb3); }
+.vault-card { display: grid; grid-template-columns: 96px 1fr; gap: 10px; align-items: start; width: 100%; padding: 10px; border-radius: 16px; background: #fff; border: 4px solid var(--rc); box-shadow: 0 0 0 4px color-mix(in srgb, var(--rc) 25%, transparent), 0 4px 0 color-mix(in srgb, var(--rc) 60%, #000); text-align: left; }
+.vault-card.big { grid-template-columns: 1fr; justify-items: center; text-align: center; }
+.vault-card.big .vault-art { width: 150px; height: 150px; }
+.vault-card.r-legendary, .vault-card.r-mythic { background: linear-gradient(160deg, #fff, color-mix(in srgb, var(--rc) 14%, #fff)); }
+.vault-card.r-mythic { animation: glow 1.6s ease-in-out infinite; }
+.vault-card-body { display: grid; gap: 6px; min-width: 0; }
+.vault-card-name { font-size: .95rem; }
+.vault-card-rar { font: .8rem var(--f-display); color: var(--rc); text-transform: uppercase; letter-spacing: .06em; }
+.vault-code { display: flex; flex-wrap: wrap; gap: 4px; }
+.vault-code-seg { font-size: .68rem; font-weight: 700; padding: 2px 7px; border-radius: 99px; color: #fff; background: #5d6d7e; }
+.vault-code-seg.c0 { background: #2f86d6; } .vault-code-seg.c1 { background: var(--rc); } .vault-code-seg.c2 { background: #e0249a; } .vault-code-seg.c3 { background: #17a2a8; } .vault-code-seg.c4 { background: #ff8c1a; }
+.vault-wear-label { margin: 2px 0 0; }
+.vault-slots { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; }
+.vault-card.big .vault-slots { width: 100%; }
+.vault-slot { display: grid; justify-items: center; gap: 1px; padding: 5px 2px; border-radius: 10px; border: 2px solid #dcc8ff; background: #faf6ff; cursor: pointer; font-size: 1.1rem; }
+.vault-slot small { font-size: .55rem; font-weight: 700; color: #6b5a8a; line-height: 1.1; text-align: center; }
+.vault-slot.on { border-color: #3dbb4a; background: #eaffe0; box-shadow: 0 0 0 2px #3dbb4a55; }
+.vault-slot.taken { opacity: .55; }
+.vault-slot.nofit { opacity: .25; cursor: default; filter: grayscale(1); }
+.vault-shelf { display: grid; gap: 8px; }
+.vault-shelf h3 { margin: 0; font-size: 1rem; padding-bottom: 4px; border-bottom: 3px solid #dcc8ff; }
+
+/* the item picture */
+.vault-art { position: relative; width: 96px; height: 96px; border-radius: 18px; display: grid; place-items: center; background: radial-gradient(circle at 50% 30%, color-mix(in srgb, var(--rc) 45%, #fff), var(--rc)); border: 3px solid var(--rc); box-shadow: inset 0 -6px 0 #0002; }
+.vault-art-dev { width: 58%; height: 58%; border-radius: 22%; display: grid; place-items: center; background: linear-gradient(150deg, color-mix(in srgb, var(--vc) 70%, #fff), var(--vc) 55%, color-mix(in srgb, var(--vc) 70%, #000)); border: 2px solid #0003; box-shadow: 0 4px 0 #0003, inset 0 2px 0 #fff6; }
+.vault-art-ic { font-size: 1.7rem; filter: drop-shadow(0 2px 0 #0004); }
+.vault-art-rar { position: absolute; left: 50%; bottom: -8px; translate: -50% 0; padding: 1px 7px; border-radius: 99px; background: var(--rc); color: #fff; font: .58rem var(--f-display); letter-spacing: .05em; text-transform: uppercase; border: 2px solid #fff; white-space: nowrap; }
+.vault-art.s-keychain .vault-art-dev { width: 34%; height: 34%; } .vault-art.s-pocket .vault-art-dev { width: 46%; height: 46%; }
+.vault-art.s-jumbo .vault-art-dev { width: 68%; height: 68%; } .vault-art.s-desk .vault-art-dev { width: 76%; height: 76%; } .vault-art.s-giant .vault-art-dev { width: 86%; height: 86%; }
+.vault-art.f-matte .vault-art-dev { box-shadow: 0 4px 0 #0003; }
+.vault-art.f-gloss .vault-art-dev { box-shadow: 0 4px 0 #0003, inset 0 6px 8px #fff9; }
+.vault-art.f-translucent .vault-art-dev { opacity: .78; border-color: #fff8; }
+.vault-art.f-brushed .vault-art-dev { background-image: repeating-linear-gradient(90deg, #fff2 0 2px, #0000 2px 5px), linear-gradient(150deg, color-mix(in srgb, var(--vc) 70%, #fff), var(--vc) 55%, color-mix(in srgb, var(--vc) 70%, #000)); }
+.vault-art.f-chrome .vault-art-dev { background-image: linear-gradient(150deg, #fff, var(--vc) 35%, #fff 50%, var(--vc) 65%, #333); }
+.vault-art.f-neon .vault-art-dev { box-shadow: 0 0 10px var(--vc), 0 0 22px var(--vc), 0 4px 0 #0003; border-color: #fff; }
+.vault-art.f-holographic .vault-art-dev { background-image: linear-gradient(135deg, #ff6f59, #ffe600, #2ecc71, #22d3ee, #5b3fd6, #ff6fae); animation: holo 3s linear infinite; background-size: 300% 300%; }
+@keyframes holo { to { background-position: 100% 100%; } }
+.vault-art.f-goldplated .vault-art-dev { background-image: linear-gradient(150deg, #fff3b0, #e0a21a 45%, #fff3b0 60%, #9a6a00); border-color: #7a4f00; }
+.vault-art.mini { width: 54px; height: 54px; border-radius: 12px; border-width: 2px; }
+.vault-art.mini .vault-art-ic { font-size: 1.1rem; }
+.vault-art.mini .vault-art-rar { display: none; }
+
+/* Chip wearing his collectibles on the home screen */
+.worn { position: absolute; z-index: 2; padding: 0; border: 0; background: none; cursor: pointer; animation: bob 3s ease-in-out infinite; filter: drop-shadow(0 4px 4px #0004); }
+.worn:active { transform: scale(.9); }
+.worn-hand_l { left: -4px; top: 118px; } .worn-hand_r { right: -4px; top: 118px; animation-delay: -1s; }
+.worn-hat { left: 50%; top: -22px; translate: -50% 0; animation: none; }
+.worn-neck { left: 50%; bottom: 96px; translate: -50% 0; animation: none; }
+.worn-neck .vault-art.mini { width: 40px; height: 40px; }
+.worn-floor_l { left: -6px; bottom: 0; animation-delay: -2s; } .worn-floor_r { right: -6px; bottom: 0; animation-delay: -.5s; }
+@media (max-height: 700px) { .worn-hat { top: -22px; } .worn-hand_l, .worn-hand_r { top: 90px; } .worn-neck { bottom: 72px; } }
+@media (prefers-reduced-motion: reduce) { .vault, .vault-card.r-mythic, .vault-seg.lock, .vault-art.f-holographic .vault-art-dev, .worn { animation: none; } }
