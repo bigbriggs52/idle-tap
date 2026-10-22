@@ -2,6 +2,10 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.17.1 (2026-10-22)
+
+- Fix: the screen shook every time you hired, assigned, unassigned or sold a manager. The manager panel was rebuilt after each tap and replayed its spring-in animation. A panel that is already open now swaps in place with no animation. The same fix covers every other panel that rebuilds itself after a tap.
+
 ## v0.17.0 (2026-10-22)
 
 - New mini game, the Tech Vault (🎁 Vault on the home screen and the map): a collectible roll.

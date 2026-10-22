@@ -924,6 +924,7 @@ button:active:not(:disabled) { filter: brightness(.9); transition-duration: 0s; 
 
 /* Panels and toasts spring in instead of just appearing */
 .sheet { animation: sheet-in .38s cubic-bezier(.2,1.5,.4,1) both; }
+.sheet.still { animation: none; } /* a panel rebuilt in place (hire, assign, sell) must not spring again */
 .sheet.from-r, .sheet.from-l { animation: none; }
 @keyframes sheet-in { 0% { transform: scale(.7); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
 .toast { border-radius: 16px; font-family: var(--f-display); letter-spacing: .01em; border: 3px solid #fff; background: linear-gradient(#ffffff, #eef6ff); box-shadow: 0 4px 0 #9fcde8, 0 8px 18px #17252c33; animation: toast-in .45s cubic-bezier(.2,1.6,.4,1) both; }

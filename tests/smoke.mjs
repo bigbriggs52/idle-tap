@@ -44,6 +44,9 @@ for (const q of [".floor-scene .seat >> nth=0", ".lift-tower .seat", ".wh-tower 
 // hire a spare Floor Lead from the 👔 sheet; it should sit unassigned in Owned
 await page.click('button[aria-label="Owned managers"]');
 await page.click("#sheet .btn.fund-cta");
+const stillAnim = await page.evaluate(() => { const s = document.querySelector("#sheet .sheet"); return s.classList.contains("still") + "|" + getComputedStyle(s).animationName; });
+console.log("rebuilt sheet", stillAnim);
+if (stillAnim !== "true|none") errors.push("Rebuilt manager panel replays its spring animation: " + stillAnim);
 const owned = await page.evaluate(() => { const L = SVT.lab(); return { total: Object.keys(L.managers).length, assigned: Object.keys(L.assign).length, order: SVT.owned(L, "floor").map((m) => m.rank) }; });
 console.log("owned", JSON.stringify(owned));
 const rankIdx = await page.evaluate(() => SVT.RANK_ORDER);
