@@ -510,8 +510,21 @@ window.SVT = window.SVT || {};
       workTimer("commercial", 0, "Shipping"),
       h("div", { class: "tower-foot" }, levelBtn("commercial", 0), h("div", { class: "door" }, seat("commercial", 0), boostBtn("commercial", 0))),
       bind(h("div", { class: "tap-hint", text: "Tap" }), (e) => { e.hidden = SVT.running(lab(), "commercial", 0); })), "commercial", 0);
-    // A courier pushes boxes from the lift to the warehouse whenever the warehouse is working.
-    const yard = runBind(h("div", { class: "yard", "aria-hidden": "true" }, h("div", { class: "courier" }, h("span", { class: "cart" }))), "commercial", 0);
+    // The warehouse trip on the road: a worker pushes the cart of money from the lift to the warehouse,
+    // unloads it there, and pushes it back empty. Its position follows the real trip.
+    const cartAmt = h("b"), cartTag = h("span", { class: "coin-tag cart-tag" }, h("span", { class: "coin", text: "$" }), cartAmt);
+    const pusher = h("div", { class: "pusher" }, cartTag, h("span", { class: "cart" }, h("span", { class: "money" })), h("span", { class: "worker" }));
+    const yard = h("div", { class: "yard cart-lane", "aria-hidden": "true" }, pusher);
+    bind(yard, () => {
+      const c = lab().commercial, T = B.WH_TRIP, left = c.left || 0, p = left > 0 ? 1 - left / T : 0;
+      const x = p < 0.45 ? p / 0.45 : p < 0.55 ? 1 : 1 - (p - 0.55) / 0.45;
+      const v = "calc(" + (x * 100).toFixed(1) + "% - " + (x * 64).toFixed(1) + "px)";
+      if (pusher.style.left !== v) pusher.style.left = v;
+      toggle(pusher, "back", p >= 0.55);
+      toggle(pusher, "loaded", c.carry > 0);
+      toggle(pusher, "moving", left > 0 && (p < 0.45 || p >= 0.55));
+      if (c.carry > 0) setText(cartAmt, fmt(c.carry));
+    });
     return h("section", { class: "surface-scene" },
       h("div", { class: "hills", "aria-hidden": "true" }), h("div", { class: "sun", "aria-hidden": "true" }),
       yard, lift, wh, h("div", { class: "grass", "aria-hidden": "true" }));

@@ -19,9 +19,9 @@ window.SVT = window.SVT || {};
   }
 
   const B = {
-    VERSION: "0.11.0",
+    VERSION: "0.11.1",
     // Release time in UTC, set with each release. Shown after the version in the player's local time.
-    BUILT: "2026-10-21T22:15Z",
+    BUILT: "2026-10-22T04:13Z",
     FLOORS: 30,
     FLOOR_MAX: 800,
     HUB_MAX: 2400,
@@ -32,7 +32,7 @@ window.SVT = window.SVT || {};
     FLOOR_MILESTONES,
     HUB_MILESTONES,
     FLOOR_CYCLE: 3, // seconds per build cycle; a tap runs one, a manager keeps them going
-    WH_TRIP: 3,     // seconds per warehouse shipping trip
+    WH_TRIP: 4,     // seconds per warehouse trip: cart to the warehouse and back
     OFFLINE_CAP: 2 * 3600,
     START_CASH: 10,
 

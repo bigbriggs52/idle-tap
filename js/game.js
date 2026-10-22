@@ -182,7 +182,8 @@ window.SVT = window.SVT || {};
 
   // ---------- simulation ----------
   // Floors build in cycles: one cycle adds a cycle's worth of products to the crate when it ends.
-  // The warehouse ships in trips: it loads up to a trip's worth from the top of the shaft and is paid when the trip ends.
+  // The warehouse ships in trips: a cart loads up to a trip's worth at the top of the shaft, is paid when it reaches the
+  // warehouse halfway through, and rolls back empty.
   // A tap runs one cycle or trip; a manager starts the next one straight away.
   function stepFloor(lab, f, n, dt, t) {
     const mgr = !!SVT.mgrOf(lab, "floor", n), T = B.FLOOR_CYCLE;
@@ -202,9 +203,16 @@ window.SVT = window.SVT || {};
         if (!mgr || !(lab.lobby > 0)) return earned;
         SVT.startShip(lab, t);
       }
+      // The cart reaches the warehouse halfway through the trip and is paid there, then rolls back empty.
+      const half = B.WH_TRIP / 2;
+      if (c.carry > 0 && c.left > half) {
+        if (c.left - half > dt) { c.left -= dt; return earned; }
+        dt -= c.left - half; c.left = half;
+        earned += c.carry; lab.cash += c.carry; lab.lifetime += c.carry; c.carry = 0;
+        continue;
+      }
       if (c.left > dt) { c.left -= dt; return earned; }
       dt -= c.left; c.left = 0;
-      earned += c.carry || 0; lab.cash += c.carry || 0; lab.lifetime += c.carry || 0; c.carry = 0;
     }
     return earned;
   }
