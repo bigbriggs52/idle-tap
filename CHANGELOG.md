@@ -2,6 +2,11 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.11.1 (2026-10-22)
+
+- There is now a road under the lift tower and the warehouse. Each warehouse trip shows a worker pushing a cart of money from the lift to the warehouse, with the amount over the cart. The cart unloads there, you're paid on arrival, and the worker pushes it back empty.
+- A warehouse trip now takes 4 seconds there and back, and carries the same amount per second as before.
+
 ## v0.11.0 (2026-10-21)
 
 - One tap, one cycle, like Idle Miner. With a manager, it keeps going on its own.

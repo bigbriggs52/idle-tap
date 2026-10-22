@@ -681,3 +681,28 @@ body:has(#sheet) .toast:not(:last-child) { display: none; }
 /* v0.11: upgrade badge shows ▲ / ▲▲ / ▲▲▲ for 1 / 10 / 50 affordable levels */
 .lvl-btn .can { width: auto; min-width: 20px; padding: 0 4px; border-radius: 10px; letter-spacing: -1px; }
 .lvl-btn[data-tri="3"] .can { background: linear-gradient(#ffd23f, #e9a800); color: #5a3b00; }
+
+/* v0.11.1: a road under the towers; the warehouse cart carries the money from the lift to the warehouse and back */
+.surface-scene { height: 266px; }
+.tower { bottom: 44px; }
+.hills { bottom: 44px; }
+.grass { height: 46px; background: linear-gradient(#86cf55 0 5px, #9a9f9f 5px 7px, #7b8287 7px 38px, #b9875a 38px); }
+.grass::after { content: ""; position: absolute; left: 0; right: 0; top: 21px; height: 2px; background: repeating-linear-gradient(90deg, #f3f3e8 0 14px, transparent 14px 26px); }
+.yard.cart-lane { left: 6%; right: 6%; bottom: 10px; height: 44px; z-index: 3; pointer-events: none; }
+.yard .courier { display: none; }
+.pusher { position: absolute; bottom: 0; left: 0; width: 64px; height: 44px; transition: left .15s linear; }
+.pusher .cart { position: absolute; left: 22px; bottom: 4px; width: 38px; height: 16px; background: linear-gradient(#8a979e, #5d6a71); border: 2px solid #3d484e; border-radius: 3px 3px 5px 5px; }
+.pusher .cart::before { content: ""; position: absolute; left: 3px; bottom: -8px; width: 8px; height: 8px; border-radius: 50%; background: #2b3338; box-shadow: 22px 0 #2b3338; }
+.pusher .cart::after { content: ""; position: absolute; left: -10px; top: 0; width: 12px; height: 3px; background: #3d484e; transform: rotate(20deg); transform-origin: right; }
+.pusher .money { position: absolute; left: 2px; right: 2px; bottom: 12px; height: 0; border-radius: 6px 6px 0 0; background: radial-gradient(circle at 30% 40%, #fff3a0 0 2px, transparent 3px) 0 0 / 8px 7px, linear-gradient(#ffe36a, #e9a800); transition: height .2s; }
+.pusher.loaded .money { height: 12px; }
+.pusher .worker { position: absolute; left: 2px; bottom: 4px; width: 12px; height: 22px; border-radius: 6px 6px 2px 2px; background: #2f86d6; }
+.pusher .worker::before { content: ""; position: absolute; top: -10px; left: 1px; width: 10px; height: 10px; border-radius: 50%; background: #f0c9a4; box-shadow: 0 -3px 0 #e2663a; }
+.pusher.moving .worker { animation: walk .35s ease-in-out infinite alternate; }
+.pusher.back { transform: scaleX(-1); }
+.pusher.back .cart-tag { transform: translateX(-50%) scaleX(-1); }
+.cart-tag { position: absolute; left: 41px; bottom: 30px; transform: translateX(-50%); font-size: .7rem; padding: 1px 6px 1px 1px; display: none; }
+.cart-tag .coin { width: 14px; height: 14px; font-size: .55rem; }
+.cart-tag b { font-size: .72rem; }
+.pusher.loaded .cart-tag { display: inline-flex; }
+@keyframes walk { from { transform: translateY(0); } to { transform: translateY(-2px); } }
