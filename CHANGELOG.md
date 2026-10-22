@@ -2,6 +2,10 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.11.5 (2026-10-22)
+
+- Fixed the manager portrait in the Level panel (and the manager cards) being squished flat. It is now a proper square face for every rarity.
+
 ## v0.11.4 (2026-10-22)
 
 - Taps register reliably. A press that lifts close to where it started counts as a tap, even if your finger slides slightly or the panel scrolls a hair. Nothing fires twice.
