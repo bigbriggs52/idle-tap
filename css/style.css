@@ -1081,6 +1081,10 @@ button:active:not(:disabled) { filter: brightness(.9); transition-duration: 0s; 
 .vault-slot.taken { opacity: .55; }
 .vault-slot.nofit { opacity: .25; cursor: default; filter: grayscale(1); }
 .vault-shelf { display: grid; gap: 8px; }
+.vault-h { margin: 4px 0 0; font-size: 1rem; padding-bottom: 4px; border-bottom: 3px solid #dcc8ff; }
+.vault-lab.trophy { cursor: default; background: #fffaf0; border-color: #ffd84d; }
+.vault-lab.trophy b { font-size: .8rem; }
+.vault-lab.slot b { color: var(--rc); font-size: .8rem; text-align: right; }
 .vault-shelf h3 { margin: 0; font-size: 1rem; padding-bottom: 4px; border-bottom: 3px solid #dcc8ff; }
 
 /* the item picture */

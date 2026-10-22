@@ -19,9 +19,9 @@ window.SVT = window.SVT || {};
   }
 
   const B = {
-    VERSION: "0.17.1",
+    VERSION: "0.18.0",
     // Release time in UTC, set with each release. Shown after the version in the player's local time.
-    BUILT: "2026-10-22T22:15Z",
+    BUILT: "2026-10-22T22:40Z",
     FLOORS: 30,
     FLOOR_MAX: 800,
     HUB_MAX: 2400,
@@ -76,11 +76,14 @@ window.SVT = window.SVT || {};
       ],
     },
     DISCOUNT_SECONDS: 30,
-    // Tech Vault (collectible roll): a coin is earned each time a lab is beaten (IPO), stamped with that lab. Coins
-    // from one lab roll one of its 30 products with a rarity, color, finish, size and mods. More coins in one roll
-    // lift the whole odds table. ODDS[coins] lists Common..Mythic shares. PITY counts coins spent since the last
-    // Legendary or better: from SOFT each extra coin adds SOFT_STEP to the Legendary share, HARD guarantees it.
+    // Tech Vault (collectible roll): a new player starts with START_COINS wild coins (good at any open lab), and
+    // beating a lab (IPO), first time or replay, pays COIN_PER_BEAT coins stamped with that lab. Coins roll one of
+    // the lab's 30 products with a rarity, color, finish, size and mods. More coins in one roll lift the whole odds
+    // table: ODDS[stake] lists Common..Mythic shares. PITY counts coins spent since the last Legendary or better:
+    // from SOFT each extra coin adds SOFT_STEP to the Legendary share, HARD guarantees it.
     VAULT: {
+      START_COINS: 50,
+      COIN_PER_BEAT: 10,
       RARITIES: [
         { id: "common", name: "Common", mods: 0 },
         { id: "uncommon", name: "Uncommon", mods: 1 },
@@ -89,14 +92,14 @@ window.SVT = window.SVT || {};
         { id: "legendary", name: "Legendary", mods: 3 },
         { id: "mythic", name: "Mythic", mods: 3 },
       ],
-      STAKES: [1, 2, 3, 5],
+      STAKES: [1, 3, 5, 10],
       ODDS: {
         1: [0.50, 0.28, 0.14, 0.06, 0.018, 0.002],
-        2: [0.30, 0.32, 0.22, 0.11, 0.042, 0.008],
-        3: [0.12, 0.30, 0.30, 0.19, 0.075, 0.015],
-        5: [0, 0.15, 0.35, 0.32, 0.15, 0.03],
+        3: [0.30, 0.32, 0.22, 0.11, 0.042, 0.008],
+        5: [0.12, 0.30, 0.30, 0.19, 0.075, 0.015],
+        10: [0, 0.15, 0.35, 0.32, 0.15, 0.03],
       },
-      PITY: { SOFT: 10, SOFT_STEP: 0.06, HARD: 15 },
+      PITY: { SOFT: 50, SOFT_STEP: 0.012, HARD: 75 },
       FIRST_ROLL_MIN: 2, // index into RARITIES: the first roll ever is at least Rare
     },
     ABILITIES: {

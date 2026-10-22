@@ -51,7 +51,7 @@ window.SVT = window.SVT || {};
   // Tech Vault: coins per lab (earned by beating it), how many times each lab was beaten, the items rolled so far,
   // the pity counter (coins spent since the last Legendary or better), the lab being replayed, and the items Chip
   // wears on the home screen (slot -> item id).
-  function newVault() { return { coins: {}, beats: {}, items: [], pity: 0, spent: 0, serial: 0, replay: null, show: {} }; }
+  function newVault() { return { coins: {}, wild: B.VAULT.START_COINS, beats: {}, items: [], pity: 0, spent: 0, serial: 0, replay: null, show: {} }; }
   function newState() {
     return { v: 3, activeLab: "garage", buy: "next", labs: { garage: newLab("garage") }, raid: { cleared: 0 }, rush: newRush(), vault: newVault(), lastSeen: Date.now(), seenIntro: false };
   }
@@ -124,10 +124,22 @@ window.SVT = window.SVT || {};
   };
 
   // ---------- Tech Vault coins and lab replay ----------
-  SVT.vaultCoins = (id) => (id ? S.vault.coins[id] || 0 : Object.values(S.vault.coins).reduce((a, b) => a + b, 0));
-  // Beating a lab pays one coin stamped with that lab. Labs beaten before the Vault existed pay theirs on load.
+  // Coins stamped with a lab, or every coin (wild ones included) with no id. Wild coins (the starter 50) roll at
+  // any open lab, so SVT.vaultSpendable(id) is what one lab can roll with.
+  SVT.vaultCoins = (id) => (id ? S.vault.coins[id] || 0 : Object.values(S.vault.coins).reduce((a, b) => a + b, 0) + (S.vault.wild || 0));
+  SVT.vaultWild = () => S.vault.wild || 0;
+  SVT.vaultSpendable = (id) => (S.vault.coins[id] || 0) + (S.labs[id] ? S.vault.wild || 0 : 0);
+  // Takes n coins for a lab: its own coins first, then wild ones. Returns false (and takes nothing) if short.
+  SVT.vaultSpend = (id, n) => {
+    if (SVT.vaultSpendable(id) < n) return false;
+    const own = Math.min(n, S.vault.coins[id] || 0);
+    if (own) S.vault.coins[id] -= own;
+    if (n - own) S.vault.wild -= n - own;
+    return true;
+  };
+  // Beating a lab pays COIN_PER_BEAT coins stamped with that lab. Labs beaten before the Vault existed pay on load.
   function payCoin(id) {
-    S.vault.coins[id] = (S.vault.coins[id] || 0) + 1;
+    S.vault.coins[id] = (S.vault.coins[id] || 0) + B.VAULT.COIN_PER_BEAT;
     S.vault.beats[id] = (S.vault.beats[id] || 0) + 1;
   }
   // Replay: a beaten lab starts over from scratch in its own bonus slot (one replay at a time) and pays another
@@ -602,6 +614,10 @@ window.SVT = window.SVT || {};
     if (!S.rush) S.rush = newRush(); // v0.16 adds Assembly Line Rush
     if (!S.vault) S.vault = newVault(); // v0.17 adds the Tech Vault
     if (!S.vault.show || typeof S.vault.show !== "object") S.vault.show = {};
+    if (S.vault.wild === undefined) { // v0.18: 50 starter coins, and beats pay 10 instead of 1 (top up past beats)
+      S.vault.wild = B.VAULT.START_COINS;
+      for (const id in S.vault.beats) S.vault.coins[id] = (S.vault.coins[id] || 0) + S.vault.beats[id] * (B.VAULT.COIN_PER_BEAT - 1);
+    }
     for (const id in S.labs) {
       const lab = S.labs[id];
       lab.id = id;
