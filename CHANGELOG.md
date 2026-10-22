@@ -2,6 +2,21 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.12.0 (2026-10-22)
+
+- Easier start, steady ramp. Each lab now has its own price level. Times below are for a player who keeps managers on everything (from a new pacing sim, `tests/pace.mjs`):
+  - Garage HQ: about 2 hours to IPO (it was about 10 days). Seed in ~3 minutes, Series A ~15 minutes.
+  - Arcade District about 3 hours, Archive Library about 4 hours, Maker Workshop about 7.5 hours, Sound Studio about 13 hours.
+- New island: Viking Raid, on the map under Islands.
+  - 50 Viking mines, generated from the stage number: each has its own name, shaft count (5 to 30) and omens like Rich veins or Frozen ropes.
+  - Same shafts, lift and warehouse loop. Managers automate, but there are no manager abilities and no funding rounds.
+  - Each stage has a gold goal shown in a bar under the header. Reaching it clears the stage and opens the next.
+  - Every stage takes longer: stage 1 about 3 minutes, stage 25 about 45 minutes, stage 50 about 12 hours. The goals are tuned with the pacing sim (`tests/raid-goals.mjs`).
+  - In a raid, the Funding button becomes Stages.
+- New buy option after Max: Next. It buys up to the next unlock (every 5 levels, so it also stops on the big milestones like 10, 25 and 50). At level 1 it buys 4, at 56 it buys 4, at 60 it buys 5.
+- The Level panel always opens on Next, whatever you picked last time. Swiping to the next floor or hub inside the panel keeps your choice.
+- New home screen. The game opens on it, with big buttons for Play (back into your current lab), Map, Viking Raid, Settings and a Coming soon placeholder. The 🏠 button at the top right of every lab (and on the map) brings you back to it. Brand-new players still start in the garage with the intro.
+
 ## v0.11.5 (2026-10-22)
 
 - Fixed the manager portrait in the Level panel (and the manager cards) being squished flat. It is now a proper square face for every rarity.
