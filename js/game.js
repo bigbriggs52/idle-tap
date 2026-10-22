@@ -47,8 +47,9 @@ window.SVT = window.SVT || {};
   }
   // The lift's trip: y is its depth in floors (0 = surface). It goes down floor by floor, loads, and turns back when full.
   function newLift() { return { phase: "idle", y: 0, load: 0, timer: 0, at: 0 }; }
+  function newRush() { return { mult: 1, until: 0, next: 0, best: 0, runs: 0 }; }
   function newState() {
-    return { v: 3, activeLab: "garage", buy: "next", labs: { garage: newLab("garage") }, raid: { cleared: 0 }, lastSeen: Date.now(), seenIntro: false };
+    return { v: 3, activeLab: "garage", buy: "next", labs: { garage: newLab("garage") }, raid: { cleared: 0 }, rush: newRush(), lastSeen: Date.now(), seenIntro: false };
   }
 
   let S = newState();
@@ -91,6 +92,27 @@ window.SVT = window.SVT || {};
     return kind === "floor" ? d.scale * Math.pow(d.grow, n - 1) : d.scale;
   };
   SVT.newLab = newLab;
+
+  // ---------- Assembly Line Rush ----------
+  // The mini game's reward: a timed multiplier on every part of every lab (Viking Raid is left out).
+  SVT.rushMult = (t) => (S.rush && S.rush.until > (t || now()) ? S.rush.mult : 1);
+  SVT.rushLeft = () => Math.max(0, (S.rush.until || 0) - now());
+  SVT.rushWait = () => Math.max(0, (S.rush.next || 0) - now());
+  SVT.rushTier = (score) => B.RUSH.TIERS.filter((x) => score >= x.score).pop() || null;
+  // Ends a run: starts the cooldown and gives the boost the score earned. Returns { tier, applied }.
+  SVT.finishRush = (score) => {
+    const R = S.rush, t = now(), tier = SVT.rushTier(score);
+    R.next = t + B.RUSH.COOLDOWN;
+    R.best = Math.max(R.best || 0, score);
+    R.runs = (R.runs || 0) + 1;
+    let applied = false;
+    if (tier && (SVT.rushMult(t) < tier.mult || (SVT.rushMult(t) === tier.mult && R.until < t + tier.minutes * 60))) {
+      R.mult = tier.mult; R.until = t + tier.minutes * 60; applied = true;
+    }
+    emit("rush", { score, tier, applied });
+    save();
+    return { tier, applied };
+  };
 
   // ---------- Viking Raid ----------
   SVT.isRaid = (lab) => !!lab && lab.id === "raid";
@@ -156,7 +178,7 @@ window.SVT = window.SVT || {};
   SVT.nodeMult = (lab, kind, n, t) => {
     const m = SVT.mgrOf(lab, kind, n);
     // Viking Raid omens tilt each part of the mine; managers there only automate (no abilities).
-    const omen = SVT.isRaid(lab) ? SVT.raidStage(lab).mult[kind] : 1;
+    const omen = SVT.isRaid(lab) ? SVT.raidStage(lab).mult[kind] : SVT.rushMult(t);
     if (!m) return omen;
     const r = SVT.rank(m.rank);
     let x = (1 + r.passive) * omen;
@@ -542,6 +564,7 @@ window.SVT = window.SVT || {};
     }
     if (S.buy === 100) S.buy = 50; // v0.6 buy chips are ×1, ×10, ×50, Max
     if (!S.raid) S.raid = { cleared: 0 }; // v0.12 adds the Viking Raid island
+    if (!S.rush) S.rush = newRush(); // v0.16 adds Assembly Line Rush
     for (const id in S.labs) {
       const lab = S.labs[id];
       lab.id = id;
