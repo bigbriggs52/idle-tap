@@ -468,9 +468,10 @@ window.SVT = window.SVT || {};
     bind(el, () => {
       const L = lab(), lv = SVT.levelOf(L, kind, n), max = lv >= B.maxLevel(kind);
       setText(num, max ? "MAX" : String(lv));
-      // ▲ affords 1 level, ▲▲ affords 10, ▲▲▲ affords 50.
+      // ▲ affords 1 level, ▲▲ affords up to the next ×10 level, ▲▲▲ up to the next ×50 level.
       const m = max ? null : B.bulk(kind, n, lv, Infinity, L.cash, SVT.discount(L, kind, n));
-      const can = m && L.cash >= m.cost ? m.count : 0, tri = can >= 50 ? 3 : can >= 10 ? 2 : can >= 1 ? 1 : 0;
+      const can = m && L.cash >= m.cost ? m.count : 0, room = B.maxLevel(kind) - lv;
+      const tri = can >= Math.min(room, SVT.stepTo(lv, 50)) ? 3 : can >= Math.min(room, SVT.stepTo(lv, 10)) ? 2 : can >= 1 ? 1 : 0;
       toggle(el, "afford", tri > 0);
       setText(badge, "▲".repeat(tri || 1));
       el.dataset.tri = tri;

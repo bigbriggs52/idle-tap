@@ -2,6 +2,10 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.11.2 (2026-10-22)
+
+- x10 and x50 now buy up to the next multiple, like Idle Miner. At level 56, x10 goes to 60. At 60, it goes to 70. At 56, x50 goes to 100. The Level Up label, the cost and the ▲▲ / ▲▲▲ badges follow these amounts.
+
 ## v0.11.1 (2026-10-22)
 
 - There is now a road under the lift tower and the warehouse. Each warehouse trip shows a worker pushing a cart of money from the lift to the warehouse, with the amount over the cart. The cart unloads there, you're paid on arrival, and the worker pushes it back empty.
