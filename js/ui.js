@@ -557,8 +557,8 @@ window.SVT = window.SVT || {};
       workTimer("commercial", 0, "Shipping"),
       h("div", { class: "tower-foot" }, levelBtn("commercial", 0), h("div", { class: "door" }, seat("commercial", 0), boostBtn("commercial", 0))),
       bind(h("div", { class: "tap-hint", text: "Tap" }), (e) => { e.hidden = SVT.running(lab(), "commercial", 0); })), "commercial", 0);
-    // The warehouse trip on the road: a worker pushes the cart of money from the lift to the warehouse,
-    // unloads it there, and pushes it back empty. Its position follows the real trip.
+    // The warehouse trip on the road: a worker pushes the empty cart from the warehouse to the lift, loads the money
+    // there, and pushes it back to the warehouse to unload. Its position follows the real trip.
     const cartAmt = h("b"), cartTag = h("span", { class: "coin-tag cart-tag" }, h("span", { class: "coin", text: "$" }), cartAmt);
     const pusher = h("div", { class: "pusher" }, cartTag, h("span", { class: "cart" }, h("span", { class: "money" })), h("span", { class: "worker" }));
     const yard = h("div", { class: "yard cart-lane", "aria-hidden": "true" }, pusher);
@@ -566,16 +566,16 @@ window.SVT = window.SVT || {};
     onFrame(yard, () => {
       const c = lab().commercial, T = B.WH_TRIP, left = c.left || 0, p = left > 0 ? 1 - left / T : 0;
       const raw = p < 0.45 ? p / 0.45 : p < 0.55 ? 1 : 1 - (p - 0.55) / 0.45;
-      const x = raw * raw * (3 - 2 * raw); // ease in and out at each end
+      const x = 1 - raw * raw * (3 - 2 * raw); // ease in and out at each end; 1 = warehouse (right), 0 = lift (left)
       const now = performance.now();
       if (now - laneAt > 1000 || !laneW) { laneW = yard.clientWidth - 64; laneAt = now; } // measure rarely, not every frame
-      const back = p >= 0.55;
+      const back = left > 0 && p < 0.5; // faces left on the way out to the lift
       const v = "translate3d(" + (x * laneW).toFixed(1) + "px,0,0)" + (back ? " scaleX(-1)" : "");
       if (pusher.style.transform !== v) pusher.style.transform = v;
     });
     bind(yard, () => {
       const c = lab().commercial, T = B.WH_TRIP, left = c.left || 0, p = left > 0 ? 1 - left / T : 0;
-      toggle(pusher, "back", p >= 0.55);
+      toggle(pusher, "back", left > 0 && p < 0.5);
       toggle(pusher, "loaded", c.carry > 0);
       toggle(pusher, "moving", left > 0 && (p < 0.45 || p >= 0.55));
       if (c.carry > 0) setText(cartAmt, fmt(c.carry));
