@@ -786,3 +786,8 @@ button:active:not(:disabled) { filter: brightness(.9); transition-duration: 0s; 
 .home-txt b { font: 700 1.15rem var(--f-display); text-shadow: 0 1px 2px #0005; }
 .home-tile.t-soon .home-txt b { text-shadow: none; }
 .home-txt span { font-size: .8rem; opacity: .92; }
+
+/* v0.13 beaten labs: closed, with a trophy */
+.pin.done .pin-dot { border-color: var(--legendary); background: #fff7dc; box-shadow: 0 0 0 4px #e0a21a33; }
+.pin.done .pin-icon { opacity: .6; }
+.loc.beaten { opacity: .75; background: #fffaf0; }

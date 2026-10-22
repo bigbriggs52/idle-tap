@@ -2,6 +2,14 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.13.0 (2026-10-22)
+
+- All 30 map locations are now real labs, each with its own theme, five teams and 30 products (Cinema Studios, Robotics Foundry, EV Auto Plant, Space Port … Moonbase).
+- Five labs are open at a time. Seed funding still opens labs 2 to 5. After that, beating a lab (raising its IPO) opens the lab five places on: beat Garage HQ to open Cinema Studios (lab 6), Arcade District to open lab 7, and so on up to lab 30.
+- Beaten labs close for good. They show a 🏆 on the map, stop running and can't be entered again, and play moves to another open lab. The Funding panel tells you which lab the IPO will open.
+- Difficulty keeps ramping: about 6% longer per lab, from about 14 hours for lab 6 to about 56 hours for lab 30 (efficient play, pacing sim).
+- The map list shows your open labs, the ones next to open and what opens them, and your beaten labs.
+
 ## v0.12.1 (2026-10-22)
 
 - The warehouse worker now starts at the warehouse, pushes the empty cart over to the lift, loads the money there, and pushes it back. You get paid when the cart is back at the warehouse.

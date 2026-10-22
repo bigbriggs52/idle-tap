@@ -19,9 +19,9 @@ window.SVT = window.SVT || {};
   }
 
   const B = {
-    VERSION: "0.12.1",
+    VERSION: "0.13.0",
     // Release time in UTC, set with each release. Shown after the version in the player's local time.
-    BUILT: "2026-10-22T13:31Z",
+    BUILT: "2026-10-22T13:49Z",
     FLOORS: 30,
     FLOOR_MAX: 800,
     HUB_MAX: 2400,
@@ -132,13 +132,16 @@ window.SVT = window.SVT || {};
 
   // Per-lab price scaling (see SVT.costScale). Tuned with tests/pace.mjs.
   B.LAB_DIFF = {
-    // Efficient-player time to IPO: about 2.2h, 2.9h, 4.3h, 7.6h, 13h.
+    // Efficient-player time to IPO: about 2.2h, 2.9h, 4.3h, 7.6h, 13h (labs 1-5).
     garage: { scale: 0.05, grow: 0.55 },
     arcade: { scale: 0.15, grow: 0.72 },
     library: { scale: 0.3, grow: 0.8 },
     maker: { scale: 0.5, grow: 0.85 },
     studio: { scale: 0.7, grow: 0.87 },
   };
+  // Labs 6-30 keep ramping about 6% longer each: ~14h for lab 6 up to ~56h for lab 30 (scale 0.8).
+  const GROW_6_30 = [0.8641, 0.8679, 0.8719, 0.876, 0.8796, 0.8836, 0.8878, 0.8917, 0.8953, 0.8992, 0.9028, 0.9063, 0.9096, 0.9128, 0.9159, 0.919, 0.922, 0.925, 0.9279, 0.9307, 0.9334, 0.9362, 0.9389, 0.9416, 0.9443];
+  SVT.LABS.slice(5).forEach((l, i) => { B.LAB_DIFF[l.id] = { scale: 0.8, grow: GROW_6_30[i] }; });
 
   B.tierOf = (n) => SVT.TIERS.findIndex((t) => n >= t.from && n <= t.to);
 

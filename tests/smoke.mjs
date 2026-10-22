@@ -122,7 +122,7 @@ console.log("after raise", JSON.stringify(after));
 await page.waitForTimeout(300);
 await page.click(".bottom-nav >> text=Map");
 await page.waitForTimeout(300);
-const pins = await page.evaluate(() => ({ total: document.querySelectorAll(".pin").length, soon: document.querySelectorAll(".pin.soon").length, open: document.querySelectorAll(".pin.open").length }));
+const pins = await page.evaluate(() => ({ total: document.querySelectorAll(".pin").length, locked: document.querySelectorAll(".pin.locked").length, open: document.querySelectorAll(".pin.open").length }));
 console.log("pins", JSON.stringify(pins));
 await page.screenshot({ path: out + "/06-map.png", fullPage: true });
 await page.click(".pin.open >> nth=1");
@@ -186,6 +186,18 @@ const steps = await page.evaluate(() => {
 });
 console.log("step buys", steps);
 if (steps !== "60,70,100,150,60,65,10") errors.push("x10/x50 do not round to the next multiple: " + steps);
+// beating a lab (IPO) closes it and opens the lab five places on
+const beat = await page.evaluate(() => {
+  SVT.switchLab("garage");
+  const L = SVT.lab();
+  L.round = 4; while (L.floors.length < 30) L.floors.push({ lvl: 1, stock: 0, left: 0 });
+  const ok = SVT.raise();
+  return { ok, beaten: SVT.labBeaten(SVT.state().labs.garage), lab6: !!SVT.state().labs.cinema, active: SVT.state().activeLab, back: SVT.switchLab("garage") };
+});
+console.log("beat garage", JSON.stringify(beat));
+if (!beat.ok || !beat.beaten || !beat.lab6 || beat.active === "garage" || beat.back !== false) errors.push("Beating Garage HQ did not close it and open lab 6");
+await page.waitForTimeout(300);
+await page.screenshot({ path: out + "/15-map-beaten.png" });
 // Viking Raid: island card on the map, stage sheet, a stage with no abilities, clearing opens the next stage
 await page.evaluate(() => SVT.setView("map"));
 await page.waitForTimeout(200);
