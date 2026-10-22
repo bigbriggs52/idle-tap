@@ -2,6 +2,10 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.13.1 (2026-10-22)
+
+- Hiring a manager from a floor's, the lift's or the warehouse's manager panel now puts them straight to work there. If a rarer manager already works that spot, they stay and the new hire goes to your Owned list. Hiring from the main Managers list still just adds them to Owned.
+
 ## v0.13.0 (2026-10-22)
 
 - All 30 map locations are now real labs, each with its own theme, five teams and 30 products (Cinema Studios, Robotics Foundry, EV Auto Plant, Space Port … Moonbase).
