@@ -2,6 +2,12 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.22.0 (2026-10-23)
+
+- Manager abilities now come in three kinds you can see: ⚡ **Speed** (Crunch Time, Express Lift, Launch Blitz) runs the node faster, so floor cycles shorten, the workers and belt hurry, the lift car races and the warehouse worker sprints with the cart; 📦 **Storage** (Big Batch, Bulk Freight, Fleet Expansion) makes every cycle, lift trip and cart load carry that many times more, with bigger crates, a bigger lift car and a bigger cart on screen; 💸 **Price** (Budget Cut, Vendor Deal, Bulk Contract) turns the Level button green with the discount on it. Speed and Storage both multiply income by the rank's boost, so no manager got weaker; the floor ability "Hackathon" is renamed "Big Batch".
+- While an ability runs, a tag over the floor, lift tower or warehouse names it (⚡ ×4, 📦 ×3, 💸 −60%). The ⚡ button on a seat now shows the kind's icon, the manager list groups by Speed / Storage / Price, and the type row under the Floors / Lift / Warehouse tabs has four choices: All, Speed, Storage, Price. The Level panel's "Per cycle" and "Round trip" rows show the faster times during a speed ability.
+- Viking Raid is harder. Stage max levels start at 15 (was 10) and rise to 60, and the target clear times are 3 minutes on stage 1 rising to 3 hours on stage 50 (was 1.5 to 30 minutes). Price scales were refitted with the pacing sim.
+
 ## v0.21.0 (2026-10-23)
 
 - Merging changed: any three items of the same rarity now merge, whatever their product or lab. You get one new item of the next rarity: a random product from one of the three items' labs, with a fresh look and a fresh bonus roll. The Merge section in the Items tab lists each rarity you can merge with a "Merge 3 weakest" button, or tap "Pick 3" to choose exactly which three go. Items on Chip still don't count, and Mythic is still the top.

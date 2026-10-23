@@ -72,9 +72,37 @@ const typed = await page.evaluate(async () => {
 });
 console.log("type filter", JSON.stringify(typed));
 if (!typed.n || !typed.allDiscount || typed.headers !== 0 || !typed.back) errors.push("Manager type filter is wrong: " + JSON.stringify(typed));
-if (!grouped.first.startsWith("#") || grouped.headers.length < 2 || grouped.headers[0] !== "⚡ Speed boosts") errors.push("Managers are not grouped by ability type: " + JSON.stringify(grouped));
+if (!grouped.first.startsWith("#") || grouped.headers.length < 2 || !grouped.headers[0].startsWith("⚡ Speed")) errors.push("Managers are not grouped by ability type: " + JSON.stringify(grouped));
 if (owned.total !== 4 || owned.assigned !== 3) errors.push("Owned/assigned counts wrong");
 await page.click('#sheet [aria-label="Close"]');
+// v0.22: the three ability kinds are visible. Speed runs the cycle faster (same output per second) and marks the
+// scene; storage makes a bigger cycle; price turns the Level button green with the discount on it.
+const kinds = await page.evaluate(async () => {
+  const L = SVT.lab(), B = SVT.B, out = {};
+  const pick = (kind) => Object.values(L.managers).find((m) => m.role === "floor" && B.ABILITIES.floor.find((a) => a.id === m.ability).kind === kind && !SVT.slotOfMgr(L, m.id));
+  const rate = () => SVT.rates(L).floors[0];
+  const stock = () => L.floors[0].stock;
+  const scene = () => document.querySelector('.floor[data-floor="1"] .scene'); // the lab view may be rebuilt on assign
+  for (const kind of ["speed", "storage", "discount"]) {
+    const m = pick(kind); if (!m) { out[kind] = "none"; continue; }
+    SVT.assign(m.id, "floor", 1);
+    const r0 = rate(), c0 = SVT.quote(L, "floor", 1).cost, s0 = stock(), left0 = L.floors[0].left;
+    SVT.activate("floor", 1);
+    const a = SVT.activeAbility(L, "floor", 1), r = SVT.rank(m.rank);
+    await new Promise((f) => setTimeout(f, 450));
+    out[kind] = { ratio: +(rate() / r0).toFixed(3), boost: r.boost, cls: (scene().className.match(/ab-\w+/) || [])[0], sp: scene().style.getPropertyValue("--sp"), tag: scene().querySelector(".ab-tag").hidden,
+      leftDrop: +(left0 - L.floors[0].left).toFixed(2), speedMult: SVT.speedMult(L, "floor", 1), loadMult: +SVT.loadMult(L, "floor", 1).toFixed(3), nodeMult: +SVT.nodeMult(L, "floor", 1).toFixed(3),
+      deal: document.querySelector('.floor[data-floor="1"] .lvl-btn').classList.contains("deal"), cost: +(SVT.quote(L, "floor", 1).cost / c0).toFixed(2), discount: r.discount, kindOk: a && a.kind === kind };
+    m.activeUntil = 0; m.cdUntil = 0; SVT.unassign(m.id);
+  }
+  return out;
+});
+console.log("ability kinds", JSON.stringify(kinds));
+await page.screenshot({ path: out + "/04c-ability-kinds.png" });
+const sp = kinds.speed, st = kinds.storage, dc = kinds.discount;
+if (sp === "none" || !sp.kindOk || sp.cls !== "ab-speed" || sp.sp !== String(sp.boost) || sp.speedMult !== sp.boost || Math.abs(sp.ratio - sp.boost) > 0.05 || sp.leftDrop < 0.4 * sp.boost * 0.8) errors.push("Speed ability not visible or wrong: " + JSON.stringify(sp));
+if (st === "none" || !st.kindOk || st.cls !== "ab-storage" || st.speedMult !== 1 || Math.abs(st.loadMult / st.nodeMult - 1) > 1e-6 || Math.abs(st.ratio - st.boost) > 0.05) errors.push("Storage ability wrong: " + JSON.stringify(st));
+if (dc === "none" || !dc.kindOk || dc.cls !== "ab-discount" || !dc.deal || Math.abs(dc.cost - (1 - dc.discount)) > 0.02) errors.push("Price ability wrong: " + JSON.stringify(dc));
 // rarity odds: 100k rolls should land near the stated odds
 const dist = await page.evaluate(() => { const c = {}; for (let i = 0; i < 100000; i++) { const k = SVT.rollRank(); c[k] = (c[k] || 0) + 1; } return c; });
 const want = { super: 500, legendary: 1000, epic: 3000, rare: 10000, uncommon: 30000, common: 55500 };
