@@ -2,6 +2,11 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.27.0 (2026-10-23)
+
+- Every one of the 900 Vault products now has its own picture: no two items share an icon. A motor looks like a motor, a drone like a drone. Icons come from Material Design Icons, Game-icons.net, Tabler, IconPark and Phosphor (credits in Settings); tools/icon-map.mjs lists the icon for every product and tools/build-icons.mjs refuses to build if any icon is missing or used twice.
+- Items on Chip can never be merged. That was already the rule under the hood; now the Pick 3 list shows your equipped items of that rarity locked with "On Chip · take it off to merge", the merge row says how many are kept safe, and the smoke test proves a worn item is never listed, picked or taken as one of the "3 weakest".
+
 ## v0.26.0 (2026-10-23)
 
 - Funding rounds come every 5 floors now: Seed at floor 5, Series A at 10, Series B at 15, Series C at 20, Series D at 25 and the IPO at 30 (was Seed, A, B, C, IPO at 5, 10, 18, 25, 30). The walls that need a round sit at floors 6, 11, 16, 21 and 26. Round multipliers are ×2, ×2, ×2, ×3, ×3, ×4, so a lab in its IPO round earns ×72 and a beaten lab ×288.
