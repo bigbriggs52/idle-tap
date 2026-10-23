@@ -2,6 +2,13 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.25.0 (2026-10-23)
+
+- Real pictures for every Vault item. All 900 products now have their own icon (a motor looks like a motor, a soldering kit like a soldering iron), picked by hand from Material Design Icons, Game-icons.net and Tabler and bundled with the game, so nothing is fetched from the web. The item's rolled colour and finish are painted onto the icon itself: a Chrome Indigo calculator is a chrome-and-indigo calculator shape, Holographic shimmers, Neon glows. Credits are in Settings.
+- On the home screen Chip now holds and wears the shapes themselves, with a glow in the rarity's colour, instead of framed tiles.
+- Auto-equip: one button on the Chip tab fills every slot with the best item of its kind (biggest bonus, then rarest) and never wears the same item twice.
+- Cleaner Vault: item cards show the name, rarity, bonus, where it goes and one Equip / Take off button, with the full six-part code behind Details. Shorter text on the Roll and Chip tabs, and "Choose slot" is gone (the Chip tab places items in a specific hand or floor side).
+
 ## v0.23.0 (2026-10-23)
 
 - Viking Raid caps are the same on every stage now: shafts stop at Lv 25, the lift and the warehouse at Lv 100. Clearing a stage means every shaft at 25 and both hubs at 100. With the lift and warehouse able to go so much further, deep mines are no longer choked by a lift that stops at Lv 60; the difficulty of a stage is all in its prices and omens. Target clear times are unchanged (10 minutes on stage 1 to 12 hours on stage 50) and every stage's prices were refitted. The goal bar and the Stages panel spell out both caps.

@@ -425,6 +425,11 @@ if (vault.worn < 4) errors.push("Vault: Chip is not wearing the first items");
 await page.evaluate(() => SVT.setView("home")); await page.waitForTimeout(300);
 const wornEls = await page.locator(".worn").count();
 if (wornEls !== vault.worn) errors.push("Vault: worn items not drawn on the home screen: " + wornEls);
+// pictures: every product has a real icon, and the drawn items use it as a mask
+const icons = await page.evaluate(() => { let n = 0, bad = 0; SVT.LABS.forEach((l) => l.products.forEach((p, i) => { n++; if (!SVT.productSvg(l.id, i).startsWith("url(\"data:image/svg+xml")) bad++; })); return { n, bad, sets: Object.keys(SVT.ICONS).length }; });
+if (icons.n !== 900 || icons.bad || icons.sets < 250) errors.push("Vault: product icons missing " + JSON.stringify(icons));
+const maskOk = await page.evaluate(() => [...document.querySelectorAll(".worn .vault-art-ic")].every((el) => (getComputedStyle(el).webkitMaskImage || getComputedStyle(el).maskImage || "").includes("svg")));
+if (!maskOk) errors.push("Vault: item pictures are not drawn as icon masks");
 await page.screenshot({ path: out + "/19-home-worn.png" });
 await page.click(".bubble.b-vault", { force: true }); await page.waitForTimeout(300);
 await page.screenshot({ path: out + "/20-vault.png" });
@@ -497,6 +502,19 @@ await page.screenshot({ path: out + "/25-vault-chip.png" });
 if (!(await page.locator(".vault-pick").count())) errors.push("Vault: Chip tab slot inventory empty");
 await page.click(".vault-pick >> nth=1"); await page.waitForTimeout(200);
 if (!(await page.locator(".vault-pick.on").count())) errors.push("Vault: tapping an item in a slot inventory did not equip it");
+// auto-equip: every slot ends up with the best bonus of its kind, and nothing is worn twice
+const auto = await page.evaluate(() => {
+  const v = SVT.state().vault; v.show = {}; SVT.vaultRecalc();
+  const changed = SVT.vaultAutoEquip();
+  const worn = SVT.vaultWorn();
+  const bestOk = worn.every(({ slot, item }) => !v.items.some((x) => SVT.vaultFits(x, slot.id) && !SVT.vaultSlotOf(x.id) && (x.boost > item.boost || (x.boost === item.boost && x.rar > item.rar))));
+  const ids = worn.map((w) => w.item.id);
+  return { changed, worn: worn.length, bestOk, unique: new Set(ids).size === ids.length, again: SVT.vaultAutoEquip() };
+});
+if (auto.changed < 4 || auto.worn < 4 || !auto.bestOk || !auto.unique || auto.again !== 0) errors.push("Vault: auto-equip wrong " + JSON.stringify(auto));
+await page.evaluate(() => SVT.openChip()); await page.waitForTimeout(200);
+if (!(await page.locator(".vault-auto").count())) errors.push("Vault: auto-equip button missing");
+await page.screenshot({ path: out + "/25b-vault-chip-auto.png" });
 await page.evaluate(() => SVT.closeVault()); await page.evaluate(() => SVT.setView("home")); await page.waitForTimeout(300);
 if (!(await page.locator(".worn-total").count())) errors.push("Vault: bonus pill missing on the home screen");
 await page.screenshot({ path: out + "/26-home-bonus.png" });
