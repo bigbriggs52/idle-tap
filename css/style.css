@@ -1161,6 +1161,7 @@ button:active:not(:disabled) { filter: brightness(.9); transition-duration: 0s; 
 .vault-pick { display: grid; grid-template-columns: 54px 1fr; gap: 8px; align-items: center; text-align: left; padding: 6px; border-radius: 12px; border: 3px solid var(--rc); background: #fff; cursor: pointer; }
 .vault-pick.on { background: #eaffe0; box-shadow: 0 0 0 3px #3dbb4a55; }
 .vault-pick.elsewhere { opacity: .7; }
+.vault-pick.onchip { opacity: .55; cursor: not-allowed; background: #f1f1f1; border-style: dashed; }
 .vault-pick-body { display: grid; gap: 2px; min-width: 0; }
 .vault-pick-body b { font-size: .85rem; }
 .vault-pick-body small { font-size: .7rem; font-weight: 700; color: var(--rc); }

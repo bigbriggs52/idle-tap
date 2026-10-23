@@ -435,8 +435,8 @@ await page.evaluate(() => SVT.setView("home")); await page.waitForTimeout(300);
 const wornEls = await page.locator(".worn").count();
 if (wornEls !== vault.worn) errors.push("Vault: worn items not drawn on the home screen: " + wornEls);
 // pictures: every product has a real icon, and the drawn items use it as a mask
-const icons = await page.evaluate(() => { let n = 0, bad = 0; SVT.LABS.forEach((l) => l.products.forEach((p, i) => { n++; if (!SVT.productSvg(l.id, i).startsWith("url(\"data:image/svg+xml")) bad++; })); return { n, bad, sets: Object.keys(SVT.ICONS).length }; });
-if (icons.n !== 900 || icons.bad || icons.sets < 250) errors.push("Vault: product icons missing " + JSON.stringify(icons));
+const icons = await page.evaluate(() => { let n = 0, bad = 0; SVT.LABS.forEach((l) => l.products.forEach((p, i) => { n++; if (!SVT.productSvg(l.id, i).startsWith("url(\"data:image/svg+xml")) bad++; })); const v = Object.values(SVT.PRODUCT_ICON); return { n, bad, sets: Object.keys(SVT.ICONS).length, mapped: v.length, distinct: new Set(v).size }; });
+if (icons.n !== 900 || icons.bad || icons.mapped !== 900 || icons.distinct !== 900 || icons.sets !== 900) errors.push("Vault: every product needs its own icon " + JSON.stringify(icons));
 const maskOk = await page.evaluate(() => [...document.querySelectorAll(".worn .vault-art-ic")].every((el) => (getComputedStyle(el).webkitMaskImage || getComputedStyle(el).maskImage || "").includes("svg")));
 if (!maskOk) errors.push("Vault: item pictures are not drawn as icon masks");
 await page.screenshot({ path: out + "/19-home-worn.png" });
@@ -494,10 +494,23 @@ const bonus = await page.evaluate(() => {
   const w = SVT.vaultMerges()[0]; const weak = w ? SVT.vaultMerge(w.rar) : null;
   out.mergeWeak = !!weak && weak.rar === w.rar + 1;
   out.mergeBad = SVT.vaultMerge(0, [1, 1, 1]) === null;
+  // an item on Chip never merges: it is not listed, cannot be picked, and is not among the "3 weakest"
+  const wornIds = Object.values(v.show).filter(Boolean);
+  const wornItem = v.items.find((x) => wornIds.includes(x.id));
+  const sameRar = v.items.filter((x) => x.rar === wornItem.rar && !wornIds.includes(x.id)).slice(0, 2);
+  const beforeWorn = v.items.length;
+  out.wornMerge = {
+    worn: wornIds.length,
+    notListed: SVT.vaultMerges().every((mm) => mm.items.every((x) => !wornIds.includes(x.id))),
+    pickRefused: SVT.vaultMerge(wornItem.rar, [wornItem.id].concat(sameRar.map((x) => x.id))) === null,
+    stillThere: !!SVT.vaultItem(wornItem.id) && v.items.length === beforeWorn,
+    weakestKeeps: (() => { for (const mm of SVT.vaultMerges()) { const r = SVT.vaultMerge(mm.rar); if (!r) return false; } return wornIds.every((id) => SVT.vaultItem(id) && SVT.vaultSlotOf(id)); })(),
+  };
   return out;
 });
 console.log("bonus", JSON.stringify(bonus));
 if (!bonus.allHaveBoost || !bonus.mythicBoost) errors.push("Vault: item boosts missing");
+if (!bonus.wornMerge || !bonus.wornMerge.worn || !bonus.wornMerge.notListed || !bonus.wornMerge.pickRefused || !bonus.wornMerge.stillThere || !bonus.wornMerge.weakestKeeps) errors.push("Vault: an equipped item could be merged " + JSON.stringify(bonus.wornMerge));
 if (bonus.mult !== bonus.sum || Math.abs(bonus.ratio - bonus.mult) > 1e-6 || !bonus.raidSame || !bonus.capped) errors.push("Vault: bonus multiplier wrong " + JSON.stringify(bonus));
 if (Object.values(bonus.cats).reduce((a, b) => a + b, 0) !== 900 || Object.keys(bonus.cats).length !== 7) errors.push("Vault: not every product has a slot category " + JSON.stringify(bonus.cats));
 if (JSON.stringify(bonus.catSamples) !== JSON.stringify({ calc: "hand", watch: "wrist", ai: "head", neck: "neck", headphones: "head", server: "floor", shoe: "feet", jacket: "body" })) errors.push("Vault: product categories wrong " + JSON.stringify(bonus.catSamples));

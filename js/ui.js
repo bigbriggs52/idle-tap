@@ -1087,7 +1087,8 @@ window.SVT = window.SVT || {};
       h("p", { class: "muted", text: "Every 5 levels unlocks new tech (+10% on floors, +2% on hubs). Levels 10, 25, 50, 100 and beyond are big milestones." }),
       h("p", null, h("a", { href: "https://github.com/bigbriggs52/idle-tap/blob/main/CHANGELOG.md", target: "_blank", rel: "noopener", text: "Changelog" })),
       h("p", { class: "muted small" }, "Vault item pictures: ", h("a", { href: "https://pictogrammers.com/library/mdi/", target: "_blank", rel: "noopener", text: "Material Design Icons" }), " (Apache 2.0), ",
-        h("a", { href: "https://game-icons.net", target: "_blank", rel: "noopener", text: "Game-icons.net" }), " (CC BY 3.0), ", h("a", { href: "https://tabler.io/icons", target: "_blank", rel: "noopener", text: "Tabler Icons" }), " (MIT)."),
+        h("a", { href: "https://game-icons.net", target: "_blank", rel: "noopener", text: "Game-icons.net" }), " (CC BY 3.0), ", h("a", { href: "https://tabler.io/icons", target: "_blank", rel: "noopener", text: "Tabler Icons" }), " (MIT), ",
+        h("a", { href: "https://iconpark.oceanengine.com/", target: "_blank", rel: "noopener", text: "IconPark" }), " (Apache 2.0), ", h("a", { href: "https://phosphoricons.com", target: "_blank", rel: "noopener", text: "Phosphor" }), " (MIT)."),
       reset));
   }
 

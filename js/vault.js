@@ -411,11 +411,13 @@ window.SVT = window.SVT || {};
     const picking = mergePick && mergePick.rar === m.rar, ids = picking ? mergePick.ids : [];
     const done = (it) => { if (it) { toast("🔀 Merged into a " + RAR[it.rar].name + " " + SVT.itemProduct(it) + "!", "big"); mergePick = null; reveal(it); } };
     const chosen = ids.map((id) => m.items.find((it) => it.id === id)).filter(Boolean);
+    // items of this rarity that are on Chip: shown locked so it is clear they never merge
+    const onChip = S().items.filter((it) => it.rar === m.rar && SVT.vaultSlotOf(it.id)).sort((a, b) => b.boost - a.boost || b.id - a.id);
     return h("div", { class: "vault-merge r-" + RAR[m.rar].id },
       h("div", { class: "vault-merge-items" }, (picking ? chosen : m.items.slice(0, 3)).map((it) => SVT.itemArt(it, "mini"))),
       h("div", { class: "vault-merge-body" },
         h("b", { text: RAR[m.rar].name + " × " + m.count }),
-        h("small", { text: (picking ? ids.length + " of 3 picked" : "Any 3") + " → 1 " + RAR[m.rar + 1].name + ", random item with a new look and bonus roll" })),
+        h("small", { text: (picking ? ids.length + " of 3 picked" : "Any 3") + " → 1 " + RAR[m.rar + 1].name + ", random item with a new look and bonus roll" + (onChip.length ? " · " + onChip.length + " on Chip stay safe" : "") })),
       h("div", { class: "vault-merge-btns" },
         picking
           ? h("button", { class: "btn small fund-cta", disabled: ids.length !== 3, onclick: () => done(SVT.vaultMerge(m.rar, ids)), text: "Merge these" })
@@ -426,7 +428,9 @@ window.SVT = window.SVT || {};
         return h("button", { class: "vault-pick r-" + it.rarity + (on ? " on" : ""), onclick: () => { if (on) mergePick.ids = ids.filter((x) => x !== it.id); else if (ids.length < 3) mergePick.ids = ids.concat(it.id); else return; gallery(); } },
           SVT.itemArt(it, "mini"),
           h("span", { class: "vault-pick-body" }, h("b", { text: SVT.itemName(it) }), h("small", { class: "r-" + it.rarity, text: boostText(it) + (on ? " · picked" : "") })));
-      })) : null);
+      }).concat(onChip.map((it) => h("div", { class: "vault-pick onchip r-" + it.rarity, "aria-disabled": "true" },
+        SVT.itemArt(it, "mini"),
+        h("span", { class: "vault-pick-body" }, h("b", { text: SVT.itemName(it) }), h("small", { class: "r-" + it.rarity, text: "🔒 On Chip · take it off to merge" })))))) : null);
   }
   function gallery() {
     const { h } = SVT.ui;
