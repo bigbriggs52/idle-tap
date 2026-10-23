@@ -2,6 +2,12 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.18.1 (2026-10-23)
+
+- Fix: swiping down no longer refreshes the page. The browser's pull-to-refresh is turned off on the whole game, and a downward drag with nothing left to scroll up is swallowed before the browser sees it. Scrolling the mine, the map and the panels works as before.
+- Assembly Line Rush is faster: parts now arrive every 0.9 s at the start (was 1.25 s) and every 0.4 s by the end (was 0.5 s), and they ride the belt in 2.4 s down to 1.1 s (was 3.4 s down to 1.5 s). About 75 parts fit in a run instead of 55.
+- Rush boost thresholds move up to match: 20+ parts ×2, 35+ ×3, 50+ ×4, 65+ ×5 (were 15/25/35/45). The boost lengths are unchanged.
+
 ## v0.18.0 (2026-10-22)
 
 - Tech Vault coins: a new player starts with 50 wild coins that roll at any open lab (existing saves get them once). Beating a lab, first time or on a replay, now pays 10 of its coins instead of 1; labs you beat earlier are topped up to 10 per win.

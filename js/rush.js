@@ -11,10 +11,11 @@ window.SVT = window.SVT || {};
     { id: "gear", icon: "⚙️", name: "Gears", dir: "right" },
   ];
   const KEYS = { ArrowLeft: "left", ArrowDown: "down", ArrowRight: "right", a: "left", s: "down", d: "right" };
-  // Belt pace over the run: a new part every 1.25 s at the start, down to 0.5 s; a part takes 3.4 s to ride the
-  // belt at the start, down to 1.5 s. Tuned so a careful player reaches ×2–×3 and ×5 needs a near-perfect run.
-  const spawnGap = (t) => Math.max(0.5, 1.25 - t * 0.0175);
-  const rideTime = (t) => Math.max(1.5, 3.4 - t * 0.045);
+  // Belt pace over the run: a new part every 0.9 s at the start, down to 0.4 s; a part takes 2.4 s to ride the
+  // belt at the start, down to 1.1 s. About 75 parts fit in a run, so ×5 (65) needs a near-perfect run and a
+  // careful player lands ×2–×3. (v0.18.1: the first pace, 1.25 s to 0.5 s, felt too slow.)
+  const spawnGap = (t) => Math.max(0.4, 0.9 - t * 0.0125);
+  const rideTime = (t) => Math.max(1.1, 2.4 - t * 0.03);
 
   let box = null, game = null;
   const ui = () => SVT.ui;

@@ -19,9 +19,9 @@ window.SVT = window.SVT || {};
   }
 
   const B = {
-    VERSION: "0.18.0",
+    VERSION: "0.18.1",
     // Release time in UTC, set with each release. Shown after the version in the player's local time.
-    BUILT: "2026-10-22T22:40Z",
+    BUILT: "2026-10-23T05:41Z",
     FLOORS: 30,
     FLOOR_MAX: 800,
     HUB_MAX: 2400,
@@ -69,10 +69,10 @@ window.SVT = window.SVT || {};
       LIVES: 3,
       COOLDOWN: 15 * 60,
       TIERS: [
-        { score: 15, mult: 2, minutes: 10 },
-        { score: 25, mult: 3, minutes: 15 },
-        { score: 35, mult: 4, minutes: 20 },
-        { score: 45, mult: 5, minutes: 30 },
+        { score: 20, mult: 2, minutes: 10 },
+        { score: 35, mult: 3, minutes: 15 },
+        { score: 50, mult: 4, minutes: 20 },
+        { score: 65, mult: 5, minutes: 30 },
       ],
     },
     DISCOUNT_SECONDS: 30,
