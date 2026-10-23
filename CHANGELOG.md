@@ -2,6 +2,13 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.20.1 (2026-10-23)
+
+- The ×50 buy button is gone. The Level panel now offers ×1, ×10, Max and Next.
+- Max now lands on a round level: it buys as many levels as you can afford, rounded down so the new level is a multiple of 50 (from Lv 56 with cash for 140 levels it goes to Lv 100). If you cannot afford the next multiple of 50 it buys everything you can afford, and if you can afford the max level it takes you there.
+- Saves that had ×50 selected switch to Max. The ▲▲▲ badge on a Level button still means you can reach the next multiple of 50, which is where Max will land.
+- Manager lists are grouped by ability type, ⚡ Speed boosts first and then 💸 Cost cuts, with the best rarity at the top of each group. Free managers still come before the ones already working somewhere.
+
 ## v0.20.0 (2026-10-23)
 
 - Chip now really wears his collectibles. Nine slots sit on his body: left hand, right hand, wrist, head, neck, body, feet, and the floor on either side of him. Each item is drawn at that spot on the home screen, so he holds the calculator, wears the watch, carries the AI chip on his head and hangs the lanyard round his neck. Big things like arcade cabinets and servers stand next to him.

@@ -411,7 +411,8 @@ window.SVT = window.SVT || {};
     emit("tap", { kind, n });
   };
 
-  // ×10 and ×50 round up to the next multiple, like Idle Miner: Lv 56 ×10 buys 4 (to 60), Lv 60 ×10 buys 10 (to 70).
+  // ×10 rounds up to the next multiple, like Idle Miner: Lv 56 ×10 buys 4 (to 60), Lv 60 ×10 buys 10 (to 70).
+  // Max buys as much as the cash affords, landing on a multiple of 50 when it can (see B.bulk).
   SVT.stepTo = (lv, step) => step - (lv % step);
   // "next" buys up to the next unlock: unlocks come every 5 levels (and the big milestones 10, 25, 50... are on them).
   SVT.buyAmount = (lv) => (S.buy === "max" ? Infinity : S.buy === "next" ? SVT.stepTo(lv || 0, 5) : S.buy === 1 ? 1 : SVT.stepTo(lv || 0, S.buy));
@@ -621,7 +622,7 @@ window.SVT = window.SVT || {};
         else if (d && d.v === 3 && d.labs && d.labs.garage) S = d;
       } catch (e) {}
     }
-    if (S.buy === 100) S.buy = 50; // v0.6 buy chips are ×1, ×10, ×50, Max
+    if (S.buy === 100 || S.buy === 50) S.buy = "max"; // v0.20.1 drops the ×50 chip (and v0.6 dropped ×100): Max rounds to 50s
     if (!S.raid) S.raid = { cleared: 0 }; // v0.12 adds the Viking Raid island
     if (!S.rush) S.rush = newRush(); // v0.16 adds Assembly Line Rush
     if (!S.vault) S.vault = newVault(); // v0.17 adds the Tech Vault

@@ -611,6 +611,8 @@ table.stats td.next.up { color: var(--good); font-weight: 700; }
 .mgr-panel { display: grid; gap: 8px; align-content: start; }
 .sec-label { font: 700 .9rem var(--f-display); color: #1d5a9a; }
 .sheet ul.mlist { list-style: none; padding: 0; display: grid; gap: 8px; }
+.mlist .mgroup { font: .72rem var(--f-display); color: var(--muted); text-transform: uppercase; letter-spacing: .05em; padding: 4px 2px 0; }
+.mlist .mgroup:first-child { padding-top: 0; }
 .mcard { display: grid; grid-template-columns: 62px 1fr auto; gap: 10px; align-items: center; background: #fff; border: 3px solid var(--rc, var(--common)); border-radius: 12px; padding: 8px; }
 .mcard.assigned { background: linear-gradient(#fffbe8, #fff); }
 .mcard.busy { opacity: .55; filter: grayscale(.6); }

@@ -51,6 +51,17 @@ const owned = await page.evaluate(() => { const L = SVT.lab(); return { total: O
 console.log("owned", JSON.stringify(owned));
 const rankIdx = await page.evaluate(() => SVT.RANK_ORDER);
 if (owned.order.some((r, i) => i && rankIdx[r] < rankIdx[owned.order[i - 1]])) errors.push("Owned list not sorted by rarity");
+const grouped = await page.evaluate(() => {
+  const L = SVT.lab(); L.cash = 1e12;
+  for (let i = 0; i < 12; i++) SVT.hire("floor");
+  SVT.openManagers("floor", null, 0);
+  const rows = [...document.querySelectorAll("#sheet .mlist > li")].map((li) => li.classList.contains("mgroup") ? "#" + li.textContent : li.querySelector(".minfo b") ? li.dataset.kind || "card" : "?");
+  const kinds = [...document.querySelectorAll("#sheet .mlist > li.mgroup")].map((li) => li.textContent);
+  return { headers: kinds, first: rows[0] };
+});
+console.log("manager groups", JSON.stringify(grouped));
+await page.screenshot({ path: out + "/04b-manager-groups.png" });
+if (!grouped.first.startsWith("#") || grouped.headers.length < 2 || grouped.headers[0] !== "⚡ Speed boosts") errors.push("Managers are not grouped by ability type: " + JSON.stringify(grouped));
 if (owned.total !== 4 || owned.assigned !== 3) errors.push("Owned/assigned counts wrong");
 await page.click('#sheet [aria-label="Close"]');
 // rarity odds: 100k rolls should land near the stated odds
@@ -180,18 +191,25 @@ const tri = await page.evaluate(async () => {
 });
 console.log("badge tiers", tri);
 if (tri !== "0123") errors.push("Upgrade badge tiers wrong: " + tri);
-// ×10 / ×50 round up to the next multiple: Lv 56 ×10 -> 60, Lv 60 ×10 -> 70, Lv 56 ×50 -> 100
+// ×10 rounds up to the next multiple: Lv 56 ×10 -> 60, Lv 60 ×10 -> 70. Max lands on a multiple of 50 when one is
+// affordable (Lv 56 with cash for 140 -> 100; Lv 56 with cash for 60 -> 60), and the max level when the cash reaches it.
 const steps = await page.evaluate(() => {
   const L = SVT.lab(), f = L.floors[0], out = [];
   L.cash = 1e30;
-  for (const [lv, b] of [[56, 10], [60, 10], [56, 50], [100, 50]]) { f.lvl = lv; SVT.setBuy(b); out.push(lv + SVT.quote(L, "floor", 1).count); }
+  for (const [lv, b] of [[56, 10], [60, 10]]) { f.lvl = lv; SVT.setBuy(b); out.push(lv + SVT.quote(L, "floor", 1).count); }
+  SVT.setBuy("max");
+  const costTo = (lv, to) => SVT.B.bulk("floor", 1, lv, to - lv, 0, 0, SVT.costScale(L, "floor", 1)).cost;
+  f.lvl = 56; L.cash = costTo(56, 140); out.push(56 + SVT.quote(L, "floor", 1).count);
+  L.cash = costTo(56, 60); out.push(56 + SVT.quote(L, "floor", 1).count);
+  L.cash = 1e300; out.push(56 + SVT.quote(L, "floor", 1).count);
+  L.cash = 1e30;
   SVT.setBuy("next");
   for (const lv of [56, 60, 9]) { f.lvl = lv; out.push(lv + SVT.quote(L, "floor", 1).count); }
   SVT.setBuy(1);
   return out.join(",");
 });
 console.log("step buys", steps);
-if (steps !== "60,70,100,150,60,65,10") errors.push("x10/x50 do not round to the next multiple: " + steps);
+if (steps !== "60,70,100,60,800,60,65,10") errors.push("x10 or Max rounding is wrong: " + steps);
 // back-to-top arrow: hidden at the top, shows when scrolled down, glides back to the top
 await page.evaluate(() => { SVT.setView("lab"); const L = SVT.lab(); while (L.floors.length < 12) L.floors.push({ lvl: 1, stock: 0, left: 0 }); SVT.render(); });
 await page.waitForTimeout(200);
@@ -268,7 +286,7 @@ if ((await page.evaluate(() => SVT.lab().stage)) !== 2) errors.push("Stage 2 did
 await page.evaluate(() => SVT.switchLab("garage"));
 // opening a Level panel always starts on Next (up to the next unlock)
 const reopenBuy = await page.evaluate(async () => {
-  SVT.setBuy(50); document.querySelector(".floor .lvl-btn").click();
+  SVT.setBuy(10); document.querySelector(".floor .lvl-btn").click();
   await new Promise((r) => setTimeout(r, 200));
   const on = document.querySelector(".seg .chip.on");
   return SVT.state().buy + "|" + (on && on.textContent);
