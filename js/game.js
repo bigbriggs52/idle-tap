@@ -100,8 +100,10 @@ window.SVT = window.SVT || {};
   SVT.labDiff = (lab) => (SVT.isRaid(lab) ? SVT.RAID.stage(lab.stage).diff : B.LAB_DIFF[lab && lab.id] || B.LAB_DIFF.garage);
   SVT.costScale = (lab, kind, n) => {
     const d = SVT.labDiff(lab);
-    return kind === "floor" ? d.scale * Math.pow(d.grow, n - 1) : d.scale;
+    return kind === "floor" ? d.scale * Math.pow(d.grow, n - 1) : d.scale * (d.hub ? d.hub[kind] : 1);
   };
+  // Price growth per level: labs use the shared rates; Viking Raid has its own (see RAID.GROWTH).
+  SVT.growthOf = (lab, kind) => (SVT.isRaid(lab) ? SVT.RAID.GROWTH[kind] : B.growth(kind));
   SVT.newLab = newLab;
 
   // ---------- Assembly Line Rush ----------
@@ -174,12 +176,12 @@ window.SVT = window.SVT || {};
   SVT.raidStage = (lab) => SVT.RAID.stage(lab.stage);
   SVT.raidNext = () => Math.min(SVT.RAID.STAGES, S.raid.cleared + 1);
   // Raid shafts, lift and warehouse stop at the stage's max level; labs use the normal caps.
-  SVT.maxLevel = (lab, kind) => (SVT.isRaid(lab) ? SVT.raidStage(lab).max : B.maxLevel(kind));
+  SVT.maxLevel = (lab, kind) => (SVT.isRaid(lab) ? SVT.raidStage(lab).max[kind] : B.maxLevel(kind));
   // A stage is cleared by opening every shaft and taking every shaft, the lift and the warehouse to max level.
   SVT.raidProgress = (lab) => {
-    const st = SVT.raidStage(lab), max = st.max, total = (st.floors + 2) * (max - 1) + (st.floors - 1);
-    let done = lab.floors.length - 1 + Math.min(max, lab.freight.lvl) - 1 + Math.min(max, lab.commercial.lvl) - 1;
-    lab.floors.forEach((f) => (done += Math.min(max, f.lvl) - 1));
+    const st = SVT.raidStage(lab), m = st.max, total = st.floors * (m.floor - 1) + (m.freight - 1) + (m.commercial - 1) + (st.floors - 1);
+    let done = lab.floors.length - 1 + Math.min(m.freight, lab.freight.lvl) - 1 + Math.min(m.commercial, lab.commercial.lvl) - 1;
+    lab.floors.forEach((f) => (done += Math.min(m.floor, f.lvl) - 1));
     return { done, total, p: done / total };
   };
   // Starts a stage from scratch. Only cleared stages and the next one can be raided.
@@ -232,12 +234,11 @@ window.SVT = window.SVT || {};
   // Throughput multiplier from the node's manager: passive bonus x active boost (speed or storage).
   SVT.nodeMult = (lab, kind, n, t) => {
     const m = SVT.mgrOf(lab, kind, n);
-    // Viking Raid omens tilt each part of the mine; managers there only automate (no abilities).
+    // Viking Raid omens tilt each part of the mine (abilities work there too since v0.23).
     const omen = SVT.isRaid(lab) ? SVT.raidStage(lab).mult[kind] : SVT.rushMult(t) * vaultMult;
     if (!m) return omen;
     const r = SVT.rank(m.rank);
     let x = (1 + r.passive) * omen;
-    if (SVT.isRaid(lab)) return x;
     const ab = SVT.ability(roleOf(kind), m.ability);
     if (ab.kind !== "discount" && m.activeUntil > (t || now())) x *= r.boost;
     return x;
@@ -246,7 +247,7 @@ window.SVT = window.SVT || {};
   // animation; storage as bigger loads; discount on the upgrade prices.
   SVT.activeAbility = (lab, kind, n, t) => {
     const m = SVT.mgrOf(lab, kind, n);
-    if (!m || SVT.isRaid(lab) || !(m.activeUntil > (t || now()))) return null;
+    if (!m || !(m.activeUntil > (t || now()))) return null;
     const ab = SVT.ability(roleOf(kind), m.ability), r = SVT.rank(m.rank);
     return { kind: ab.kind, mult: ab.kind === "discount" ? r.discount : r.boost };
   };
@@ -255,7 +256,7 @@ window.SVT = window.SVT || {};
   SVT.loadMult = (lab, kind, n, t) => SVT.nodeMult(lab, kind, n, t) / SVT.speedMult(lab, kind, n, t);
   SVT.discount = (lab, kind, n, t) => {
     const m = SVT.mgrOf(lab, kind, n);
-    if (!m || SVT.isRaid(lab)) return 0;
+    if (!m) return 0;
     const ab = SVT.ability(roleOf(kind), m.ability);
     return ab.kind === "discount" && m.activeUntil > (t || now()) ? SVT.rank(m.rank).discount : 0;
   };
@@ -434,7 +435,7 @@ window.SVT = window.SVT || {};
   SVT.buyAmount = (lv) => (S.buy === "max" ? Infinity : S.buy === "next" ? SVT.stepTo(lv || 0, 5) : S.buy === 1 ? 1 : SVT.stepTo(lv || 0, S.buy));
   SVT.quote = (lab, kind, n) => {
     const L = SVT.levelOf(lab, kind, n);
-    return B.bulk(kind, n, L, SVT.buyAmount(L), lab.cash, SVT.discount(lab, kind, n), SVT.costScale(lab, kind, n), SVT.maxLevel(lab, kind));
+    return B.bulk(kind, n, L, SVT.buyAmount(L), lab.cash, SVT.discount(lab, kind, n), SVT.costScale(lab, kind, n), SVT.maxLevel(lab, kind), SVT.growthOf(lab, kind));
   };
 
   SVT.upgrade = (kind, n) => {
@@ -536,7 +537,7 @@ window.SVT = window.SVT || {};
     const lab = SVT.lab();
     const m = SVT.mgrOf(lab, kind, n);
     const t = now();
-    if (!m || m.cdUntil > t || SVT.isRaid(lab)) return false;
+    if (!m || m.cdUntil > t) return false;
     const ab = SVT.ability(roleOf(kind), m.ability);
     const dur = ab.kind === "discount" ? B.DISCOUNT_SECONDS : B.BOOST_SECONDS;
     m.activeUntil = t + dur;

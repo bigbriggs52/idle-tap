@@ -19,9 +19,9 @@ window.SVT = window.SVT || {};
   }
 
   const B = {
-    VERSION: "0.22.1",
+    VERSION: "0.23.0",
     // Release time in UTC, set with each release. Shown after the version in the player's local time.
-    BUILT: "2026-10-23T21:17Z",
+    BUILT: "2026-10-23T21:31Z",
     FLOORS: 30,
     FLOOR_MAX: 800,
     HUB_MAX: 2400,
@@ -146,10 +146,10 @@ window.SVT = window.SVT || {};
   B.commercialCap = (L) => 2 * Math.pow(1.11, L - 1) * B.hubMult(L);
 
   // Cost of one level from L to L+1.
-  B.levelCost = (kind, n, L) => {
-    if (kind === "floor") return B.floorBase(n) * Math.pow(B.FLOOR_GROWTH, L - 1);
+  B.levelCost = (kind, n, L, growth) => {
+    if (kind === "floor") return B.floorBase(n) * Math.pow(growth || B.FLOOR_GROWTH, L - 1);
     const base = kind === "freight" ? B.freightBase : B.commercialBase;
-    return base * Math.pow(B.HUB_GROWTH, L - 1);
+    return base * Math.pow(growth || B.HUB_GROWTH, L - 1);
   };
   B.growth = (kind) => (kind === "floor" ? B.FLOOR_GROWTH : B.HUB_GROWTH);
   B.maxLevel = (kind) => (kind === "floor" ? B.FLOOR_MAX : B.HUB_MAX);
@@ -158,9 +158,9 @@ window.SVT = window.SVT || {};
   // cash affords, rounded down so the new level is a multiple of 50 (Lv 56 with cash for 140 goes to 100); when no
   // multiple of 50 is affordable (or the cap gets in the way) it buys everything affordable.
   B.ROUND_TO = 50;
-  B.bulk = (kind, n, L, want, cash, discount, scale, max) => {
-    const r = B.growth(kind);
-    const first = B.levelCost(kind, n, L) * (1 - discount) * (scale || 1);
+  B.bulk = (kind, n, L, want, cash, discount, scale, max, growth) => {
+    const r = growth || B.growth(kind);
+    const first = B.levelCost(kind, n, L, growth) * (1 - discount) * (scale || 1);
     const cap = (max || B.maxLevel(kind)) - L;
     if (cap <= 0) return { count: 0, cost: 0 };
     let k;

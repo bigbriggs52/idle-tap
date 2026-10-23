@@ -2,6 +2,13 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.23.0 (2026-10-23)
+
+- Viking Raid caps are the same on every stage now: shafts stop at Lv 25, the lift and the warehouse at Lv 100. Clearing a stage means every shaft at 25 and both hubs at 100. With the lift and warehouse able to go so much further, deep mines are no longer choked by a lift that stops at Lv 60; the difficulty of a stage is all in its prices and omens. Target clear times are unchanged (10 minutes on stage 1 to 12 hours on stage 50) and every stage's prices were refitted. The goal bar and the Stages panel spell out both caps.
+- The lift, the warehouse and the deepest shaft now finish together. Raid prices climb 1.5× per shaft level (25 levels) and 1.1× per lift or warehouse level (100 levels), and each stage's hub prices are set so the last level of the lift, of the warehouse and of the deepest shaft cost the same. Upgrade evenly and all three max out around the same time instead of the shafts finishing early and the hubs dragging on.
+- Manager abilities now work in Viking Raid too: Speed, Storage and Price all fire there, with the same durations and cooldowns as in the labs. Only the passive rarity bonus worked there before.
+- Fix: an empty yellow pill sat over the Tap labels and under "Tap to build" on every lift, warehouse and shaft until an ability had run there (the v0.22 ability tag was created visible). It is hidden until an ability is active.
+
 ## v0.22.1 (2026-10-23)
 
 - Viking Raid is steeper. Each deeper shaft now costs 1.3× the one above it (they all cost the same before), so the last shafts of a mine are the expensive ones and the whole mine needs upgrading to pay for them. Target clear times go up again: 10 minutes on stage 1, about 22 on stage 10, 80 on stage 25, 5 hours on stage 40 and 12 hours on stage 50 (was 3 minutes to 3 hours). Price scales refitted with the pacing sim.
