@@ -14,7 +14,7 @@ const clear = (s) => {
 for (let s = 1; s <= R.STAGES; s++) {
   const st = R.stage(s), T = R.time(s), omen = st.diff.scale / (R.SCALES[s - 1] || 1);
   let k = 0.05, t = 0;
-  for (let pass = 0; pass < 6; pass++) {
+  for (let pass = 0; pass < 10; pass++) {
     st.diff.scale = k * omen;
     t = clear(s);
     if (Math.abs(t / T - 1) < 0.03) break;
