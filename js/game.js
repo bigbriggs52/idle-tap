@@ -229,7 +229,7 @@ window.SVT = window.SVT || {};
     return (SVT.nodeOf(lab, kind, n).left || 0) > 0;
   };
   SVT.cycleTime = (kind) => (kind === "floor" ? B.FLOOR_CYCLE : B.WH_TRIP);
-  // Throughput multiplier from the node's manager: passive bonus x active boost.
+  // Throughput multiplier from the node's manager: passive bonus x active boost (speed or storage).
   SVT.nodeMult = (lab, kind, n, t) => {
     const m = SVT.mgrOf(lab, kind, n);
     // Viking Raid omens tilt each part of the mine; managers there only automate (no abilities).
@@ -239,9 +239,20 @@ window.SVT = window.SVT || {};
     let x = (1 + r.passive) * omen;
     if (SVT.isRaid(lab)) return x;
     const ab = SVT.ability(roleOf(kind), m.ability);
-    if (ab.kind === "boost" && m.activeUntil > (t || now())) x *= r.boost;
+    if (ab.kind !== "discount" && m.activeUntil > (t || now())) x *= r.boost;
     return x;
   };
+  // The ability running on a node right now: { kind, mult } or null. Speed shows as faster cycles, trips and
+  // animation; storage as bigger loads; discount on the upgrade prices.
+  SVT.activeAbility = (lab, kind, n, t) => {
+    const m = SVT.mgrOf(lab, kind, n);
+    if (!m || SVT.isRaid(lab) || !(m.activeUntil > (t || now()))) return null;
+    const ab = SVT.ability(roleOf(kind), m.ability), r = SVT.rank(m.rank);
+    return { kind: ab.kind, mult: ab.kind === "discount" ? r.discount : r.boost };
+  };
+  // How much faster the node runs (speed ability), and how much more each cycle or trip carries (everything else).
+  SVT.speedMult = (lab, kind, n, t) => { const a = SVT.activeAbility(lab, kind, n, t); return a && a.kind === "speed" ? a.mult : 1; };
+  SVT.loadMult = (lab, kind, n, t) => SVT.nodeMult(lab, kind, n, t) / SVT.speedMult(lab, kind, n, t);
   SVT.discount = (lab, kind, n, t) => {
     const m = SVT.mgrOf(lab, kind, n);
     if (!m || SVT.isRaid(lab)) return 0;
@@ -267,16 +278,17 @@ window.SVT = window.SVT || {};
   // Down one floor every 1/speed s, stop at each floor with stock and pour it in at the loading speed until the floor
   // is empty or the car is full, turn back once full or past the last floor, then empty it over UNLOAD_TIME at the top.
   // Average throughput matches B.freightCap.
-  const STOP_TIME = B.LIFT_STOP, UNLOAD_TIME = B.LIFT_UNLOAD;
-  SVT.liftCapacity = (lab, t) => B.freightLoad(lab.freight.lvl) * SVT.prestigeMult(lab) * SVT.nodeMult(lab, "freight", 0, t);
-  SVT.liftLoadRate = (lab, t) => SVT.liftCapacity(lab, t) / B.liftFillTime(lab.freight.lvl);
+  SVT.liftCapacity = (lab, t) => B.freightLoad(lab.freight.lvl) * SVT.prestigeMult(lab) * SVT.loadMult(lab, "freight", 0, t);
+  SVT.liftLoadRate = (lab, t) => SVT.liftCapacity(lab, t) / B.liftFillTime(lab.freight.lvl) * SVT.speedMult(lab, "freight", 0, t);
   function nextStop(lab, from) {
     for (let k = Math.floor(from + 1e-9) + 1; k <= lab.floors.length; k++) if (lab.floors[k - 1].stock > 0) return k;
     return 0;
   }
   function stepLift(lab, dt, t) {
     const L = lab.lift || (lab.lift = newLift());
-    const speed = B.freightSpeed(lab.freight.lvl);
+    // A speed ability runs the whole trip faster: the car, the stops, loading and unloading.
+    const sp = SVT.speedMult(lab, "freight", 0, t), speed = B.freightSpeed(lab.freight.lvl) * sp;
+    const STOP_TIME = B.LIFT_STOP / sp, UNLOAD_TIME = B.LIFT_UNLOAD / sp;
     let guard = 20;
     while (dt > 1e-9 && guard-- > 0) {
       if (L.phase === "idle") {
@@ -316,18 +328,22 @@ window.SVT = window.SVT || {};
   // The warehouse ships in trips: a cart loads up to a trip's worth at the top of the shaft, is paid when it reaches the
   // warehouse halfway through, and rolls back empty.
   // A tap runs one cycle or trip; a manager starts the next one straight away.
+  // `left` counts down in base seconds (a full cycle is FLOOR_CYCLE, a trip WH_TRIP) and runs sp times faster
+  // under a speed ability, so the countdown bars, the cart and the workers all visibly speed up.
   function stepFloor(lab, f, n, dt, t) {
-    const mgr = !!SVT.mgrOf(lab, "floor", n), T = B.FLOOR_CYCLE;
+    const mgr = !!SVT.mgrOf(lab, "floor", n), T = B.FLOOR_CYCLE, sp = SVT.speedMult(lab, "floor", n, t);
+    dt *= sp;
     let guard = 50;
     while (dt > 1e-9 && guard-- > 0) {
       if (!(f.left > 0)) { if (!mgr) return; f.left = T; }
       if (f.left > dt) { f.left -= dt; return; }
       dt -= f.left; f.left = 0;
-      f.stock += B.floorOutput(n, f.lvl) * SVT.prestigeMult(lab) * SVT.nodeMult(lab, "floor", n, t) * T;
+      f.stock += B.floorOutput(n, f.lvl) * SVT.prestigeMult(lab) * SVT.loadMult(lab, "floor", n, t) * T;
     }
   }
   function stepWarehouse(lab, dt, t) {
     const c = lab.commercial, mgr = !!SVT.mgrOf(lab, "commercial", 0);
+    dt *= SVT.speedMult(lab, "commercial", 0, t);
     let earned = 0, guard = 50;
     while (dt > 1e-9 && guard-- > 0) {
       if (!(c.left > 0)) {
@@ -349,7 +365,7 @@ window.SVT = window.SVT || {};
     }
     return earned;
   }
-  SVT.shipLoad = (lab, t) => B.commercialCap(lab.commercial.lvl) * SVT.prestigeMult(lab) * SVT.nodeMult(lab, "commercial", 0, t) * B.WH_TRIP;
+  SVT.shipLoad = (lab, t) => B.commercialCap(lab.commercial.lvl) * SVT.prestigeMult(lab) * SVT.loadMult(lab, "commercial", 0, t) * B.WH_TRIP;
   // A trip starts at the warehouse: the worker pushes the empty cart to the lift, loads up, and pushes it back.
   SVT.startShip = (lab) => {
     const c = lab.commercial;
@@ -522,7 +538,7 @@ window.SVT = window.SVT || {};
     const t = now();
     if (!m || m.cdUntil > t || SVT.isRaid(lab)) return false;
     const ab = SVT.ability(roleOf(kind), m.ability);
-    const dur = ab.kind === "boost" ? B.BOOST_SECONDS : B.DISCOUNT_SECONDS;
+    const dur = ab.kind === "discount" ? B.DISCOUNT_SECONDS : B.BOOST_SECONDS;
     m.activeUntil = t + dur;
     m.cdUntil = m.activeUntil + SVT.rank(m.rank).cooldown;
     emit("ability", { kind, n });

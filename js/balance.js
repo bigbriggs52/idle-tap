@@ -19,9 +19,9 @@ window.SVT = window.SVT || {};
   }
 
   const B = {
-    VERSION: "0.21.0",
+    VERSION: "0.22.0",
     // Release time in UTC, set with each release. Shown after the version in the player's local time.
-    BUILT: "2026-10-23T19:50Z",
+    BUILT: "2026-10-23T19:56Z",
     FLOORS: 30,
     FLOOR_MAX: 800,
     HUB_MAX: 2400,
@@ -107,23 +107,27 @@ window.SVT = window.SVT || {};
       BONUS: [{ chance: 0.2, mult: 1.05 }, { chance: 0.35, mult: 1.1 }, { chance: 0.5, mult: 1.15 }, { chance: 0.7, mult: 1.25 }, { chance: 1, mult: 1.35 }, { chance: 1, mult: 1.5 }],
       MAX_BONUS: 3,
     },
+    // v0.21: three ability kinds. "speed" runs the node faster (shorter cycles, a quicker lift and cart), "storage"
+    // makes every cycle, lift trip and cart load carry more, "discount" cuts upgrade prices. Speed and storage both
+    // multiply throughput by the rank's boost; you see the difference in how the lab moves.
     ABILITIES: {
       floor: [
-        { id: "crunch", name: "Crunch Time", kind: "boost" },
-        { id: "hackathon", name: "Hackathon", kind: "boost" },
+        { id: "crunch", name: "Crunch Time", kind: "speed" },
+        { id: "hackathon", name: "Big Batch", kind: "storage" },
         { id: "budget", name: "Budget Cut", kind: "discount" },
       ],
       freight: [
-        { id: "express", name: "Express Lift", kind: "boost" },
-        { id: "bulk", name: "Bulk Freight", kind: "boost" },
+        { id: "express", name: "Express Lift", kind: "speed" },
+        { id: "bulk", name: "Bulk Freight", kind: "storage" },
         { id: "vendor", name: "Vendor Deal", kind: "discount" },
       ],
       commercial: [
-        { id: "blitz", name: "Launch Blitz", kind: "boost" },
-        { id: "fleet", name: "Fleet Expansion", kind: "boost" },
+        { id: "blitz", name: "Launch Blitz", kind: "speed" },
+        { id: "fleet", name: "Fleet Expansion", kind: "storage" },
         { id: "contract", name: "Bulk Contract", kind: "discount" },
       ],
     },
+    ABILITY_KINDS: { speed: { icon: "⚡", name: "Speed" }, storage: { icon: "📦", name: "Storage" }, discount: { icon: "💸", name: "Price" } },
     ROLE_NAMES: { floor: "Floor Lead", freight: "Logistics Lead", commercial: "Commercial Director" },
   };
 

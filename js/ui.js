@@ -202,7 +202,11 @@ window.SVT = window.SVT || {};
   function effectText(m) {
     const r = SVT.rank(m.rank), ab = SVT.ability(m.role, m.ability);
     if (inRaid()) return "Automates only: no abilities on Viking Raid" + (r.passive ? " · +" + r.passive * 100 + "% always" : "");
-    return ab.name + ": " + (ab.kind === "boost" ? "×" + r.boost + " for " + B.BOOST_SECONDS + "s" : "−" + Math.round(r.discount * 100) + "% upgrades for " + B.DISCOUNT_SECONDS + "s") + (r.passive ? " · +" + r.passive * 100 + "% always" : "");
+    const K = B.ABILITY_KINDS[ab.kind];
+    const what = ab.kind === "speed" ? "×" + r.boost + " speed for " + B.BOOST_SECONDS + "s"
+      : ab.kind === "storage" ? "×" + r.boost + " load for " + B.BOOST_SECONDS + "s"
+      : "−" + Math.round(r.discount * 100) + "% upgrades for " + B.DISCOUNT_SECONDS + "s";
+    return K.icon + " " + ab.name + ": " + what + (r.passive ? " · +" + r.passive * 100 + "% always" : "");
   }
 
   // Manager card: portrait, name, rarity, boost, timer and buttons (Idle Miner's manager list).
@@ -226,8 +230,8 @@ window.SVT = window.SVT || {};
 
   // The managers panel. With a slot (kind, n) it is that slot's panel: assigned manager on top, owned cards with
   // Assign below, ‹ › to the next slot. Without one it is the roster for a role. Hire is pinned at the bottom.
-  let mgrType = "all"; // ability-type filter on the manager panels: "all", "boost" (speed) or "discount" (cost)
-  const MGR_TYPES = [["all", "✨", "All"], ["boost", "⚡", "Speed"], ["discount", "💸", "Cost"]];
+  let mgrType = "all"; // ability-type filter on the manager panels: "all", "speed", "storage" or "discount" (price)
+  const MGR_TYPES = [["all", "✨", "All"]].concat(Object.keys(B.ABILITY_KINDS).map((k) => [k, B.ABILITY_KINDS[k].icon, B.ABILITY_KINDS[k].name]));
   function openManagers(role, kind, n, _back, dir) {
     sheetCtx = { role, kind, n };
     const L = lab();
@@ -235,13 +239,13 @@ window.SVT = window.SVT || {};
     const reopen = () => openManagers(role, kind, n);
     const current = kind ? SVT.mgrOf(L, kind, n) : null;
     // Free managers first, then managers busy elsewhere (greyed out at the bottom). Within each, grouped by ability
-    // type (speed boosts, then cost cuts) with the best rarity at the top of each group. SVT.owned is already in
+    // type (speed, storage, then price) with the best rarity at the top of each group. SVT.owned is already in
     // rarity order, so the index keeps that inside a group.
     const busy = (m) => !!SVT.slotOfMgr(L, m.id);
-    const KIND = { boost: 0, discount: 1 }, kindOf = (m) => SVT.ability(m.role, m.ability).kind;
+    const KIND = { speed: 0, storage: 1, discount: 2 }, kindOf = (m) => SVT.ability(m.role, m.ability).kind;
     const list = SVT.owned(L, role).filter((m) => m !== current && (mgrType === "all" || kindOf(m) === mgrType)).map((m, i) => [m, i])
       .sort((a, b) => busy(a[0]) - busy(b[0]) || KIND[kindOf(a[0])] - KIND[kindOf(b[0])] || a[1] - b[1]).map((x) => x[0]);
-    const GROUP = { boost: "⚡ Speed boosts", discount: "💸 Cost cuts" };
+    const GROUP = { speed: "⚡ Speed: runs faster", storage: "📦 Storage: bigger loads", discount: "💸 Price: cheaper upgrades" };
     let lastGroup = null;
     const cards = list.flatMap((m) => {
       const key = (busy(m) ? "busy-" : "free-") + kindOf(m);
@@ -272,11 +276,11 @@ window.SVT = window.SVT || {};
         h("button", { class: "filter" + (ro === role ? " on" : ""), role: "tab", "aria-selected": ro === role ? "true" : "false", onclick: () => openManagers(ro, null, 0),
           title: B.ROLE_NAMES[ro] }, h("span", { "aria-hidden": "true", text: { floor: "🏭", freight: "🛗", commercial: "🏬" }[ro] }), h("small", { text: { floor: "Floors", freight: "Lift", commercial: "Warehouse" }[ro] + " " + SVT.owned(L, ro).length })))));
     }
-    // Ability-type filter: Speed (boosts) or Cost (discounts). Not in Viking Raid, where abilities are off.
+    // Ability-type filter: Speed, Storage or Price. Not in Viking Raid, where abilities are off.
     if (!inRaid()) parts.push(h("div", { class: "filters types", role: "tablist", "aria-label": "Manager type" }, MGR_TYPES.map(([t, ic, label]) =>
       h("button", { class: "filter type" + (t === mgrType ? " on" : ""), role: "tab", "aria-selected": t === mgrType ? "true" : "false", "data-type": t,
         onclick: () => { mgrType = t; openManagers(role, kind, n); } }, h("span", { "aria-hidden": "true", text: ic }), h("small", { text: label + (t === "all" ? "" : " " + SVT.owned(L, role).filter((m) => kindOf(m) === t).length) })))));
-    const emptyText = here && current ? "No other " + B.ROLE_NAMES[role] + "s yet." : mgrType !== "all" ? "No " + (mgrType === "boost" ? "speed" : "cost") + " managers here yet." : "None yet. Hire one below.";
+    const emptyText = here && current ? "No other " + B.ROLE_NAMES[role] + "s yet." : mgrType !== "all" ? "No " + B.ABILITY_KINDS[mgrType].name.toLowerCase() + " managers here yet." : "None yet. Hire one below.";
     parts.push(h("div", { class: "sec-label", text: here ? "Your " + B.ROLE_NAMES[role] + "s:" : B.ROLE_NAMES[role] + "s:" }),
       h("ul", { class: "mlist" }, cards.length ? cards : h("li", { class: "muted empty", text: emptyText })),
       h("p", { class: "muted small odds", text: "Each hire rolls Super 0.5%, Legendary 1%, Epic 3%, Rare 10%, Uncommon 30% or Common 55.5%. Funding rounds send every manager away." }));
@@ -325,7 +329,7 @@ window.SVT = window.SVT || {};
     const P = () => SVT.prestigeMult(lab()), M = () => SVT.nodeMult(lab(), kind, n), depth = () => lab().floors.length;
     if (kind === "floor") return [
       ["Output", (L) => "$" + fmt(B.floorOutput(n, L) * P() * M()) + "/s"],
-      ["Per cycle", (L) => "$" + fmt(B.floorOutput(n, L) * P() * M() * B.FLOOR_CYCLE) + " / " + B.FLOOR_CYCLE + "s"],
+      ["Per cycle", (L) => { const sp = SVT.speedMult(lab(), kind, n); return "$" + fmt(B.floorOutput(n, L) * P() * M() / sp * B.FLOOR_CYCLE) + " / " + +(B.FLOOR_CYCLE / sp).toFixed(1) + "s"; }],
       ["Team", (L) => teamSize(L) + " " + teamName(n)],
       ["Value per product", () => "$" + fmt(B.floorValue(n) * P())],
       ["Tech unlock bonus", (L) => multText(B.floorMult(L))],
@@ -335,12 +339,12 @@ window.SVT = window.SVT || {};
       ["Load per trip", (L) => "$" + fmt(B.freightLoad(L) * P() * M())],
       ["Lift speed", (L) => multText(B.freightSpeed(L))],
       ["Loading speed", (L) => "$" + fmt(B.freightLoad(L) / B.liftFillTime(L) * P() * M()) + "/s"],
-      ["Round trip", (L) => B.freightTrip(L, depth()).toFixed(1) + "s"],
+      ["Round trip", (L) => (B.freightTrip(L, depth()) / SVT.speedMult(lab(), kind, n)).toFixed(1) + "s"],
       ["Tech unlock bonus", (L) => multText(B.hubMult(L))],
     ];
     return [
       ["Ships", (L) => "$" + fmt(B.commercialCap(L) * P() * M()) + "/s"],
-      ["Load per trip", (L) => "$" + fmt(B.commercialCap(L) * P() * M() * B.WH_TRIP) + " / " + B.WH_TRIP + "s"],
+      ["Load per trip", (L) => { const sp = SVT.speedMult(lab(), kind, n); return "$" + fmt(B.commercialCap(L) * P() * M() / sp * B.WH_TRIP) + " / " + +(B.WH_TRIP / sp).toFixed(1) + "s"; }],
       ["Tech unlock bonus", (L) => multText(B.hubMult(L))],
     ];
   }
@@ -353,7 +357,7 @@ window.SVT = window.SVT || {};
     }
     if (kind === "freight") rows.push(["Waiting on floors", () => "$" + fmt(totalWaiting(lab()))]);
     if (kind === "commercial") rows.push(["Waiting to ship", () => "$" + fmt(lab().lobby)]);
-    rows.push(["Manager bonus", () => { const m = SVT.nodeMult(lab(), kind, n); return m > 1 ? multText(m) : "None"; }]);
+    rows.push(["Manager bonus", () => { const m = SVT.nodeMult(lab(), kind, n), a = SVT.activeAbility(lab(), kind, n); return (m > 1 ? multText(m) : "None") + (a && a.kind !== "discount" ? " (" + B.ABILITY_KINDS[a.kind].icon + " ×" + a.mult + " " + a.kind + ")" : ""); }]);
     rows.push(["Prestige bonus", () => multText(SVT.prestigeMult(lab()))]);
     rows.push(["Lab income", () => { const r = SVT.rates(lab()); return "$" + fmt(r.income) + "/s · limited by " + { build: "floors", freight: "lift", commercial: "warehouse" }[r.limit]; }]);
     return rows;
@@ -508,7 +512,7 @@ window.SVT = window.SVT || {};
       const auto = !!SVT.mgrOf(L, kind, n), left = SVT.nodeOf(L, kind, n).left || 0, T = SVT.cycleTime(kind);
       toggle(box, "auto", auto);
       box.hidden = !auto && !(left > 0);
-      setText(label, auto ? "Auto" : Math.ceil(left) + "s");
+      setText(label, auto ? "Auto" : Math.ceil(left / SVT.speedMult(L, kind, n)) + "s");
     });
     onFrame(fill, () => {
       const L = lab(), left = SVT.nodeOf(L, kind, n).left || 0, T = SVT.cycleTime(kind);
@@ -554,19 +558,22 @@ window.SVT = window.SVT || {};
       const m = SVT.mgrOf(lab(), kind, n);
       el.hidden = !m || inRaid();
       if (el.hidden) return;
-      const t = SVT.now(), live = m.activeUntil > t, cd = !live && m.cdUntil > t;
-      setText(el, live ? SVT.fmtTime(m.activeUntil - t) : cd ? SVT.fmtTime(m.cdUntil - t) : "⚡");
+      const t = SVT.now(), live = m.activeUntil > t, cd = !live && m.cdUntil > t, ab = SVT.ability(kind, m.ability);
+      setText(el, live ? SVT.fmtTime(m.activeUntil - t) : cd ? SVT.fmtTime(m.cdUntil - t) : B.ABILITY_KINDS[ab.kind].icon);
       setDisabled(el, live || cd); toggle(el, "live", live); toggle(el, "ready", !live && !cd);
     });
     return el;
   }
   // Big blue Level button: opens the stats and upgrade sheet. A green ▲ shows when you can afford an upgrade.
   function levelBtn(kind, n) {
-    const num = h("b"), badge = h("i", { class: "can", "aria-hidden": "true", text: "▲" });
+    const num = h("b"), badge = h("i", { class: "can", "aria-hidden": "true", text: "▲" }), deal = h("i", { class: "deal-tag", "aria-hidden": "true" });
     const el = h("button", { class: "lvl-btn", onclick: (e) => { e.stopPropagation(); openNode(kind, n); } },
-      h("span", { text: "Level" }), num, badge);
+      h("span", { text: "Level" }), num, badge, deal);
     bind(el, () => {
       const L = lab(), lv = SVT.levelOf(L, kind, n), max = lv >= SVT.maxLevel(lab(), kind);
+      const d = SVT.discount(L, kind, n);
+      toggle(el, "deal", d > 0);
+      if (d > 0) setText(deal, "−" + Math.round(d * 100) + "%");
       popText(num, max ? "MAX" : String(lv));
       // ▲ affords 1 level, ▲▲ affords up to the next ×10 level, ▲▲▲ up to the next multiple of 50 (where Max lands).
       const m = max ? null : B.bulk(kind, n, lv, Infinity, L.cash, SVT.discount(L, kind, n), SVT.costScale(L, kind, n));
@@ -587,6 +594,24 @@ window.SVT = window.SVT || {};
     return el;
   }
   const runBind = (el, kind, n) => bind(el, (e) => toggle(e, "run", SVT.running(lab(), kind, n)));
+  // Shows the running ability on a scene: .ab-speed with --sp (CSS animations run that much faster), .ab-storage
+  // (bigger crates, car and cart) or .ab-discount, plus a floating tag naming it.
+  function abilityBind(el, kind, n) {
+    const tag = h("span", { class: "ab-tag", "aria-hidden": "true" });
+    el.append(tag);
+    let shown = "";
+    return bind(el, (e) => {
+      const a = SVT.activeAbility(lab(), kind, n);
+      const key = a ? a.kind + a.mult : "";
+      if (key === shown) return;
+      shown = key;
+      e.classList.remove("ab-speed", "ab-storage", "ab-discount");
+      if (a) e.classList.add("ab-" + a.kind);
+      e.style.setProperty("--sp", a && a.kind === "speed" ? String(a.mult) : "1");
+      tag.hidden = !a;
+      if (a) setText(tag, B.ABILITY_KINDS[a.kind].icon + (a.kind === "discount" ? " −" + Math.round(a.mult * 100) + "%" : " ×" + a.mult));
+    });
+  }
 
   // ---------- surface: lift tower (left) and warehouse (right) ----------
   function surface() {
@@ -601,6 +626,7 @@ window.SVT = window.SVT || {};
       h("div", { class: "tower-foot" }, h("div", { class: "door" }, seat("freight", 0), boostBtn("freight", 0)), levelBtn("freight", 0)),
       bind(h("div", { class: "tap-hint", text: "Tap" }), (e) => { e.hidden = SVT.running(lab(), "freight", 0) || (lab().lift && lab().lift.phase !== "idle"); })));
     bind(lift, (e) => toggle(e, "run", SVT.running(lab(), "freight", 0) || (lab().lift && lab().lift.phase !== "idle")));
+    abilityBind(lift, "freight", 0);
     const wh = runBind(h("div", { class: "tower wh-tower hub-scene", onclick: () => SVT.tap("commercial", 0) },
       h("div", { class: "roof" }),
       bottleneckPill("commercial"),
@@ -616,6 +642,8 @@ window.SVT = window.SVT || {};
     const cartAmt = h("b"), cartTag = h("span", { class: "coin-tag cart-tag" }, h("span", { class: "coin", text: "$" }), cartAmt);
     const pusher = h("div", { class: "pusher" }, cartTag, h("span", { class: "cart" }, h("span", { class: "money" })), h("span", { class: "worker" }));
     const yard = h("div", { class: "yard cart-lane", "aria-hidden": "true" }, pusher);
+    abilityBind(wh, "commercial", 0);
+    abilityBind(yard, "commercial", 0);
     let laneW = 0, laneAt = 0;
     onFrame(yard, () => {
       const c = lab().commercial, T = B.WH_TRIP, left = c.left || 0, p = left > 0 ? 1 - left / T : 0;
@@ -690,6 +718,7 @@ window.SVT = window.SVT || {};
       workTimer("floor", n, "Building"),
       levelBtn("floor", n),
       bind(h("div", { class: "tap-hint", text: "Tap to build" }), (e) => { e.hidden = SVT.running(lab(), "floor", n); })), "floor", n);
+    abilityBind(scene, "floor", n);
     // While the lift loads here, coins fly from the crate across into the shaft.
     const fly = h("span", { class: "fly", "aria-hidden": "true" }, [0, 1, 2].map((i) => h("span", { class: "coin", style: "--i:" + i, text: "$" })));
     const row = h("div", { class: "floor tier" + tier, "data-floor": n }, scene, fly);
@@ -733,6 +762,7 @@ window.SVT = window.SVT || {};
     // Numbered tags on the shaft, one beside each floor, like Idle Miner's mine shafts.
     const tags = floors.map((_, i) => h("span", { class: "shaft-num", text: i + 1 }));
     const shaft = h("div", { class: "shaft", "aria-hidden": "true" }, tags, car);
+    abilityBind(shaft, "freight", 0);
     // Floor row centres are measured once a second (not every frame); the car glides between them every frame.
     let centres = [0], carH = 64, measuredAt = 0;
     const measure = () => {

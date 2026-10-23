@@ -39,14 +39,15 @@ window.SVT = window.SVT || {};
     STAGES: 50,
     // Stage 1 has 5 shafts, each stage one more, up to 30.
     shafts: (s) => Math.min(30, 4 + s),
-    // Max level for every shaft, the lift and the warehouse on that stage.
-    max: (s) => 10 + 5 * Math.floor((s - 1) / 5),
-    // Target clear time for an efficient player: 90 seconds for stage 1, rising to 30 minutes for stage 50.
-    time: (s) => 90 * Math.pow(20, (s - 1) / 49),
+    // Max level for every shaft, the lift and the warehouse on that stage (v0.22: 15 on stage 1, up to 60).
+    max: (s) => 15 + 5 * Math.floor((s - 1) / 5),
+    // Target clear time for an efficient player (v0.22, the first pace of 1.5 to 30 minutes was far too easy):
+    // 3 minutes for stage 1, rising to 3 hours for stage 50.
+    time: (s) => 180 * Math.pow(60, (s - 1) / 49),
     // Every shaft costs about the same (grow cancels the 10x price step per shaft), so deep stages stay quick.
     BASE: { grow: 0.1 },
     // Price scale per stage, from tests/raid-goals.mjs (the pacing sim fitted to each stage's target time).
-    SCALES: [0.36, 0.32, 0.29, 0.27, 0.25, 0.19, 0.18, 0.13, 0.16, 0.12, 0.13, 0.13, 0.17, 0.16, 0.12, 0.12, 0.15, 0.095, 0.077, 0.077, 0.14, 0.058, 0.15, 0.075, 0.15, 0.096, 0.059, 0.12, 0.096, 0.09, 0.088, 0.19, 0.2, 0.12, 0.3, 0.12, 0.13, 0.14, 0.18, 0.21, 0.32, 0.16, 0.17, 0.25, 0.19, 0.53, 0.24, 0.34, 0.35, 0.5],
+SCALES: [0.48, 0.43, 0.42, 0.39, 0.38, 0.3, 0.3, 0.23, 0.29, 0.22, 0.27, 0.28, 0.38, 0.4, 0.29, 0.28, 0.39, 0.22, 0.2, 0.2, 0.4, 0.16, 0.44, 0.22, 0.46, 0.3, 0.18, 0.39, 0.32, 0.31, 0.31, 0.71, 0.74, 0.45, 1.2, 0.55, 0.6, 0.65, 0.85, 1, 1.5, 0.75, 0.83, 1.2, 0.98, 2.8, 1.3, 1.8, 1.9, 2.9],
   };
 
   // 50 different mine names, drawn once in a fixed order.

@@ -1159,3 +1159,52 @@ button:active:not(:disabled) { filter: brightness(.9); transition-duration: 0s; 
 .vault-pick-body b { font-size: .85rem; }
 .vault-pick-body small { font-size: .7rem; font-weight: 700; color: var(--rc); }
 .worn-total { position: absolute; left: 50%; bottom: -22px; translate: -50% 0; z-index: 3; padding: 3px 10px; border-radius: 99px; border: 3px solid #fff; background: linear-gradient(#ffe36a, #f2b100); color: #5a3a00; font: .95rem var(--f-display); box-shadow: 0 3px 0 #9a6a00; cursor: pointer; }
+
+/* v0.22: ability kinds you can see. abilityBind sets --sp on a scene while a speed ability runs, so every animation
+   in it plays that much faster (the lift car, countdown bars and cart already follow the real, faster trips).
+   Storage shows as bigger crates, car and cart; Price as a green Level button with the discount on it. */
+.conveyor, .belt { animation-duration: calc(.5s / var(--sp, 1)); }
+.item { animation-duration: calc(3.2s / var(--sp, 1)); animation-delay: calc(var(--d) / var(--sp, 1)); }
+.item .box::after { animation-duration: calc(1.6s / var(--sp, 1)); }
+.packer .roll { animation-duration: calc(1s / var(--sp, 1)); }
+.packer .film { animation-duration: calc(1.6s / var(--sp, 1)); animation-delay: calc(-0.48s / var(--sp, 1)); }
+.tool { animation-duration: calc(.4s / var(--sp, 1)); }
+.sparks { animation-duration: calc(1.6s / var(--sp, 1)); }
+.sparks span { animation-duration: calc(var(--st, .45s) / var(--sp, 1)); animation-delay: calc(var(--k) * -0.06s / var(--sp, 1)); }
+.flash { animation-duration: calc(.25s / var(--sp, 1)); }
+.worker { animation-duration: calc(.5s / var(--sp, 1)); }
+.worker.w2, .worker.w5 { animation-duration: calc(2.4s / var(--sp, 1)); }
+.worker.w5 { animation-delay: calc(-1.2s / var(--sp, 1)); }
+.lift-car, .lbox.ride, .lbox.in, .lbox.out { animation-duration: calc(4s / var(--sp, 1)); }
+.wbox { animation-duration: calc(1.8s / var(--sp, 1)); animation-delay: calc(var(--d) / var(--sp, 1)); }
+.truck, .cargo { animation-duration: calc(5.4s / var(--sp, 1)); }
+.pusher.moving .worker { animation-duration: calc(.35s / var(--sp, 1)); }
+/* the floating tag naming the running ability */
+.ab-tag { position: absolute; top: 4px; left: 50%; transform: translateX(-50%); z-index: 4; padding: 2px 8px; border-radius: 10px; border: 2px solid #fff; background: #f5b301; color: #4a3000; font: 800 .66rem var(--f-display); white-space: nowrap; box-shadow: 0 2px 6px #0004; animation: ab-pop .4s ease-out; pointer-events: none; }
+.ab-tag[hidden] { display: none; }
+.ab-speed > .ab-tag { background: #ffd23f; }
+.ab-storage > .ab-tag { background: #ffb37a; color: #4a2300; }
+.ab-discount > .ab-tag { background: #5fd38a; color: #0f3d22; }
+.tower > .ab-tag { top: 42px; }
+.floor-scene > .ab-tag { top: auto; bottom: 6px; left: 58%; }
+.yard > .ab-tag, .shaft > .ab-tag { display: none; }
+@keyframes ab-pop { from { transform: translateX(-50%) scale(.4); opacity: 0; } }
+/* speed: a warm glow and motion lines behind the lift car and the cart */
+.ab-speed.scene, .tower.ab-speed { box-shadow: inset 0 0 0 2px #ffd23f99, 0 0 10px #ffd23f66; }
+.shaft.ab-speed .car { box-shadow: 0 0 14px #ffd23f, 0 0 0 2px #ffd23f88; }
+.shaft.ab-speed .car::after { content: ""; position: absolute; left: 50%; top: -14px; width: 2px; height: 12px; background: #ffd23f; box-shadow: -8px 4px 0 #ffd23f, 8px 4px 0 #ffd23f; opacity: .9; }
+.yard.ab-speed .pusher .worker::after { content: ""; position: absolute; left: -10px; top: 6px; width: 8px; height: 2px; background: #ffd23fcc; box-shadow: -3px 5px 0 #ffd23f99, -1px 10px 0 #ffd23f66; }
+/* storage: bigger loads everywhere */
+.ab-storage .crate { height: 26px; border-color: #c98f60; box-shadow: 0 0 8px #ffb37a; }
+.floor[data-floor] .ab-storage .rack, .ab-storage .rack { border-color: #ffb37a; }
+.shaft.ab-storage .car { left: -3px; right: -3px; height: 80px; box-shadow: 0 0 12px #ffb37a, 0 0 0 2px #ffb37a88; }
+.tower.ab-storage .lbox, .tower.ab-storage .wbox { transform: scale(1.5); }
+.tower.ab-storage .cargo { height: 20px; }
+.yard.ab-storage .pusher .cart { width: 46px; height: 22px; bottom: 4px; }
+.yard.ab-storage .pusher .cart::before { box-shadow: 30px 0 #2b3338; }
+.yard.ab-storage .pusher.loaded .money { height: 18px; }
+/* price: the Level button turns green and wears the discount */
+.lvl-btn.deal { border-color: #136b3b; background: linear-gradient(#5fd38a, #1f9b56); box-shadow: 0 3px 0 #136b3b; text-shadow: 0 1px 0 #136b3b; }
+.lvl-btn.deal:active { box-shadow: 0 1px 0 #136b3b; }
+.lvl-btn .deal-tag { display: none; position: absolute; bottom: -10px; left: 50%; transform: translateX(-50%); padding: 1px 6px; border-radius: 9px; border: 2px solid #fff; background: #ffd23f; color: #5a3b00; font: 800 .6rem var(--f-display); font-style: normal; text-shadow: none; white-space: nowrap; }
+.lvl-btn.deal .deal-tag { display: block; }
