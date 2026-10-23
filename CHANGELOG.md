@@ -2,6 +2,10 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.21.0 (2026-10-23)
+
+- Merging changed: any three items of the same rarity now merge, whatever their product or lab. You get one new item of the next rarity: a random product from one of the three items' labs, with a fresh look and a fresh bonus roll. The Merge section in the Items tab lists each rarity you can merge with a "Merge 3 weakest" button, or tap "Pick 3" to choose exactly which three go. Items on Chip still don't count, and Mythic is still the top.
+
 ## v0.20.2 (2026-10-23)
 
 - Manager panels get a type row under the Floors / Lift / Warehouse tabs: ✨ All, ⚡ Speed or 💸 Cost, with the count of each. Pick one to see only those managers, best rarity first. The choice sticks while you browse.
