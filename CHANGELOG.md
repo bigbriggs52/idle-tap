@@ -2,6 +2,10 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.22.1 (2026-10-23)
+
+- Viking Raid is steeper. Each deeper shaft now costs 1.3× the one above it (they all cost the same before), so the last shafts of a mine are the expensive ones and the whole mine needs upgrading to pay for them. Target clear times go up again: 10 minutes on stage 1, about 22 on stage 10, 80 on stage 25, 5 hours on stage 40 and 12 hours on stage 50 (was 3 minutes to 3 hours). Price scales refitted with the pacing sim.
+
 ## v0.22.0 (2026-10-23)
 
 - Manager abilities now come in three kinds you can see: ⚡ **Speed** (Crunch Time, Express Lift, Launch Blitz) runs the node faster, so floor cycles shorten, the workers and belt hurry, the lift car races and the warehouse worker sprints with the cart; 📦 **Storage** (Big Batch, Bulk Freight, Fleet Expansion) makes every cycle, lift trip and cart load carry that many times more, with bigger crates, a bigger lift car and a bigger cart on screen; 💸 **Price** (Budget Cut, Vendor Deal, Bulk Contract) turns the Level button green with the discount on it. Speed and Storage both multiply income by the rank's boost, so no manager got weaker; the floor ability "Hackathon" is renamed "Big Batch".
