@@ -730,7 +730,7 @@ window.SVT = window.SVT || {};
     return row;
   }
 
-  // The IPO's gate (v0.24): every floor at FLOOR_MAX and both hubs at HUB_MAX.
+  // The IPO's gate (v0.26): every floor at FLOOR_MAX and both hubs at HUB_MAX.
   function maxedText(L) {
     const pr = SVT.labProgress(L);
     return pr.p >= 1 ? "Lab fully maxed. Raise your IPO in Funding!" : "All 30 floors unlocked. Max every floor to Lv " + B.FLOOR_MAX + " and the lift and warehouse to Lv " + B.HUB_MAX + " to raise the IPO · " + Math.floor(pr.p * 100) + "%";
@@ -1086,6 +1086,8 @@ window.SVT = window.SVT || {};
       h("p", { class: "muted", text: "Tap floors, the lift and the warehouse to work them. Tap a dashed seat to hire a manager to automate it and keep earning while you're away (up to 2 hours). Income is limited by the slowest of build, freight and commercial, marked Slowest. Tap a blue Level button for stats and upgrades, and hold Upgrade to keep buying." }),
       h("p", { class: "muted", text: "Every 5 levels unlocks new tech (+10% on floors, +2% on hubs). Levels 10, 25, 50, 100 and beyond are big milestones." }),
       h("p", null, h("a", { href: "https://github.com/bigbriggs52/idle-tap/blob/main/CHANGELOG.md", target: "_blank", rel: "noopener", text: "Changelog" })),
+      h("p", { class: "muted small" }, "Vault item pictures: ", h("a", { href: "https://pictogrammers.com/library/mdi/", target: "_blank", rel: "noopener", text: "Material Design Icons" }), " (Apache 2.0), ",
+        h("a", { href: "https://game-icons.net", target: "_blank", rel: "noopener", text: "Game-icons.net" }), " (CC BY 3.0), ", h("a", { href: "https://tabler.io/icons", target: "_blank", rel: "noopener", text: "Tabler Icons" }), " (MIT)."),
       reset));
   }
 

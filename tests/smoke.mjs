@@ -29,7 +29,7 @@ await page.screenshot({ path: out + "/02-start.png" });
 // give money, buy upgrades, hire, unlock floors up to the Seed wall
 await page.evaluate(() => SVT.debug.addCash(1e7));
 await page.evaluate(() => SVT.setBuy(10));
-await page.click(".lift-tower .lvl-btn"); // v0.24: floors cap at Lv 10, so x10 three times needs the lift
+await page.click(".lift-tower .lvl-btn"); // v0.26: floors cap at Lv 10, so x10 three times needs the lift
 for (let i = 0; i < 3; i++) await page.click("#sheet .btn.up");
 await page.click('#sheet [aria-label="Close"]');
 // tap the empty manager seat -> Hire (pinned at the bottom): the new manager is assigned there straight away
@@ -221,7 +221,7 @@ if (cyc.lift !== "idle") errors.push("Lift moved without a tap");
 // upgrade badge: ▲ / ▲▲ / ▲▲▲ for 1 / 10 / 50 affordable levels
 const tri = await page.evaluate(async () => {
   const L = SVT.lab(), out = [];
-  const lv = L.freight.lvl, to = (k) => k - (lv % k); // v0.24: floors cap at Lv 10, so the lift carries this test
+  const lv = L.freight.lvl, to = (k) => k - (lv % k); // v0.26: floors cap at Lv 10, so the lift carries this test
   const k = SVT.costScale(L, "freight", 0), cost = (n) => SVT.B.bulk("freight", 0, lv, n, 0, 0, k).cost;
   for (const c of [0, cost(1), cost(to(10)), cost(to(50))]) {
     L.cash = c * 1.0001; await new Promise((r) => setTimeout(r, 400));
@@ -234,7 +234,7 @@ if (tri !== "0123") errors.push("Upgrade badge tiers wrong: " + tri);
 // ×10 rounds up to the next multiple: Lv 56 ×10 -> 60, Lv 60 ×10 -> 70. Max lands on a multiple of 50 when one is
 // affordable (Lv 56 with cash for 140 -> 100; Lv 56 with cash for 60 -> 60), and the max level when the cash reaches it.
 const steps = await page.evaluate(() => {
-  const L = SVT.lab(), f = L.freight, out = []; // the lift: floors cap at Lv 10 since v0.24
+  const L = SVT.lab(), f = L.freight, out = []; // the lift: floors cap at Lv 10 since v0.26
   L.cash = 1e30;
   for (const [lv, b] of [[56, 10], [60, 10]]) { f.lvl = lv; SVT.setBuy(b); out.push(lv + SVT.quote(L, "freight", 0).count); }
   SVT.setBuy("max");
@@ -271,7 +271,7 @@ const beat = await page.evaluate(() => {
   SVT.switchLab("garage");
   const L = SVT.lab();
   L.round = SVT.B.ROUNDS.length - 1; while (L.floors.length < 30) L.floors.push({ lvl: 1, stock: 0, left: 0 });
-  const early = SVT.raise(); // v0.24: the IPO needs the whole lab maxed first
+  const early = SVT.raise(); // v0.26: the IPO needs the whole lab maxed first
   const wild0 = SVT.vaultWild();
   L.floors.forEach((f) => (f.lvl = SVT.B.FLOOR_MAX)); L.freight.lvl = SVT.B.HUB_MAX; L.commercial.lvl = SVT.B.HUB_MAX;
   const ok = SVT.raise();
@@ -422,7 +422,7 @@ const vault = await page.evaluate(() => {
   return out;
 });
 console.log("vault", JSON.stringify(vault));
-// wild: 50 starter + 2 x 50 for labs 2 and 6 opening + 2 x 5 for the Seed and IPO rounds raised above (v0.24)
+// wild: 50 starter + 2 x 50 for labs 2 and 6 opening + 2 x 5 for the Seed and IPO rounds raised above (v0.26)
 if (vault.coin !== 10 || vault.wild !== 160 || !vault.done || !vault.canReplay || !vault.replaying || vault.canReplayAgain) errors.push("Vault: coin on beat or replay start wrong");
 if (!vault.mapTitle.includes("of 5 open") || !vault.replayRow) errors.push("Vault: replay row or slot count wrong: " + vault.mapTitle);
 if (vault.coin2 !== 20 || vault.beats !== 2 || !vault.closed) errors.push("Vault: beating the replay did not pay a second coin");
@@ -434,6 +434,11 @@ if (vault.worn < 4) errors.push("Vault: Chip is not wearing the first items");
 await page.evaluate(() => SVT.setView("home")); await page.waitForTimeout(300);
 const wornEls = await page.locator(".worn").count();
 if (wornEls !== vault.worn) errors.push("Vault: worn items not drawn on the home screen: " + wornEls);
+// pictures: every product has a real icon, and the drawn items use it as a mask
+const icons = await page.evaluate(() => { let n = 0, bad = 0; SVT.LABS.forEach((l) => l.products.forEach((p, i) => { n++; if (!SVT.productSvg(l.id, i).startsWith("url(\"data:image/svg+xml")) bad++; })); return { n, bad, sets: Object.keys(SVT.ICONS).length }; });
+if (icons.n !== 900 || icons.bad || icons.sets < 250) errors.push("Vault: product icons missing " + JSON.stringify(icons));
+const maskOk = await page.evaluate(() => [...document.querySelectorAll(".worn .vault-art-ic")].every((el) => (getComputedStyle(el).webkitMaskImage || getComputedStyle(el).maskImage || "").includes("svg")));
+if (!maskOk) errors.push("Vault: item pictures are not drawn as icon masks");
 await page.screenshot({ path: out + "/19-home-worn.png" });
 await page.click(".bubble.b-vault", { force: true }); await page.waitForTimeout(300);
 await page.screenshot({ path: out + "/20-vault.png" });
@@ -506,6 +511,19 @@ await page.screenshot({ path: out + "/25-vault-chip.png" });
 if (!(await page.locator(".vault-pick").count())) errors.push("Vault: Chip tab slot inventory empty");
 await page.click(".vault-pick >> nth=1"); await page.waitForTimeout(200);
 if (!(await page.locator(".vault-pick.on").count())) errors.push("Vault: tapping an item in a slot inventory did not equip it");
+// auto-equip: every slot ends up with the best bonus of its kind, and nothing is worn twice
+const auto = await page.evaluate(() => {
+  const v = SVT.state().vault; v.show = {}; SVT.vaultRecalc();
+  const changed = SVT.vaultAutoEquip();
+  const worn = SVT.vaultWorn();
+  const bestOk = worn.every(({ slot, item }) => !v.items.some((x) => SVT.vaultFits(x, slot.id) && !SVT.vaultSlotOf(x.id) && (x.boost > item.boost || (x.boost === item.boost && x.rar > item.rar))));
+  const ids = worn.map((w) => w.item.id);
+  return { changed, worn: worn.length, bestOk, unique: new Set(ids).size === ids.length, again: SVT.vaultAutoEquip() };
+});
+if (auto.changed < 4 || auto.worn < 4 || !auto.bestOk || !auto.unique || auto.again !== 0) errors.push("Vault: auto-equip wrong " + JSON.stringify(auto));
+await page.evaluate(() => SVT.openChip()); await page.waitForTimeout(200);
+if (!(await page.locator(".vault-auto").count())) errors.push("Vault: auto-equip button missing");
+await page.screenshot({ path: out + "/25b-vault-chip-auto.png" });
 await page.evaluate(() => SVT.closeVault()); await page.evaluate(() => SVT.setView("home")); await page.waitForTimeout(300);
 if (!(await page.locator(".worn-total").count())) errors.push("Vault: bonus pill missing on the home screen");
 await page.screenshot({ path: out + "/26-home-bonus.png" });

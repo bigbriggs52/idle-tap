@@ -2,13 +2,19 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
-## v0.24.0 (2026-10-23)
+## v0.26.0 (2026-10-23)
 
 - Funding rounds come every 5 floors now: Seed at floor 5, Series A at 10, Series B at 15, Series C at 20, Series D at 25 and the IPO at 30 (was Seed, A, B, C, IPO at 5, 10, 18, 25, 30). The walls that need a round sit at floors 6, 11, 16, 21 and 26. Round multipliers are ×2, ×2, ×2, ×3, ×3, ×4, so a lab in its IPO round earns ×72 and a beaten lab ×288.
 - The IPO needs the whole lab maxed out: all 30 floors at Lv 10 and the lift and warehouse at Lv 400. The floor list and the Funding sheet show how far along you are. Max levels dropped from 800 / 2400 to 10 / 400 to make that a real goal: floors stop at their first big milestone, and Lv 400 is where the hubs can still pay for themselves.
 - Every funding round and every IPO pays 5 wild Vault coins, on top of the 10 coins for beating a lab and the 50 for each new lab.
 - Lab prices refitted (tests/lab-goals.mjs) so the time to IPO stays about 2.4 h for Garage HQ, 2.9 h, 4.3 h, 7.6 h and 13 h for labs 2–5, and 14 h rising 6% per lab to about 57 h for lab 30. Every lab's floor prices now grow at most 7.2× per floor; the labs differ by their overall price scale.
 - Existing saves keep their progress: old round numbers map onto the new ladder (nobody loses floors they had opened) and levels above the new caps are clamped.
+## v0.25.0 (2026-10-23)
+
+- Real pictures for every Vault item. All 900 products now have their own icon (a motor looks like a motor, a soldering kit like a soldering iron), picked by hand from Material Design Icons, Game-icons.net and Tabler and bundled with the game, so nothing is fetched from the web. The item's rolled colour and finish are painted onto the icon itself: a Chrome Indigo calculator is a chrome-and-indigo calculator shape, Holographic shimmers, Neon glows. Credits are in Settings.
+- On the home screen Chip now holds and wears the shapes themselves, with a glow in the rarity's colour, instead of framed tiles.
+- Auto-equip: one button on the Chip tab fills every slot with the best item of its kind (biggest bonus, then rarest) and never wears the same item twice.
+- Cleaner Vault: item cards show the name, rarity, bonus, where it goes and one Equip / Take off button, with the full six-part code behind Details. Shorter text on the Roll and Chip tabs, and "Choose slot" is gone (the Chip tab places items in a specific hand or floor side).
 
 ## v0.23.0 (2026-10-23)
 

@@ -574,7 +574,7 @@ window.SVT = window.SVT || {};
     lab.commercial.lvl = 1; lab.commercial.left = 0; lab.commercial.carry = 0; lab.commercial.loaded = false;
     lab.managers = {}; lab.assign = {}; lab.hires = { floor: 0, freight: 0, commercial: 0 };
     lab.rate = 0;
-    // v0.24: every round and the IPO pay wild Vault coins, on top of the beat and new-lab coins.
+    // v0.26: every round and the IPO pay wild Vault coins, on top of the beat and new-lab coins.
     if (S.vault) S.vault.wild = (S.vault.wild || 0) + B.VAULT.ROUND_COINS;
     emit("raise", { round: r, mult: SVT.prestigeMult(lab), coins: B.VAULT.ROUND_COINS });
     // Seed (labs 1-4) or IPO (any lab) can open a new location on the map.
@@ -678,7 +678,7 @@ window.SVT = window.SVT || {};
       S.vault.wild += Object.keys(S.labs).filter((id) => id !== "garage" && id !== "raid").length * B.VAULT.OPEN_COINS;
     }
     if (SVT.vaultFixSlots) SVT.vaultFixSlots(); // v0.20 slot categories
-    // v0.24: six funding rounds (one every 5 floors) instead of five. Old round numbers map onto the new ladder so
+    // v0.26: six funding rounds (one every 5 floors) instead of five. Old round numbers map onto the new ladder so
     // nobody loses floors they had opened: old Series B (floors to 18) becomes Series D (floors to 25), old
     // Series C becomes the fifth round, old IPO stays IPO. Levels above the new caps are clamped.
     if (!S.rounds6) {

@@ -19,11 +19,11 @@ window.SVT = window.SVT || {};
   }
 
   const B = {
-    VERSION: "0.24.0",
+    VERSION: "0.26.0",
     // Release time in UTC, set with each release. Shown after the version in the player's local time.
-    BUILT: "2026-10-23T21:53Z",
+    BUILT: "2026-10-23T22:01Z",
     FLOORS: 30,
-    // v0.24: lower caps, because the IPO now needs every floor, the lift and the warehouse at max level. Floors stop
+    // v0.26: lower caps, because the IPO now needs every floor, the lift and the warehouse at max level. Floors stop
     // at their first big milestone (Lv 10). The hubs cap at Lv 400: that is the income every lab ends with, so the
     // deep floors must stay affordable against it (grow <= 0.72), and tests/lab-probe.mjs showed Lv 300 cannot carry
     // floor 30 in the later labs while Lv 600 can never be reached (hub prices outgrow hub capacity).
@@ -46,7 +46,7 @@ window.SVT = window.SVT || {};
     freightBase: 10,
     commercialBase: 12,
 
-    // Floors that need a funding round before they can be unlocked (prestige walls). v0.24: a round every 5 floors.
+    // Floors that need a funding round before they can be unlocked (prestige walls). v0.26: a round every 5 floors.
     WALLS: { 6: 0, 11: 1, 16: 2, 21: 3, 26: 4 },
     // The last round (IPO) also needs every floor, the lift and the warehouse at max level (SVT.canRaise).
     ROUNDS: [
@@ -91,7 +91,7 @@ window.SVT = window.SVT || {};
       START_COINS: 50,
       OPEN_COINS: 50, // wild coins each time a new lab opens on the map
       COIN_PER_BEAT: 10,
-      ROUND_COINS: 5, // wild coins every time a lab raises a funding round or its IPO (v0.24)
+      ROUND_COINS: 5, // wild coins every time a lab raises a funding round or its IPO (v0.26)
       RARITIES: [
         { id: "common", name: "Common", mods: 0 },
         { id: "uncommon", name: "Uncommon", mods: 1 },
@@ -190,7 +190,7 @@ window.SVT = window.SVT || {};
   };
   B.SELL_REFUND = 0.5;
 
-  // Per-lab price scaling (see SVT.costScale). v0.24: every lab's floor prices grow at most 7.2x per floor (grow 0.72)
+  // Per-lab price scaling (see SVT.costScale). v0.26: every lab's floor prices grow at most 7.2x per floor (grow 0.72)
   // so floor 30 stays affordable with the hubs capped at Lv 400; the labs differ by scale, fitted with
   // tests/lab-goals.mjs to about 2.2h, 2.9h, 4.3h, 7.6h, 13h to IPO for labs 1-5, then 14h rising 6% per lab to
   // about 57h for lab 30.

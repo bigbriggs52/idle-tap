@@ -22,14 +22,15 @@ window.SVT = window.SVT || {};
   const MODS = ["Overclocked", "Solar", "Waterproof", "Glitched", "RGB", "Dev-signed", "Prototype", "Silent", "Turbo", "Modded",
     "Hand-soldered", "Limited run", "Cooled", "Encrypted", "Retro-fit", "Boosted", "Shielded", "Clear case", "Hotrod", "Lucky"];
   const SIGNATURE = ["Founder's Edition", "One of One", "Keynote Unit", "Vault Original", "Engineering Sample"];
-  // Emoji for the product picture, by keyword in its name.
-  const ICONS = [["phone", "📱"], ["console", "🎮"], ["handheld", "🎮"], ["game", "🕹️"], ["laptop", "💻"], ["computer", "💻"], ["pc", "🖥️"], ["monitor", "🖥️"],
-    ["tablet", "📱"], ["watch", "⌚"], ["camera", "📷"], ["drone", "🚁"], ["robot", "🤖"], ["headset", "🎧"], ["headphones", "🎧"], ["earbuds", "🎧"], ["speaker", "🔊"],
-    ["radio", "📻"], ["printer", "🖨️"], ["calculator", "🧮"], ["keyboard", "⌨️"], ["mouse", "🖱️"], ["car", "🚗"], ["rocket", "🚀"], ["satellite", "🛰️"],
-    ["server", "🗄️"], ["drive", "💽"], ["disk", "💾"], ["battery", "🔋"], ["chip", "🔬"], ["ai ", "🧠"], ["ai", "🧠"], ["light", "💡"], ["led", "💡"], ["tv", "📺"],
-    ["projector", "📽️"], ["film", "🎬", ], ["mic", "🎤"], ["synth", "🎹"], ["piano", "🎹"], ["guitar", "🎸"], ["bike", "🚲"], ["scooter", "🛴"], ["boat", "🚤"], ["ship", "🚢"],
-    ["telescope", "🔭"], ["mp3", "🎵"], ["player", "🎵"], ["organizer", "📟"], ["pager", "📟"], ["meter", "📟"], ["modem", "📡"], ["router", "📡"], ["antenna", "📡"], ["sensor", "📡"], ["kit", "🧰"], ["machine", "⚙️"], ["engine", "⚙️"], ["lens", "👓"], ["glasses", "👓"], ["ring", "💍"], ["shoe", "👟"], ["sneaker", "👟"], ["jacket", "🧥"], ["cabinet", "🕹️"], ["microscope", "🔬"], ["heart", "❤️"], ["pump", "💉"], ["scanner", "🩻"], ["seed", "🌱"], ["farm", "🌾"], ["fish", "🐟"], ["plane", "✈️"], ["glider", "🛩️"]];
-  SVT.productIcon = (name) => { const n = name.toLowerCase(); const hit = ICONS.find(([k]) => n.includes(k)); return hit ? hit[1] : "🔌"; };
+  // The product picture: a real icon per product from js/icons.js (built by tools/build-icons.mjs), used as a CSS mask so
+  // the item's color and finish paint the icon itself.
+  const svgCache = {};
+  SVT.productSvg = (labId, product) => {
+    const id = (SVT.PRODUCT_ICON || {})[labId + ":" + product], ic = id && SVT.ICONS[id];
+    if (!ic) return "";
+    if (!svgCache[id]) svgCache[id] = "url(\"data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + ic.w + ' ' + ic.h + '">' + ic.body + "</svg>") + "\")";
+    return svgCache[id];
+  };
 
   const S = () => SVT.state().vault;
   const rnd = () => Math.random();
@@ -112,8 +113,8 @@ window.SVT = window.SVT || {};
   // or behind him). Held things go in a hand, wearables on the wrist, head, neck, body or feet, and anything he can't
   // wear stands on the floor beside him. An item sits in at most one slot.
   const SLOTS = [
-    { id: "hand_l", name: "Left hand", icon: "🤚", cat: "hand", x: 34, y: 26, size: 50, z: 3 },
-    { id: "hand_r", name: "Right hand", icon: "✋", cat: "hand", x: 166, y: 26, size: 50, z: 3 },
+    { id: "hand_l", name: "Left hand", icon: "🤚", cat: "hand", x: 34, y: 32, size: 56, z: 3 },
+    { id: "hand_r", name: "Right hand", icon: "✋", cat: "hand", x: 166, y: 32, size: 56, z: 3 },
     { id: "wrist", name: "Wrist", icon: "⌚", cat: "wrist", x: 22, y: 104, size: 34, z: 3 },
     { id: "head", name: "Head", icon: "🧢", cat: "head", x: 100, y: 46, size: 44, z: 3 },
     { id: "neck", name: "Neck", icon: "📿", cat: "neck", x: 100, y: 132, size: 36, z: 3 },
@@ -170,6 +171,20 @@ window.SVT = window.SVT || {};
     return slot;
   };
   const boostText = (it) => (it.boost > 1 ? "⚡ ×" + it.boost + " income" : "no bonus");
+  // Auto-equip: every slot gets the best item of its kind (biggest bonus, then rarest). Returns how many slots changed.
+  SVT.vaultAutoEquip = () => {
+    const v = S(), before = JSON.stringify(v.show), used = new Set();
+    const best = (a, b) => b.boost - a.boost || b.rar - a.rar || b.id - a.id;
+    const show = {};
+    SLOTS.forEach((sl) => {
+      const it = v.items.filter((x) => !used.has(x.id) && SVT.vaultFits(x, sl.id)).sort(best)[0];
+      if (it) { show[sl.id] = it.id; used.add(it.id); }
+    });
+    v.show = show;
+    SVT.vaultRecalc();
+    SVT.save();
+    return SLOTS.filter((sl) => (JSON.parse(before)[sl.id] || null) !== (show[sl.id] || null)).length;
+  };
   SVT.vaultSlotOf = (id) => Object.keys(S().show).find((k) => S().show[k] === id) || null;
   SVT.vaultWorn = () => SLOTS.map((sl) => ({ slot: sl, item: S().show[sl.id] ? SVT.vaultItem(S().show[sl.id]) : null })).filter((x) => x.item);
   // Saves from before v0.20 used size-based slots: move what still fits, drop the rest from Chip.
@@ -228,7 +243,7 @@ window.SVT = window.SVT || {};
     const { h } = SVT.ui;
     const fin = FINISHES[it.finish].name.toLowerCase().replace(/[^a-z]/g, "");
     return h("div", { class: "vault-art r-" + it.rarity + " f-" + fin + " s-" + SIZES[it.size][0].toLowerCase() + (cls ? " " + cls : ""), style: "--vc:" + COLORS[it.color][1] },
-      h("span", { class: "vault-art-dev" }, h("span", { class: "vault-art-ic", text: SVT.productIcon(SVT.itemProduct(it)) })),
+      h("span", { class: "vault-art-dev" }, h("span", { class: "vault-art-ic", style: "--ic:" + SVT.productSvg(it.lab, it.product), role: "img", "aria-label": SVT.itemProduct(it) })),
       h("span", { class: "vault-art-rar", text: RAR[it.rar].name }));
   };
 
@@ -275,15 +290,15 @@ window.SVT = window.SVT || {};
     if (!V.STAKES.includes(stake) || stake > have) stake = V.STAKES.filter((s) => s <= have).pop() || 1;
     const pityLeft = Math.max(0, V.PITY.HARD - v.pity);
     const body = h("div", { class: "vault-body" },
-      h("p", { class: "vault-lede", text: "Beating a lab pays " + V.COIN_PER_BEAT + " of its coins. A coin rolls one of that lab's 30 products as a one-of-a-kind collectible: product, rarity, color, finish, size and mods. Put more coins into one roll for better odds." }),
-      SVT.vaultWild() ? h("p", { class: "muted small", text: "🪙 " + SVT.vaultWild() + " wild starter " + (SVT.vaultWild() === 1 ? "coin rolls" : "coins roll") + " at any open lab. Lab coins are spent first." }) : null,
+      h("p", { class: "vault-lede", text: "Pick a lab, pick a stake, roll. Every roll is a one-of-a-kind collectible from that lab. More coins in one roll means better odds." }),
+      SVT.vaultWild() ? h("p", { class: "muted small", text: "🪙 " + SVT.vaultWild() + " wild " + (SVT.vaultWild() === 1 ? "coin rolls" : "coins roll") + " at any open lab (a lab's own coins go first)." }) : null,
       labs.length
         ? h("div", { class: "vault-labs" }, labs.map((l) => h("button", { class: "vault-lab" + (l.id === labPick ? " on" : ""), onclick: () => { labPick = l.id; openVault(); } },
           h("span", { text: l.icon + " " + l.name }), h("b", { text: "🪙 " + (v.coins[l.id] || 0) + (SVT.vaultWild() ? " +" + SVT.vaultWild() + " wild" : "") }))))
         : h("p", { class: "vault-empty", text: "No coins yet. Raise a lab's IPO to earn " + V.COIN_PER_BEAT + " coins, then replay a beaten lab from the map for " + V.COIN_PER_BEAT + " more." }),
       labPick ? h("div", { class: "vault-stakes" }, V.STAKES.map((s) => h("button", { class: "vault-stake" + (s === stake ? " on" : ""), disabled: s > have, onclick: () => { stake = s; openVault(); } }, h("b", { text: "🪙 " + s }), h("small", { text: s === 1 ? "1 coin" : s + " coins" })))) : null,
       labPick ? oddsTable(stake) : oddsTable(1),
-      h("p", { class: "muted small", text: v.pity >= V.PITY.SOFT ? "🔥 Pity: " + v.pity + " coins since your last Legendary. Legendary or better is guaranteed within " + pityLeft + " more." : "Pity: a Legendary or better is guaranteed within " + pityLeft + " coins (" + v.pity + " spent since your last one)." + (v.serial === 0 ? " Your first roll is at least Rare." : "") }));
+      h("p", { class: "muted small", text: (v.pity >= V.PITY.SOFT ? "🔥 " : "") + "Legendary or better guaranteed within " + pityLeft + " more " + (pityLeft === 1 ? "coin" : "coins") + "." + (v.serial === 0 ? " Your first roll is at least Rare." : "") }));
     const roll = h("button", { class: "btn fund-cta big vault-roll", disabled: !labPick || have < stake, onclick: () => doRoll(labPick, stake), text: labPick ? "Roll " + stake + (stake === 1 ? " coin" : " coins") : "No coins to roll" });
     shell(body, h("div", { class: "vault-foot" }, roll));
   }
@@ -320,32 +335,29 @@ window.SVT = window.SVT || {};
   }
 
   const refresh = () => { if (SVT.render) SVT.render(); openVault(); };
-  // An item card. One tap on Equip puts it in the best slot it fits (Take off removes it); "Choose slot" opens the
-  // slot row for a specific spot.
+  // An item card: picture, name, rarity and bonus, where it goes on Chip, and one Equip / Take off button. The full
+  // six-part code sits behind "Details".
   function itemCard(it, big) {
     const { h } = SVT.ui;
     const code = SVT.itemCode(it);
     const worn = SVT.vaultSlotOf(it.id);
     const fitsAny = SLOTS.some((sl) => SVT.vaultFits(it, sl.id));
-    const slots = h("div", { class: "vault-slots", hidden: true }, SLOTS.map((sl) => {
-      const mine = worn === sl.id, taken = !mine && !!S().show[sl.id], fits = SVT.vaultFits(it, sl.id);
-      return h("button", { class: "vault-slot" + (mine ? " on" : !fits ? " nofit" : taken ? " taken" : ""), disabled: !fits, "aria-label": sl.name + (mine ? ", wearing this" : !fits ? ", does not fit" : taken ? ", holds another item" : ""), title: sl.name,
-        onclick: () => { SVT.vaultWear(sl.id, mine ? null : it.id); refresh(); } },
-        h("span", { text: sl.icon }), h("small", { text: sl.name }));
-    }));
-    const equip = h("button", { class: "btn vault-equip" + (worn ? " off" : " fund-cta"), disabled: !worn && !fitsAny,
+    const slotOf = (id) => SLOTS.find((x) => x.id === id);
+    const details = h("div", { class: "vault-details", hidden: !big },
+      h("div", { class: "vault-code" }, code.map((t, i) => h("span", { class: "vault-code-seg c" + i, text: t }))),
+      h("p", { class: "muted small vault-cat", text: CATS[SVT.itemCat(it)] + (SVT.itemCat(it) === "hand" || SVT.itemCat(it) === "floor" ? " (either side; pick the side on the Chip tab)" : "") }));
+    const equip = h("button", { class: "btn small vault-equip" + (worn ? " off" : " fund-cta"), disabled: !worn && !fitsAny,
       onclick: () => { if (worn) SVT.vaultWear(null, it.id); else { const sl = SVT.vaultEquip(it.id); if (sl) SVT.ui.toast("🤖 Chip: " + sl.name + " → " + SVT.itemProduct(it)); } refresh(); },
-      text: worn ? "Take off (" + SLOTS.find((x) => x.id === worn).name + ")" : "Equip" });
-    const choose = h("button", { class: "btn small vault-choose", onclick: () => { slots.hidden = !slots.hidden; }, text: "Choose slot ▾" });
+      text: worn ? "Take off" : "Equip" });
+    const more = big ? null : h("button", { class: "btn small ghost vault-choose", onclick: () => { details.hidden = !details.hidden; more.textContent = details.hidden ? "Details ▾" : "Details ▴"; }, text: "Details ▾" });
     return h("div", { class: "vault-card r-" + it.rarity + (big ? " big" : "") + (worn ? " wearing" : "") },
       SVT.itemArt(it),
       h("div", { class: "vault-card-body" },
         h("b", { class: "vault-card-name", text: SVT.itemName(it) }),
         h("span", { class: "vault-card-rar r-" + it.rarity, text: RAR[it.rar].name + (it.rar >= 4 ? " ★" : "") + " · " + boostText(it) }),
-        h("div", { class: "vault-code" }, code.map((t, i) => h("span", { class: "vault-code-seg c" + i, text: t }))),
-        h("p", { class: "muted small vault-cat", text: CATS[SVT.itemCat(it)] }),
-        h("div", { class: "vault-equip-row" }, equip, choose),
-        slots));
+        h("span", { class: "vault-card-where", text: worn ? "🤖 On Chip: " + slotOf(worn).name.toLowerCase() : "Goes " + (SVT.itemCat(it) === "floor" ? "on the floor beside Chip" : SVT.itemCat(it) === "hand" ? "in a hand" : "on the " + SVT.itemCat(it)) }),
+        h("div", { class: "vault-equip-row" }, equip, more),
+        details));
   }
 
   // Chip tab: his six slots, each with its own inventory of the items that fit it. Tap a slot to see them, tap an item
@@ -368,7 +380,7 @@ window.SVT = window.SVT || {};
       list = h("div", { class: "vault-shelf" },
         h("h3", { text: sl.icon + " " + sl.name + ": " + items.length + (items.length === 1 ? " item fits" : " items fit") }),
         cur ? h("button", { class: "btn small", onclick: () => { SVT.vaultWear(slotPick, null); refresh(); }, text: "Empty this slot" }) : null,
-        items.length ? h("p", { class: "muted small", text: "Tap an item to put it here. Rarest first. Items already on Chip elsewhere are not listed." }) : h("p", { class: "vault-empty", text: "Nothing you own goes here yet. " + fitHint(slotPick) }),
+        items.length ? h("p", { class: "muted small", text: "Tap an item to put it here (rarest first)." }) : h("p", { class: "vault-empty", text: "Nothing you own goes here yet. " + fitHint(slotPick) }),
         items.map((it) => { const where = SVT.vaultSlotOf(it.id);
           return h("button", { class: "vault-pick r-" + it.rarity + (it.id === cur ? " on" : where ? " elsewhere" : ""), onclick: () => { if (it.id !== cur) { SVT.vaultWear(slotPick, it.id); refresh(); } } },
             SVT.itemArt(it, "mini"),
@@ -377,8 +389,9 @@ window.SVT = window.SVT || {};
     }
     shell(h("div", { class: "vault-body" },
       h("div", { class: "vault-total" }, h("b", { text: "⚡ ×" + total + " lab income" }), h("small", { text: worn.length + " of " + SLOTS.length + " slots worn · bonuses add up, max ×" + V.MAX_BONUS + " · not in Viking Raid" })),
+      h("button", { class: "btn fund-cta vault-auto", disabled: !v.items.length, onclick: () => { const n = SVT.vaultAutoEquip(); SVT.ui.toast(n ? "🤖 Chip changed " + n + (n === 1 ? " slot" : " slots") + ": best bonus in every slot." : "🤖 Chip already wears the best of everything."); refresh(); }, text: "⚡ Auto-equip best" }),
       h("div", { class: "vault-slotgrid" }, SLOTS.map(slotCard)),
-      list || h("p", { class: "muted small", text: "Tap a slot to see its own inventory: only the items that go there, rarest first. Hand-held things go in a hand; watches and gloves on the wrist; headsets, glasses and AI brains on the head; only neckwear round the neck; jackets, suits and backpacks on the body; shoes on the feet. Everything he can't wear stands on the floor beside him." })));
+      list || h("p", { class: "muted small", text: "Tap a slot to see what fits it, rarest first. Items only go where they belong: hand-helds in a hand, watches on the wrist, headsets and AI on the head, neckwear round the neck, clothing on the body, shoes on the feet, and big things on the floor beside him." })));
   }
   const fitHint = (slot) => { const sl = SLOTS.find((x) => x.id === slot); return CATS[sl.cat] + ": roll more at a lab that makes that kind of thing."; };
   function reveal(it) {
@@ -387,7 +400,7 @@ window.SVT = window.SVT || {};
     shell(h("div", { class: "vault-body vault-reveal r-" + it.rarity },
       h("p", { class: "vault-got", text: it.rar >= 5 ? "✨ MYTHIC! ✨" : it.rar === 4 ? "⭐ Legendary! ⭐" : it.rar === 3 ? "Epic!" : "You got…" }),
       itemCard(it, true),
-      h("p", { class: "muted small", text: "One of a kind: no other item in your Vault will ever share this look. DNA " + it.dna + "." })),
+      h("p", { class: "muted small", text: "One of a kind: nothing else in your Vault will ever share this look." })),
       h("div", { class: "vault-foot" }, h("button", { class: "btn fund-cta big", onclick: () => { tab = "roll"; openVault(); }, text: SVT.vaultCoins() ? "Roll again" : "Back to the Vault" })));
     if (it.rar >= 4) toast((it.rar >= 5 ? "✨ Mythic " : "⭐ Legendary ") + SVT.itemProduct(it) + "!", "big");
     if (SVT.render) SVT.render();
