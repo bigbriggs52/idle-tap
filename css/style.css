@@ -634,6 +634,8 @@ table.stats td.next.up { color: var(--good); font-weight: 700; }
 .filter small { font-size: .66rem; font-weight: 700; color: var(--muted); }
 .filter.on { background: linear-gradient(#ffe36a, #f2b100); border-color: #c98c00; }
 .filter.on small { color: #5a3b00; }
+.filters.types { margin-top: -2px; }
+.filters.types .filter { padding: 4px 4px; font-size: 1rem; border-radius: 9px; }
 .odds { font-size: .7rem; }
 @media (max-width: 360px) { .mcard { grid-template-columns: 52px 1fr; } .mbtns { grid-column: 1 / -1; grid-auto-flow: column; } .portrait { width: 52px; height: 52px; } .btn.lvlup { min-width: 0; } }
 

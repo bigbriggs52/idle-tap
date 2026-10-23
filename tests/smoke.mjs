@@ -61,6 +61,17 @@ const grouped = await page.evaluate(() => {
 });
 console.log("manager groups", JSON.stringify(grouped));
 await page.screenshot({ path: out + "/04b-manager-groups.png" });
+const typed = await page.evaluate(async () => {
+  document.querySelector('#sheet .filter.type[data-type="discount"]').click();
+  await new Promise((r) => setTimeout(r, 150));
+  const kinds = [...document.querySelectorAll("#sheet .mlist .mcard")].map((c) => c.textContent.includes("Budget Cut") ? "discount" : "other");
+  const headers = document.querySelectorAll("#sheet .mlist .mgroup").length;
+  document.querySelector('#sheet .filter.type[data-type="all"]').click();
+  await new Promise((r) => setTimeout(r, 150));
+  return { n: kinds.length, allDiscount: kinds.every((k) => k === "discount"), headers, back: document.querySelectorAll("#sheet .mlist .mgroup").length };
+});
+console.log("type filter", JSON.stringify(typed));
+if (!typed.n || !typed.allDiscount || typed.headers !== 0 || !typed.back) errors.push("Manager type filter is wrong: " + JSON.stringify(typed));
 if (!grouped.first.startsWith("#") || grouped.headers.length < 2 || grouped.headers[0] !== "⚡ Speed boosts") errors.push("Managers are not grouped by ability type: " + JSON.stringify(grouped));
 if (owned.total !== 4 || owned.assigned !== 3) errors.push("Owned/assigned counts wrong");
 await page.click('#sheet [aria-label="Close"]');

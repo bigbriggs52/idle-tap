@@ -226,6 +226,8 @@ window.SVT = window.SVT || {};
 
   // The managers panel. With a slot (kind, n) it is that slot's panel: assigned manager on top, owned cards with
   // Assign below, ‹ › to the next slot. Without one it is the roster for a role. Hire is pinned at the bottom.
+  let mgrType = "all"; // ability-type filter on the manager panels: "all", "boost" (speed) or "discount" (cost)
+  const MGR_TYPES = [["all", "✨", "All"], ["boost", "⚡", "Speed"], ["discount", "💸", "Cost"]];
   function openManagers(role, kind, n, _back, dir) {
     sheetCtx = { role, kind, n };
     const L = lab();
@@ -237,13 +239,13 @@ window.SVT = window.SVT || {};
     // rarity order, so the index keeps that inside a group.
     const busy = (m) => !!SVT.slotOfMgr(L, m.id);
     const KIND = { boost: 0, discount: 1 }, kindOf = (m) => SVT.ability(m.role, m.ability).kind;
-    const list = SVT.owned(L, role).filter((m) => m !== current).map((m, i) => [m, i])
+    const list = SVT.owned(L, role).filter((m) => m !== current && (mgrType === "all" || kindOf(m) === mgrType)).map((m, i) => [m, i])
       .sort((a, b) => busy(a[0]) - busy(b[0]) || KIND[kindOf(a[0])] - KIND[kindOf(b[0])] || a[1] - b[1]).map((x) => x[0]);
     const GROUP = { boost: "⚡ Speed boosts", discount: "💸 Cost cuts" };
     let lastGroup = null;
     const cards = list.flatMap((m) => {
       const key = (busy(m) ? "busy-" : "free-") + kindOf(m);
-      const head = !inRaid() && key !== lastGroup ? h("li", { class: "mgroup", text: GROUP[kindOf(m)] + (busy(m) ? " (in use)" : "") }) : null;
+      const head = !inRaid() && mgrType === "all" && key !== lastGroup ? h("li", { class: "mgroup", text: GROUP[kindOf(m)] + (busy(m) ? " (in use)" : "") }) : null;
       lastGroup = key;
       return [head, mgrRow(m)].filter(Boolean);
     });
@@ -270,8 +272,13 @@ window.SVT = window.SVT || {};
         h("button", { class: "filter" + (ro === role ? " on" : ""), role: "tab", "aria-selected": ro === role ? "true" : "false", onclick: () => openManagers(ro, null, 0),
           title: B.ROLE_NAMES[ro] }, h("span", { "aria-hidden": "true", text: { floor: "🏭", freight: "🛗", commercial: "🏬" }[ro] }), h("small", { text: { floor: "Floors", freight: "Lift", commercial: "Warehouse" }[ro] + " " + SVT.owned(L, ro).length })))));
     }
+    // Ability-type filter: Speed (boosts) or Cost (discounts). Not in Viking Raid, where abilities are off.
+    if (!inRaid()) parts.push(h("div", { class: "filters types", role: "tablist", "aria-label": "Manager type" }, MGR_TYPES.map(([t, ic, label]) =>
+      h("button", { class: "filter type" + (t === mgrType ? " on" : ""), role: "tab", "aria-selected": t === mgrType ? "true" : "false", "data-type": t,
+        onclick: () => { mgrType = t; openManagers(role, kind, n); } }, h("span", { "aria-hidden": "true", text: ic }), h("small", { text: label + (t === "all" ? "" : " " + SVT.owned(L, role).filter((m) => kindOf(m) === t).length) })))));
+    const emptyText = here && current ? "No other " + B.ROLE_NAMES[role] + "s yet." : mgrType !== "all" ? "No " + (mgrType === "boost" ? "speed" : "cost") + " managers here yet." : "None yet. Hire one below.";
     parts.push(h("div", { class: "sec-label", text: here ? "Your " + B.ROLE_NAMES[role] + "s:" : B.ROLE_NAMES[role] + "s:" }),
-      h("ul", { class: "mlist" }, cards.length ? cards : h("li", { class: "muted empty", text: here && current ? "No other " + B.ROLE_NAMES[role] + "s yet." : "None yet. Hire one below." })),
+      h("ul", { class: "mlist" }, cards.length ? cards : h("li", { class: "muted empty", text: emptyText })),
       h("p", { class: "muted small odds", text: "Each hire rolls Super 0.5%, Legendary 1%, Epic 3%, Rare 10%, Uncommon 30% or Common 55.5%. Funding rounds send every manager away." }));
     // Children stay put (only their text changes), so a finger on the button never loses its target mid-tap.
     const hireCost = h("b");
@@ -440,14 +447,19 @@ window.SVT = window.SVT || {};
     const stop = () => { clearTimeout(timer); timer = null; held = false; };
     const loop = (gap) => { timer = setTimeout(() => { if (!fn()) return stop(); loop(Math.max(35, gap * 0.75)); }, gap); };
     el.dataset.hold = "1"; // handles its own presses; the tap helper below leaves it alone
+    // The browser must never turn the press into a scroll (that fired pointercancel and dropped the first touch),
+    // and the pointer is captured so a finger that drifts a little keeps the hold going until it lifts.
+    el.style.touchAction = "none";
+    el.addEventListener("contextmenu", (e) => e.preventDefault());
     el.addEventListener("pointerdown", (e) => {
       if (e.button > 0 || el.disabled) return;
+      if (el.setPointerCapture) { try { el.setPointerCapture(e.pointerId); } catch (_) {} }
       held = true;
       fn();
       dirty = true;
       loop(320);
     });
-    ["pointerup", "pointerleave", "pointercancel", "blur"].forEach((t) => el.addEventListener(t, stop));
+    ["pointerup", "pointercancel", "lostpointercapture", "blur"].forEach((t) => el.addEventListener(t, stop));
     // Keyboard and assistive tech still get a plain click (pointer presses are handled above).
     el.addEventListener("click", (e) => { if (e.detail === 0 && !held) fn(); });
     return el;

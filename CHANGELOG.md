@@ -2,6 +2,11 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.20.2 (2026-10-23)
+
+- Manager panels get a type row under the Floors / Lift / Warehouse tabs: ✨ All, ⚡ Speed or 💸 Cost, with the count of each. Pick one to see only those managers, best rarity first. The choice sticks while you browse.
+- Fix: holding the Level Up button sometimes missed the first touch. The press now takes over the pointer, so a finger that drifts slightly or a browser that wants to scroll no longer cuts the hold short, and the long-press menu is suppressed.
+
 ## v0.20.1 (2026-10-23)
 
 - The ×50 buy button is gone. The Level panel now offers ×1, ×10, Max and Next.
