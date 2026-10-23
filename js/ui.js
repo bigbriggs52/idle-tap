@@ -1068,6 +1068,22 @@ window.SVT = window.SVT || {};
   document.addEventListener("click", () => { dirty = true; }, true);
   // iOS only shows :active press styles when a touch listener exists.
   document.addEventListener("touchstart", () => {}, { passive: true });
+  // No pull-to-refresh: a downward drag that starts with nothing scrolled up (the page and every scrollable panel
+  // under the finger at the top) is cancelled before the browser can turn it into a reload. Ordinary scrolling
+  // keeps working because any scrolled container lets the drag through.
+  let dragY = null;
+  const scrolledParent = (el) => {
+    for (; el && el !== document.body; el = el.parentElement) {
+      if (el.scrollTop > 0 && /auto|scroll/.test(getComputedStyle(el).overflowY)) return true;
+    }
+    return false;
+  };
+  document.addEventListener("touchstart", (e) => { dragY = e.touches.length === 1 ? e.touches[0].clientY : null; }, { passive: true });
+  document.addEventListener("touchmove", (e) => {
+    if (dragY == null || e.touches.length !== 1) return;
+    const dy = e.touches[0].clientY - dragY;
+    if (dy > 0 && window.scrollY <= 0 && !scrolledParent(e.target) && e.cancelable) e.preventDefault();
+  }, { passive: false });
 
   SVT.on((type, d) => {
     if (type === "unlock") {

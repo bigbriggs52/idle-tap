@@ -310,7 +310,7 @@ const boost = await page.evaluate(() => {
   const S = SVT.state(), L = S.labs.arcade, before = SVT.rates(L).income, raidBefore = S.labs.raid ? SVT.rates(S.labs.raid).income : 0;
   const wait = SVT.rushWait();
   S.rush.next = 0;
-  const r = SVT.finishRush(45);
+  const r = SVT.finishRush(65);
   return { wait, applied: r.applied, mult: SVT.rushMult(), ratio: SVT.rates(L).income / before, raidSame: !S.labs.raid || SVT.rates(S.labs.raid).income === raidBefore, again: SVT.finishRush(20).applied };
 });
 console.log("rush boost", JSON.stringify(boost));
@@ -381,6 +381,9 @@ await page.click(".vault-tab >> nth=2"); await page.waitForTimeout(300);
 await page.screenshot({ path: out + "/24-vault-trophies.png" });
 if (!(await page.locator(".vault-lab.trophy").count())) errors.push("Vault: trophies tab missing the beaten lab");
 await page.evaluate(() => SVT.closeVault());
+const overscroll = await page.evaluate(() => getComputedStyle(document.documentElement).overscrollBehaviorY + "|" + getComputedStyle(document.body).overscrollBehaviorY);
+console.log("overscroll", overscroll);
+if (overscroll !== "none|none") errors.push("Pull-to-refresh not disabled on html/body: " + overscroll);
 const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
 console.log("horizontal overflow", overflow);
 console.log("errors", JSON.stringify(errors));
