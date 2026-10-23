@@ -232,17 +232,28 @@ window.SVT = window.SVT || {};
     const here = kind ? SVT.slotKey(kind, n) : null;
     const reopen = () => openManagers(role, kind, n);
     const current = kind ? SVT.mgrOf(L, kind, n) : null;
-    // Free managers first (rarest first), then managers busy elsewhere, greyed out at the bottom.
+    // Free managers first, then managers busy elsewhere (greyed out at the bottom). Within each, grouped by ability
+    // type (speed boosts, then cost cuts) with the best rarity at the top of each group. SVT.owned is already in
+    // rarity order, so the index keeps that inside a group.
     const busy = (m) => !!SVT.slotOfMgr(L, m.id);
+    const KIND = { boost: 0, discount: 1 }, kindOf = (m) => SVT.ability(m.role, m.ability).kind;
     const list = SVT.owned(L, role).filter((m) => m !== current).map((m, i) => [m, i])
-      .sort((a, b) => busy(a[0]) - busy(b[0]) || a[1] - b[1]).map((x) => x[0]);
-    const cards = list.map((m) => {
+      .sort((a, b) => busy(a[0]) - busy(b[0]) || KIND[kindOf(a[0])] - KIND[kindOf(b[0])] || a[1] - b[1]).map((x) => x[0]);
+    const GROUP = { boost: "⚡ Speed boosts", discount: "💸 Cost cuts" };
+    let lastGroup = null;
+    const cards = list.flatMap((m) => {
+      const key = (busy(m) ? "busy-" : "free-") + kindOf(m);
+      const head = !inRaid() && key !== lastGroup ? h("li", { class: "mgroup", text: GROUP[kindOf(m)] + (busy(m) ? " (in use)" : "") }) : null;
+      lastGroup = key;
+      return [head, mgrRow(m)].filter(Boolean);
+    });
+    function mgrRow(m) {
       const slot = SVT.slotOfMgr(L, m.id), btns = [];
       if (here && !slot) btns.push(h("button", { class: "btn use", onclick: () => { SVT.assign(m.id, kind, n); toast(m.name + " now runs " + SVT.slotName(here)); reopen(); }, text: "Assign" }));
       if (slot) btns.push(h("button", { class: "btn small ghost", onclick: () => { SVT.unassign(m.id); reopen(); }, text: "Unassign" }));
       else btns.push(h("button", { class: "btn small ghost sell", onclick: () => { SVT.sell(m.id); reopen(); }, text: "Sell $" + fmt(m.paid * B.SELL_REFUND) }));
       return mgrCard(m, { busy: !!slot, where: slot ? "In use on " + SVT.slotName(slot) : null, buttons: btns });
-    });
+    }
     const parts = [];
     if (here) {
       let top;
@@ -350,7 +361,7 @@ window.SVT = window.SVT || {};
   const nodeName = (kind, n) => (kind === "floor" ? "Floor " + n : kind === "freight" ? "Lift" : "Warehouse");
   function buySeg() {
     return h("div", { class: "seg", role: "group", "aria-label": "Buy amount" },
-      [1, 10, 50, "max", "next"].map((b) => bind(h("button", { class: "chip" + (b === "next" ? " next" : ""), onclick: () => SVT.setBuy(b), text: b === "max" ? "Max" : b === "next" ? "Next" : "x" + b,
+      [1, 10, "max", "next"].map((b) => bind(h("button", { class: "chip" + (b === "next" ? " next" : ""), onclick: () => SVT.setBuy(b), text: b === "max" ? "Max" : b === "next" ? "Next" : "x" + b,
         "aria-label": b === "next" ? "Buy up to the next unlock" : null }),
         (e) => toggle(e, "on", SVT.state().buy === b))));
   }
@@ -545,7 +556,7 @@ window.SVT = window.SVT || {};
     bind(el, () => {
       const L = lab(), lv = SVT.levelOf(L, kind, n), max = lv >= SVT.maxLevel(lab(), kind);
       popText(num, max ? "MAX" : String(lv));
-      // ▲ affords 1 level, ▲▲ affords up to the next ×10 level, ▲▲▲ up to the next ×50 level.
+      // ▲ affords 1 level, ▲▲ affords up to the next ×10 level, ▲▲▲ up to the next multiple of 50 (where Max lands).
       const m = max ? null : B.bulk(kind, n, lv, Infinity, L.cash, SVT.discount(L, kind, n), SVT.costScale(L, kind, n));
       const can = m && L.cash >= m.cost ? m.count : 0, room = SVT.maxLevel(lab(), kind) - lv;
       const tri = can >= Math.min(room, SVT.stepTo(lv, 50)) ? 3 : can >= Math.min(room, SVT.stepTo(lv, 10)) ? 2 : can >= 1 ? 1 : 0;

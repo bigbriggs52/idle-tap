@@ -19,9 +19,9 @@ window.SVT = window.SVT || {};
   }
 
   const B = {
-    VERSION: "0.20.0",
+    VERSION: "0.20.1",
     // Release time in UTC, set with each release. Shown after the version in the player's local time.
-    BUILT: "2026-10-23T06:50Z",
+    BUILT: "2026-10-23T06:04Z",
     FLOORS: 30,
     FLOOR_MAX: 800,
     HUB_MAX: 2400,
@@ -150,7 +150,10 @@ window.SVT = window.SVT || {};
   B.growth = (kind) => (kind === "floor" ? B.FLOOR_GROWTH : B.HUB_GROWTH);
   B.maxLevel = (kind) => (kind === "floor" ? B.FLOOR_MAX : B.HUB_MAX);
 
-  // Geometric-series bulk buy. Returns { count, cost } for buying up to `want` levels (Infinity = max affordable).
+  // Geometric-series bulk buy. Returns { count, cost } for buying up to `want` levels. Infinity = the most levels the
+  // cash affords, rounded down so the new level is a multiple of 50 (Lv 56 with cash for 140 goes to 100); when no
+  // multiple of 50 is affordable (or the cap gets in the way) it buys everything affordable.
+  B.ROUND_TO = 50;
   B.bulk = (kind, n, L, want, cash, discount, scale, max) => {
     const r = B.growth(kind);
     const first = B.levelCost(kind, n, L) * (1 - discount) * (scale || 1);
@@ -160,6 +163,8 @@ window.SVT = window.SVT || {};
     if (want === Infinity) {
       k = Math.floor(Math.log(1 + (cash * (r - 1)) / first) / Math.log(r));
       k = Math.max(1, Math.min(k, cap));
+      const round = k - ((L + k) % B.ROUND_TO);
+      if (round >= 1 && k < cap) k = round;
     } else {
       k = Math.min(want, cap);
     }
