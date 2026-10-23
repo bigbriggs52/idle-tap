@@ -1,5 +1,5 @@
-// Viking Raid: a separate island of 50 generated mines. Same shafts, lift and warehouse, no manager abilities,
-// no funding rounds. Each stage is built from its number (same stage, same mine) and is cleared by opening every
+// Viking Raid: a separate island of 50 generated mines. Same shafts, lift, warehouse and managers (abilities
+// included since v0.23), no funding rounds. Each stage is built from its number (same stage, same mine) and is cleared by opening every
 // shaft and taking every shaft, the lift and the warehouse to the stage's max level.
 window.SVT = window.SVT || {};
 
@@ -39,8 +39,14 @@ window.SVT = window.SVT || {};
     STAGES: 50,
     // Stage 1 has 5 shafts, each stage one more, up to 30.
     shafts: (s) => Math.min(30, 4 + s),
-    // Max level for every shaft, the lift and the warehouse on that stage (v0.22: 15 on stage 1, up to 60).
-    max: (s) => 15 + 5 * Math.floor((s - 1) / 5),
+    // Max levels on every stage (v0.23, user's call): shafts stop at Lv 25, the lift and the warehouse at Lv 100.
+    // Fixed caps, so the difficulty of a stage is all in its prices (SCALES) and its omens.
+    MAX: { floor: 25, freight: 100, commercial: 100 },
+    // Price growth per level in the raid (labs use 1.12 / 1.14). Shaft levels climb steeply over their 25 levels,
+    // hub levels gently over their 100, and each stage's hub prices are set (diff.hub) so the last level of the
+    // lift, of the warehouse and of the deepest shaft cost the same: a player who upgrades evenly finishes all
+    // three around the same time (the user's ask, v0.23).
+    GROWTH: { floor: 1.5, freight: 1.1, commercial: 1.1 },
     // Target clear time for an efficient player (v0.22.1; 1.5 to 30 minutes, then 3 minutes to 3 hours, were both
     // "way too easy"): 10 minutes for stage 1, rising to 12 hours for stage 50.
     time: (s) => 600 * Math.pow(72, (s - 1) / 49),
@@ -49,7 +55,7 @@ window.SVT = window.SVT || {};
     // to stay small: at 0.6 the deep shafts can never be paid for. (v0.22.1; 0.1 made every shaft cost the same.)
     BASE: { grow: 0.13 },
     // Price scale per stage, from tests/raid-goals.mjs (the pacing sim fitted to each stage's target time).
-    SCALES: [1.3, 1.2, 1, 0.88, 0.78, 0.57, 0.49, 0.32, 0.36, 0.22, 0.28, 0.24, 0.29, 0.27, 0.16, 0.14, 0.16, 0.076, 0.056, 0.05, 0.083, 0.027, 0.06, 0.025, 0.041, 0.025, 0.015, 0.033, 0.027, 0.027, 0.03, 0.069, 0.076, 0.046, 0.12, 0.1, 0.12, 0.13, 0.17, 0.21, 0.33, 0.17, 0.19, 0.29, 0.23, 0.72, 0.31, 0.46, 0.5, 0.73],
+    SCALES: [3.6, 2.7, 2.1, 1.5, 1.2, 0.88, 0.73, 0.42, 0.43, 0.25, 0.26, 0.21, 0.24, 0.2, 0.12, 0.1, 0.11, 0.052, 0.039, 0.031, 0.05, 0.017, 0.038, 0.016, 0.025, 0.014, 0.0092, 0.02, 0.017, 0.017, 0.019, 0.044, 0.045, 0.03, 0.075, 0.036, 0.042, 0.046, 0.057, 0.069, 0.11, 0.056, 0.065, 0.096, 0.079, 0.24, 0.11, 0.16, 0.17, 0.27],
   };
 
   // 50 different mine names, drawn once in a fixed order.
@@ -59,6 +65,15 @@ window.SVT = window.SVT || {};
     if (!NAMES.includes(nm)) NAMES.push(nm);
   }
 
+  // Hub price multipliers so that lift Lv 100, warehouse Lv 100 and the deepest shaft's Lv 25 cost the same.
+  function hubScale(F) {
+    const B = SVT.B, G = R.GROWTH, M = R.MAX;
+    const last = B.floorBase(F) * Math.pow(R.BASE.grow, F - 1) * Math.pow(G.floor, M.floor - 2);
+    return {
+      freight: last / (B.freightBase * Math.pow(G.freight, M.freight - 2)),
+      commercial: last / (B.commercialBase * Math.pow(G.commercial, M.commercial - 2)),
+    };
+  }
   const cache = {};
   R.stage = (s) => {
     if (cache[s]) return cache[s];
@@ -75,10 +90,10 @@ window.SVT = window.SVT || {};
     const st = {
       n: s, name, omens,
       floors: R.shafts(s),
-      max: R.max(s),
+      max: R.MAX,
       time: R.time(s),
       mult: { floor: mult("floor"), freight: mult("freight"), commercial: mult("commercial") },
-      diff: { scale: (R.SCALES[s - 1] || 1) * mult("cost"), grow: R.BASE.grow },
+      diff: { scale: (R.SCALES[s - 1] || 1) * mult("cost"), grow: R.BASE.grow, hub: hubScale(R.shafts(s)) },
     };
     return (cache[s] = st);
   };

@@ -151,7 +151,7 @@ window.SVT = window.SVT || {};
     return bind(h("div", { class: "goal-bar" }, fill, txt), (e) => {
       const L = lab(), pr = SVT.raidProgress(L), p = Math.min(1, pr.p);
       toggle(e, "won", L.won);
-      setText(txt, L.won ? "🎯 Stage cleared! Open Stages for the next raid" : "🎯 Max the mine to Lv " + SVT.raidStage(L).max + " · " + Math.floor(p * 100) + "%");
+      setText(txt, L.won ? "🎯 Stage cleared! Open Stages for the next raid" : "🎯 Shafts to Lv " + SVT.raidStage(L).max.floor + ", lift and warehouse to Lv " + SVT.raidStage(L).max.freight + " · " + Math.floor(p * 100) + "%");
       const v = "scaleX(" + p.toFixed(4) + ")";
       if (fill.style.transform !== v) fill.style.transform = v;
     });
@@ -201,7 +201,6 @@ window.SVT = window.SVT || {};
   const roleOf = (kind) => kind;
   function effectText(m) {
     const r = SVT.rank(m.rank), ab = SVT.ability(m.role, m.ability);
-    if (inRaid()) return "Automates only: no abilities on Viking Raid" + (r.passive ? " · +" + r.passive * 100 + "% always" : "");
     const K = B.ABILITY_KINDS[ab.kind];
     const what = ab.kind === "speed" ? "×" + r.boost + " speed for " + B.BOOST_SECONDS + "s"
       : ab.kind === "storage" ? "×" + r.boost + " load for " + B.BOOST_SECONDS + "s"
@@ -211,7 +210,6 @@ window.SVT = window.SVT || {};
 
   // Manager card: portrait, name, rarity, boost, timer and buttons (Idle Miner's manager list).
   function abilityTimer(m) {
-    if (inRaid()) return null;
     return bind(h("span", { class: "cd" }), (e) => {
       const t = SVT.now();
       setText(e, m.activeUntil > t ? "⚡ Active " + SVT.fmtTime(m.activeUntil - t) : m.cdUntil > t ? "⏱ " + SVT.fmtTime(m.cdUntil - t) : "⚡ Ready");
@@ -249,7 +247,7 @@ window.SVT = window.SVT || {};
     let lastGroup = null;
     const cards = list.flatMap((m) => {
       const key = (busy(m) ? "busy-" : "free-") + kindOf(m);
-      const head = !inRaid() && mgrType === "all" && key !== lastGroup ? h("li", { class: "mgroup", text: GROUP[kindOf(m)] + (busy(m) ? " (in use)" : "") }) : null;
+      const head = mgrType === "all" && key !== lastGroup ? h("li", { class: "mgroup", text: GROUP[kindOf(m)] + (busy(m) ? " (in use)" : "") }) : null;
       lastGroup = key;
       return [head, mgrRow(m)].filter(Boolean);
     });
@@ -268,7 +266,7 @@ window.SVT = window.SVT || {};
           const t = SVT.now(), ready = !(current.activeUntil > t) && !(current.cdUntil > t);
           setText(e, ready ? "⚡ Use" : "⚡"); setDisabled(e, !ready);
         });
-        top = mgrCard(current, { assigned: true, buttons: [h("button", { class: "btn unassign", onclick: () => { SVT.unassign(current.id); reopen(); }, text: "Unassign" }), inRaid() ? null : use] });
+        top = mgrCard(current, { assigned: true, buttons: [h("button", { class: "btn unassign", onclick: () => { SVT.unassign(current.id); reopen(); }, text: "Unassign" }), use] });
       } else top = h("li", { class: "mcard empty-slot" }, h("div", { class: "portrait" }, h("span", { class: "plus", text: "+" })), h("div", { class: "minfo" }, h("b", { text: "Nobody yet" }), h("span", { class: "muted", text: "Assign one below or hire a new one." })));
       parts.push(h("div", { class: "sec-label", text: "Assigned manager:" }), h("ul", { class: "mlist" }, top));
     } else {
@@ -276,8 +274,8 @@ window.SVT = window.SVT || {};
         h("button", { class: "filter" + (ro === role ? " on" : ""), role: "tab", "aria-selected": ro === role ? "true" : "false", onclick: () => openManagers(ro, null, 0),
           title: B.ROLE_NAMES[ro] }, h("span", { "aria-hidden": "true", text: { floor: "🏭", freight: "🛗", commercial: "🏬" }[ro] }), h("small", { text: { floor: "Floors", freight: "Lift", commercial: "Warehouse" }[ro] + " " + SVT.owned(L, ro).length })))));
     }
-    // Ability-type filter: Speed, Storage or Price. Not in Viking Raid, where abilities are off.
-    if (!inRaid()) parts.push(h("div", { class: "filters types", role: "tablist", "aria-label": "Manager type" }, MGR_TYPES.map(([t, ic, label]) =>
+    // Ability-type filter: Speed, Storage or Price.
+    parts.push(h("div", { class: "filters types", role: "tablist", "aria-label": "Manager type" }, MGR_TYPES.map(([t, ic, label]) =>
       h("button", { class: "filter type" + (t === mgrType ? " on" : ""), role: "tab", "aria-selected": t === mgrType ? "true" : "false", "data-type": t,
         onclick: () => { mgrType = t; openManagers(role, kind, n); } }, h("span", { "aria-hidden": "true", text: ic }), h("small", { text: label + (t === "all" ? "" : " " + SVT.owned(L, role).filter((m) => kindOf(m) === t).length) })))));
     const emptyText = here && current ? "No other " + B.ROLE_NAMES[role] + "s yet." : mgrType !== "all" ? "No " + B.ABILITY_KINDS[mgrType].name.toLowerCase() + " managers here yet." : "None yet. Hire one below.";
@@ -556,7 +554,7 @@ window.SVT = window.SVT || {};
     const el = h("button", { class: "boost", "aria-label": "Use manager ability", onclick: (e) => { e.stopPropagation(); SVT.activate(kind, n); } });
     bind(el, () => {
       const m = SVT.mgrOf(lab(), kind, n);
-      el.hidden = !m || inRaid();
+      el.hidden = !m;
       if (el.hidden) return;
       const t = SVT.now(), live = m.activeUntil > t, cd = !live && m.cdUntil > t, ab = SVT.ability(kind, m.ability);
       setText(el, live ? SVT.fmtTime(m.activeUntil - t) : cd ? SVT.fmtTime(m.cdUntil - t) : B.ABILITY_KINDS[ab.kind].icon);
@@ -576,7 +574,7 @@ window.SVT = window.SVT || {};
       if (d > 0) setText(deal, "−" + Math.round(d * 100) + "%");
       popText(num, max ? "MAX" : String(lv));
       // ▲ affords 1 level, ▲▲ affords up to the next ×10 level, ▲▲▲ up to the next multiple of 50 (where Max lands).
-      const m = max ? null : B.bulk(kind, n, lv, Infinity, L.cash, SVT.discount(L, kind, n), SVT.costScale(L, kind, n));
+      const m = max ? null : B.bulk(kind, n, lv, Infinity, L.cash, SVT.discount(L, kind, n), SVT.costScale(L, kind, n), SVT.maxLevel(L, kind), SVT.growthOf(L, kind));
       const can = m && L.cash >= m.cost ? m.count : 0, room = SVT.maxLevel(lab(), kind) - lv;
       const tri = can >= Math.min(room, SVT.stepTo(lv, 50)) ? 3 : can >= Math.min(room, SVT.stepTo(lv, 10)) ? 2 : can >= 1 ? 1 : 0;
       toggle(el, "afford", tri > 0);
@@ -598,6 +596,7 @@ window.SVT = window.SVT || {};
   // (bigger crates, car and cart) or .ab-discount, plus a floating tag naming it.
   function abilityBind(el, kind, n) {
     const tag = h("span", { class: "ab-tag", "aria-hidden": "true" });
+    tag.hidden = true; // v0.23 fix: it stayed visible as an empty pill until the first ability ran
     el.append(tag);
     let shown = "";
     return bind(el, (e) => {
@@ -733,7 +732,7 @@ window.SVT = window.SVT || {};
 
   function lockedRow() {
     const nf = SVT.nextFloor(lab());
-    if (!nf) return h("div", { class: "floor done" }, h("div", { class: "fbody" }, h("b", { text: inRaid() ? "All " + lab().floors.length + " shafts open. Take every shaft, the lift and the warehouse to Lv " + SVT.raidStage(lab()).max + " to clear the raid." : "All 30 floors unlocked. Raise your IPO in Funding." })));
+    if (!nf) return h("div", { class: "floor done" }, h("div", { class: "fbody" }, h("b", { text: inRaid() ? "All " + lab().floors.length + " shafts open. Take every shaft to Lv " + SVT.raidStage(lab()).max.floor + " and the lift and warehouse to Lv " + SVT.raidStage(lab()).max.freight + " to clear the raid." : "All 30 floors unlocked. Raise your IPO in Funding." })));
     const n = nf.n;
     if (nf.blocked) {
       return h("div", { class: "floor locked wall" },
@@ -903,7 +902,7 @@ window.SVT = window.SVT || {};
     const right = h("span", { class: "muted", text: S.raid.cleared >= R.STAGES ? "All 50 cleared" : "Stage " + SVT.raidNext() + " of " + R.STAGES });
     return h("button", { class: "loc island", onclick: openRaid },
       h("span", { class: "lab-icon", text: "⚔️" }),
-      h("span", { class: "loc-name" }, h("b", { text: "Viking Raid" }), h("span", { class: "muted", text: "50 mines · managers automate, no abilities" })), right);
+      h("span", { class: "loc-name" }, h("b", { text: "Viking Raid" }), h("span", { class: "muted", text: "50 mines · managers and abilities work" })), right);
   }
   function stageTime(s) { const t = SVT.RAID.time(s); return t < 3600 ? "~" + Math.round(t / 60) + " min" : "~" + (Math.round(t / 360) / 10) + " h"; }
   // Stage list: cleared stages, the next one to raid, and the locked ones after it.
@@ -924,7 +923,7 @@ window.SVT = window.SVT || {};
       const st = R.stage(pick);
       info.replaceChildren(
         h("div", { class: "raid-title" }, h("b", { text: "Stage " + pick + ": " + st.name }), h("span", { class: "muted", text: stageTime(pick) })),
-        h("p", { class: "muted small", text: "Goal: open all " + st.floors + " shafts and take every shaft, the lift and the warehouse to Lv " + st.max }),
+        h("p", { class: "muted small", text: "Goal: open all " + st.floors + " shafts, take every shaft to Lv " + st.max.floor + " and the lift and warehouse to Lv " + st.max.freight }),
         st.omens.length ? h("ul", { class: "omens" }, st.omens.map((o) => h("li", { class: o.mult > 1 === (o.stat !== "cost") ? "good" : "bad" }, h("b", { text: o.name }), " " + o.text))) : h("p", { class: "muted small", text: "No omens on this mine." }));
       go.textContent = live() ? "Continue stage " + pick : pick <= S.raid.cleared ? "Raid stage " + pick + " again" : "Raid stage " + pick;
       stages.querySelectorAll(".stage").forEach((b) => toggle(b, "sel", +b.dataset.s === pick));
@@ -938,7 +937,7 @@ window.SVT = window.SVT || {};
     });
     show();
     sheet("Viking Raid", h("div", { class: "sheet-body raid-panel" },
-      h("p", { class: "muted", text: "A separate island of Viking mines. Dig the shafts, lift the loot and ship it like in your labs, but managers only automate: no abilities and no funding rounds. Max out the mine to clear a stage and open the next: open every shaft, then take every shaft, the lift and the warehouse to the stage's max level. Each stage adds a shaft, and the max level rises every 5 stages." }),
+      h("p", { class: "muted", text: "A separate island of Viking mines. Dig the shafts, lift the loot and ship it like in your labs, with managers and their abilities but no funding rounds. Max out the mine to clear a stage and open the next: open every shaft, take every shaft to Lv 25 and the lift and warehouse to Lv 100. Each stage adds a shaft and costs more." }),
       info, stages), { icon: "⚔️", foot: h("div", { class: "panel-foot" }, go) });
   }
   SVT.openRaid = openRaid;

@@ -86,6 +86,7 @@ const kinds = await page.evaluate(async () => {
   for (const kind of ["speed", "storage", "discount"]) {
     const m = pick(kind); if (!m) { out[kind] = "none"; continue; }
     SVT.assign(m.id, "floor", 1);
+    L.floors[0].left = B.FLOOR_CYCLE; // a fresh cycle, so the countdown cannot wrap during the measurement
     const r0 = rate(), c0 = SVT.quote(L, "floor", 1).cost, s0 = stock(), left0 = L.floors[0].left;
     SVT.activate("floor", 1);
     const a = SVT.activeAbility(L, "floor", 1), r = SVT.rank(m.rank);
@@ -290,13 +291,15 @@ const raid = await page.evaluate(() => {
   SVT.debug.addCash(1e6); SVT.unlockFloor(); SVT.hire("floor");
   const m = Object.values(L.managers)[0];
   if (m) SVT.assign(m.id, "floor", 1);
-  return { id: L.id, stage: L.stage, title: document.querySelector(".lab-title").innerText.replace(/\n/g, " | "), activate: SVT.activate("floor", 1), nav: document.querySelector(".nav-btn.fund").innerText.replace(/\n/g, " ") };
+  const tags = [...document.querySelectorAll(".ab-tag")].filter((e) => getComputedStyle(e).display !== "none").length; // before any ability runs
+  return { id: L.id, stage: L.stage, tags, title: document.querySelector(".lab-title").innerText.replace(/\n/g, " | "), activate: SVT.activate("floor", 1), nav: document.querySelector(".nav-btn.fund").innerText.replace(/\n/g, " ") };
 });
 await page.waitForTimeout(400);
 raid.boost = await page.locator(".floor .boost:not([hidden])").count();
 console.log("raid", JSON.stringify(raid));
 if (raid.id !== "raid" || raid.stage !== 1) errors.push("Raid stage 1 did not start");
-if (raid.activate !== false || raid.boost !== 0) errors.push("Manager abilities still usable in Viking Raid");
+if (raid.activate !== true || raid.boost !== 1) errors.push("Manager abilities not usable in Viking Raid (v0.23): " + JSON.stringify(raid));
+if (raid.tags !== 0) errors.push("Ability tags visible with no ability running: " + raid.tags);
 await page.screenshot({ path: out + "/11-raid-stage.png" });
 await page.evaluate(() => { SVT.debug.addCash(1e15); for (let i = 0; i < 40; i++) SVT.unlockFloor(); });
 await page.waitForTimeout(400);
@@ -305,16 +308,16 @@ await page.locator(".floor.done").scrollIntoViewIfNeeded();
 await page.screenshot({ path: out + "/11b-raid-all-shafts.png" });
 if (doneW < 200) errors.push("All-shafts-open box is squeezed (" + doneW + "px wide)");
 const capped = await page.evaluate(() => {
-  const L = SVT.lab(), max = SVT.raidStage(L).max;
+  const L = SVT.lab(), max = SVT.raidStage(L).max.freight;
   SVT.state().buy = "max";
   const q = SVT.quote(L, "freight", 0);
   SVT.upgrade("freight", 0); SVT.upgrade("commercial", 0);
   L.floors.forEach((f, i) => SVT.upgrade("floor", i + 1));
   SVT.tick(1);
-  return { max, lift: L.freight.lvl, quoteAtMax: SVT.quote(L, "freight", 0).count, first: q.count, won: L.won, p: SVT.raidProgress(L).p };
+  return { max, lift: L.freight.lvl, shaft: L.floors[0].lvl, shaftMax: SVT.raidStage(L).max.floor, quoteAtMax: SVT.quote(L, "freight", 0).count, first: q.count, won: L.won, p: SVT.raidProgress(L).p };
 });
 console.log("raid max", JSON.stringify(capped));
-if (capped.lift !== capped.max || capped.quoteAtMax !== 0 || !capped.won) errors.push("Raid max level or clear-by-maxing is wrong");
+if (capped.lift !== capped.max || capped.shaft !== capped.shaftMax || capped.quoteAtMax !== 0 || !capped.won) errors.push("Raid max level or clear-by-maxing is wrong");
 await page.waitForTimeout(400);
 await page.screenshot({ path: out + "/12-raid-clear.png" });
 const cleared = await page.evaluate(() => SVT.state().raid.cleared);

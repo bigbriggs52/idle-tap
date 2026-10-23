@@ -56,7 +56,7 @@ export function play(SVT, lab, stop, maxT = 1e7) {
     const tryKind = (kind, n) => {
       const node = SVT.nodeOf(lab, kind, n);
       if (node.lvl >= SVT.maxLevel(lab, kind)) return;
-      const q = B.bulk(kind, n, node.lvl, 1, 0, 0, SVT.costScale(lab, kind, n), SVT.maxLevel(lab, kind));
+      const q = B.bulk(kind, n, node.lvl, 1, 0, 0, SVT.costScale(lab, kind, n), SVT.maxLevel(lab, kind), SVT.growthOf ? SVT.growthOf(lab, kind) : 0);
       node.lvl++; const g = soft() - sbase; node.lvl--;
       consider(q.cost, g, () => { lab.cash -= q.cost; node.lvl++; });
     };

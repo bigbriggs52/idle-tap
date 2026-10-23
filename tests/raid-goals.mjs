@@ -21,6 +21,6 @@ for (let s = 1; s <= R.STAGES; s++) {
     k *= T / t;
   }
   scales.push(Number(k.toPrecision(2)));
-  console.error("stage", s, st.name, st.floors + " shafts", "max Lv " + st.max, (T / 60).toFixed(1) + " min target", (t / 60).toFixed(1) + " min sim");
+  console.error("stage", s, st.name, st.floors + " shafts", "shafts Lv " + st.max.floor + " hubs Lv " + st.max.freight, (T / 60).toFixed(1) + " min target", (t / 60).toFixed(1) + " min sim");
 }
 console.log("    SCALES: [" + scales.join(", ") + "],");
