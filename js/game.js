@@ -53,7 +53,7 @@ window.SVT = window.SVT || {};
   // wears on the home screen (slot -> item id).
   function newVault() { return { coins: {}, wild: B.VAULT.START_COINS, beats: {}, items: [], pity: 0, spent: 0, serial: 0, replay: null, show: {} }; }
   function newState() {
-    return { v: 3, activeLab: "garage", buy: "next", labs: { garage: newLab("garage") }, raid: { cleared: 0 }, rush: newRush(), vault: newVault(), lastSeen: Date.now(), seenIntro: false };
+    return { rounds6: true, v: 3, activeLab: "garage", buy: "next", labs: { garage: newLab("garage") }, raid: { cleared: 0 }, rush: newRush(), vault: newVault(), lastSeen: Date.now(), seenIntro: false };
   }
 
   let S = newState();
@@ -551,7 +551,15 @@ window.SVT = window.SVT || {};
   SVT.nextRound = (lab) => (!SVT.isRaid(lab) && lab.round < B.ROUNDS.length ? B.ROUNDS[lab.round] : null);
   SVT.canRaise = (lab) => {
     const r = SVT.nextRound(lab);
-    return !!r && lab.floors.length >= r.needFloor;
+    return !!r && lab.floors.length >= r.needFloor && (!r.maxed || SVT.labProgress(lab).p >= 1);
+  };
+  // How close the lab is to fully maxed (every floor open and at FLOOR_MAX, both hubs at HUB_MAX): the IPO's gate.
+  SVT.labProgress = (lab) => {
+    const fm = B.maxLevel("floor"), hm = B.maxLevel("freight");
+    const total = B.FLOORS * (fm - 1) + 2 * (hm - 1) + (B.FLOORS - 1);
+    let done = lab.floors.length - 1 + Math.min(hm, lab.freight.lvl) - 1 + Math.min(hm, lab.commercial.lvl) - 1;
+    lab.floors.forEach((f) => (done += Math.min(fm, f.lvl) - 1));
+    return { done, total, p: done / total };
   };
   SVT.raise = () => {
     const lab = SVT.lab();
@@ -566,7 +574,9 @@ window.SVT = window.SVT || {};
     lab.commercial.lvl = 1; lab.commercial.left = 0; lab.commercial.carry = 0; lab.commercial.loaded = false;
     lab.managers = {}; lab.assign = {}; lab.hires = { floor: 0, freight: 0, commercial: 0 };
     lab.rate = 0;
-    emit("raise", { round: r, mult: SVT.prestigeMult(lab) });
+    // v0.24: every round and the IPO pay wild Vault coins, on top of the beat and new-lab coins.
+    if (S.vault) S.vault.wild = (S.vault.wild || 0) + B.VAULT.ROUND_COINS;
+    emit("raise", { round: r, mult: SVT.prestigeMult(lab), coins: B.VAULT.ROUND_COINS });
     // Seed (labs 1-4) or IPO (any lab) can open a new location on the map.
     openLabs().forEach((l) => emit("labUnlocked", { lab: l }));
     // Raising the IPO beats the lab: it closes for good (🏆 on the map) and play moves to another open lab.
@@ -668,6 +678,20 @@ window.SVT = window.SVT || {};
       S.vault.wild += Object.keys(S.labs).filter((id) => id !== "garage" && id !== "raid").length * B.VAULT.OPEN_COINS;
     }
     if (SVT.vaultFixSlots) SVT.vaultFixSlots(); // v0.20 slot categories
+    // v0.24: six funding rounds (one every 5 floors) instead of five. Old round numbers map onto the new ladder so
+    // nobody loses floors they had opened: old Series B (floors to 18) becomes Series D (floors to 25), old
+    // Series C becomes the fifth round, old IPO stays IPO. Levels above the new caps are clamped.
+    if (!S.rounds6) {
+      S.rounds6 = true;
+      const MAP = [0, 1, 2, 4, 5, 6];
+      for (const id in S.labs) {
+        const L = S.labs[id];
+        if (id === "raid") continue;
+        L.round = MAP[Math.min(5, L.round || 0)];
+        L.floors.forEach((f) => { f.lvl = Math.min(f.lvl, B.FLOOR_MAX); });
+        L.freight.lvl = Math.min(L.freight.lvl, B.HUB_MAX); L.commercial.lvl = Math.min(L.commercial.lvl, B.HUB_MAX);
+      }
+    }
     return applyOffline();
   };
 

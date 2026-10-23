@@ -730,9 +730,14 @@ window.SVT = window.SVT || {};
     return row;
   }
 
+  // The IPO's gate (v0.24): every floor at FLOOR_MAX and both hubs at HUB_MAX.
+  function maxedText(L) {
+    const pr = SVT.labProgress(L);
+    return pr.p >= 1 ? "Lab fully maxed. Raise your IPO in Funding!" : "All 30 floors unlocked. Max every floor to Lv " + B.FLOOR_MAX + " and the lift and warehouse to Lv " + B.HUB_MAX + " to raise the IPO · " + Math.floor(pr.p * 100) + "%";
+  }
   function lockedRow() {
     const nf = SVT.nextFloor(lab());
-    if (!nf) return h("div", { class: "floor done" }, h("div", { class: "fbody" }, h("b", { text: inRaid() ? "All " + lab().floors.length + " shafts open. Take every shaft to Lv " + SVT.raidStage(lab()).max.floor + " and the lift and warehouse to Lv " + SVT.raidStage(lab()).max.freight + " to clear the raid." : "All 30 floors unlocked. Raise your IPO in Funding." })));
+    if (!nf) return h("div", { class: "floor done" }, h("div", { class: "fbody" }, h("b", { text: inRaid() ? "All " + lab().floors.length + " shafts open. Take every shaft to Lv " + SVT.raidStage(lab()).max.floor + " and the lift and warehouse to Lv " + SVT.raidStage(lab()).max.freight + " to clear the raid." : maxedText(lab()) })));
     const n = nf.n;
     if (nf.blocked) {
       return h("div", { class: "floor locked wall" },
@@ -1043,12 +1048,12 @@ window.SVT = window.SVT || {};
     const L = lab();
     const next = SVT.nextRound(L);
     const ladder = h("ol", { class: "ladder" }, B.ROUNDS.map((r, i) => h("li", { class: i < L.round ? "done" : i === L.round ? "next" : "" },
-      h("b", { text: r.name }), h("span", { text: " ×" + r.mult + " income · needs Floor " + r.needFloor + (B.WALLS[r.needFloor + 1] === i ? " · opens Floor " + (r.needFloor + 1) : "") }))));
+      h("b", { text: r.name }), h("span", { text: " ×" + r.mult + " income · needs Floor " + r.needFloor + (r.maxed ? " and every floor at Lv " + B.FLOOR_MAX + ", lift and warehouse at Lv " + B.HUB_MAX : "") + (B.WALLS[r.needFloor + 1] === i ? " · opens Floor " + (r.needFloor + 1) : "") + " · +" + B.VAULT.ROUND_COINS + " 🪙" }))));
     let armed = false;
     const btn = h("button", { class: "btn fund-cta big" });
     const can = SVT.canRaise(L);
     if (!next) { btn.textContent = "IPO complete"; btn.disabled = true; }
-    else if (!can) { btn.textContent = "Reach Floor " + next.needFloor + " to raise " + next.name; btn.disabled = true; }
+    else if (!can) { btn.textContent = L.floors.length < next.needFloor ? "Reach Floor " + next.needFloor + " to raise " + next.name : "Max the whole lab to raise " + next.name + " · " + Math.floor(SVT.labProgress(L).p * 100) + "%"; btn.disabled = true; }
     else btn.textContent = "Raise " + next.name;
     btn.addEventListener("click", () => {
       const ipo = next === B.ROUNDS[B.ROUNDS.length - 1];
@@ -1057,7 +1062,7 @@ window.SVT = window.SVT || {};
     });
     sheet("Funding", h("div", { class: "sheet-body" },
       h("p", { text: "Current multiplier: ×" + SVT.prestigeMult(L) }),
-      h("p", { class: "muted", text: "Some floors start a new tech era and need funding before you can afford them. Raising a round resets this lab's floors, hubs, cash and managers. You will need to hire new managers, but the whole lab earns more forever." }),
+      h("p", { class: "muted", text: "Every 5 floors start a new tech era and need funding before you can open them. Raising a round resets this lab's floors, hubs, cash and managers. You will need to hire new managers, but the whole lab earns more forever, and every round pays " + B.VAULT.ROUND_COINS + " Vault coins. The IPO needs the whole lab maxed out first." }),
       ladder,
       h("p", { class: "muted small", text: "Raising the IPO beats this lab: it closes for good with a 🏆" + (opensOnIpo(L) ? " and " + opensOnIpo(L).name + " opens on the map." : ".") }),
       btn));
@@ -1154,7 +1159,7 @@ window.SVT = window.SVT || {};
     if (type === "floor") { toast((inRaid() ? "New shaft: " : "New floor: ") + productName(d.n)); render(); }
     if (type === "assign" || type === "switch") render();
     if (type === "hire") { const y = window.scrollY; render(); window.scrollTo(0, y); }
-    if (type === "raise") { toast("💰 Raised " + d.round.name + "! Lab income now ×" + d.mult, "big"); render(); }
+    if (type === "raise") { toast("💰 Raised " + d.round.name + "! Lab income now ×" + d.mult + (d.coins ? " · +" + d.coins + " 🪙" : ""), "big"); render(); }
     if (type === "tap") squish(document.querySelector(d.kind === "floor" ? '.floor[data-floor="' + d.n + '"] .scene' : d.kind === "freight" ? ".lift-tower" : ".wh-tower"));
     if (type === "labUnlocked") toast("🗺 New location open on the map: " + d.lab.name, "big");
     if (type === "labBeaten") { toast("🏆 You beat " + d.lab.name + "! +1 🪙 " + d.lab.name + " coin for the Vault" + (d.replay ? "." : ", and a new lab opens."), "big"); setView("map"); }
