@@ -1108,15 +1108,23 @@ button:active:not(:disabled) { filter: brightness(.9); transition-duration: 0s; 
 .vault-art.mini .vault-art-ic { font-size: 1.1rem; }
 .vault-art.mini .vault-art-rar { display: none; }
 
-/* Chip wearing his collectibles on the home screen */
-.worn { position: absolute; z-index: 2; padding: 0; border: 0; background: none; cursor: pointer; animation: bob 3s ease-in-out infinite; filter: drop-shadow(0 4px 4px #0004); }
-.worn:active { transform: scale(.9); }
-.worn-hand_l { left: -4px; top: 118px; } .worn-hand_r { right: -4px; top: 118px; animation-delay: -1s; }
-.worn-hat { left: 50%; top: -22px; translate: -50% 0; animation: none; }
-.worn-neck { left: 50%; bottom: 96px; translate: -50% 0; animation: none; }
-.worn-neck .vault-art.mini { width: 40px; height: 40px; }
-.worn-floor_l { left: -6px; bottom: 0; animation-delay: -2s; } .worn-floor_r { right: -6px; bottom: 0; animation-delay: -.5s; }
-@media (max-height: 700px) { .worn-hat { top: -22px; } .worn-hand_l, .worn-hand_r { top: 90px; } .worn-neck { bottom: 72px; } }
+/* Chip wearing his collectibles on the home screen: a layer the size of his box, items centred on their anchors */
+.worn-layer { position: absolute; left: 50%; bottom: 0; width: 200px; height: 270px; translate: -50% 0; pointer-events: none; }
+.worn { position: absolute; translate: -50% -50%; padding: 0; border: 0; background: none; cursor: pointer; pointer-events: auto; animation: bob 3s ease-in-out infinite; filter: drop-shadow(0 4px 4px #0004); }
+.worn .vault-art.mini { width: var(--ws, 44px); height: var(--ws, 44px); }
+.worn-head, .worn-neck, .worn-body, .worn-feet, .worn-wrist { animation: none; }
+.worn-head .vault-art.mini, .worn-neck .vault-art.mini, .worn-body .vault-art.mini { opacity: .96; }
+.worn-hand_r { animation-delay: -1s; } .worn-floor_l { animation-delay: -2s; } .worn-floor_r { animation-delay: -.5s; }
+.worn:active { translate: -50% -50%; scale: .9; }
+@media (max-height: 700px) { .worn-layer { width: 150px; height: 200px; } .worn .vault-art.mini { width: calc(var(--ws, 44px) * .75); height: calc(var(--ws, 44px) * .75); } }
+.vault-cat { margin: 0; }
+.vault-merge { display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: center; padding: 8px; border-radius: 12px; border: 3px solid var(--rc); background: #fff; }
+.vault-merge-items { display: flex; gap: 2px; }
+.vault-merge-items .vault-art.mini { width: 36px; height: 36px; border-radius: 9px; }
+.vault-merge-items .vault-art-ic { font-size: .9rem; }
+.vault-merge-body { display: grid; gap: 2px; min-width: 0; }
+.vault-merge-body b { font-size: .85rem; }
+.vault-merge-body small { font-size: .68rem; font-weight: 700; color: #6b5a8a; }
 @media (prefers-reduced-motion: reduce) { .vault, .vault-card.r-mythic, .vault-seg.lock, .vault-art.f-holographic .vault-art-dev, .worn { animation: none; } }
 
 /* v0.19: equip buttons, the Chip tab with a slot grid and per-slot inventories, the bonus pill */
@@ -1141,4 +1149,4 @@ button:active:not(:disabled) { filter: brightness(.9); transition-duration: 0s; 
 .vault-pick-body { display: grid; gap: 2px; min-width: 0; }
 .vault-pick-body b { font-size: .85rem; }
 .vault-pick-body small { font-size: .7rem; font-weight: 700; color: var(--rc); }
-.worn-total { position: absolute; left: 50%; bottom: 44px; translate: -50% 0; z-index: 3; padding: 3px 10px; border-radius: 99px; border: 3px solid #fff; background: linear-gradient(#ffe36a, #f2b100); color: #5a3a00; font: .95rem var(--f-display); box-shadow: 0 3px 0 #9a6a00; cursor: pointer; }
+.worn-total { position: absolute; left: 50%; bottom: -22px; translate: -50% 0; z-index: 3; padding: 3px 10px; border-radius: 99px; border: 3px solid #fff; background: linear-gradient(#ffe36a, #f2b100); color: #5a3a00; font: .95rem var(--f-display); box-shadow: 0 3px 0 #9a6a00; cursor: pointer; }

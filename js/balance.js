@@ -19,9 +19,9 @@ window.SVT = window.SVT || {};
   }
 
   const B = {
-    VERSION: "0.19.0",
+    VERSION: "0.20.0",
     // Release time in UTC, set with each release. Shown after the version in the player's local time.
-    BUILT: "2026-10-23T06:10Z",
+    BUILT: "2026-10-23T06:50Z",
     FLOORS: 30,
     FLOOR_MAX: 800,
     HUB_MAX: 2400,
@@ -83,6 +83,7 @@ window.SVT = window.SVT || {};
     // from SOFT each extra coin adds SOFT_STEP to the Legendary share, HARD guarantees it.
     VAULT: {
       START_COINS: 50,
+      OPEN_COINS: 50, // wild coins each time a new lab opens on the map
       COIN_PER_BEAT: 10,
       RARITIES: [
         { id: "common", name: "Common", mods: 0 },

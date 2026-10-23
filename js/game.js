@@ -90,6 +90,8 @@ window.SVT = window.SVT || {};
       // A lab being replayed has started over, but it already met the gate once.
       if (g && !S.labs[l.id] && from && (from.round >= g.round || (g.round > 1 && SVT.labDone(from.id)))) { S.labs[l.id] = newLab(l.id); opened.push(l); }
     });
+    // Every new location on the map pays wild Vault coins.
+    if (opened.length && S.vault) S.vault.wild = (S.vault.wild || 0) + opened.length * B.VAULT.OPEN_COINS;
     return opened;
   }
 
@@ -642,6 +644,12 @@ window.SVT = window.SVT || {};
     if (S.vault.replay && !SVT.labReplaying(S.labs[S.vault.replay])) S.vault.replay = null;
     openLabs();
     if (SVT.labBeaten(S.labs[S.activeLab])) { const l = SVT.LABS.find((x) => S.labs[x.id] && !SVT.labBeaten(S.labs[x.id])); if (l) S.activeLab = l.id; }
+    // v0.20: every new lab opening pays OPEN_COINS wild coins; labs already open get theirs once.
+    if (!S.vault.openPaid) {
+      S.vault.openPaid = true;
+      S.vault.wild += Object.keys(S.labs).filter((id) => id !== "garage" && id !== "raid").length * B.VAULT.OPEN_COINS;
+    }
+    if (SVT.vaultFixSlots) SVT.vaultFixSlots(); // v0.20 slot categories
     return applyOffline();
   };
 
