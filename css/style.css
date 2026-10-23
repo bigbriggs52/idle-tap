@@ -1122,9 +1122,14 @@ button:active:not(:disabled) { filter: brightness(.9); transition-duration: 0s; 
 .worn:active { translate: -50% -50%; scale: .9; }
 @media (max-height: 700px) { .worn-layer { width: 150px; height: 200px; } .worn .vault-art.mini { width: calc(var(--ws, 44px) * .75); height: calc(var(--ws, 44px) * .75); } }
 .vault-cat { margin: 0; }
-.vault-merge { display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: center; padding: 8px; border-radius: 12px; border: 3px solid var(--rc); background: #fff; }
+.vault-merge { display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: center; padding: 8px; border-radius: 12px; border: 3px solid var(--rc); background: #fff; }
+.vault-merge-btns { grid-column: 1 / -1; display: flex; gap: 6px; }
+.vault-merge-btns .btn { flex: 1; }
+.vault-merge-btns .btn:disabled { opacity: .45; }
+.vault-merge-picks { grid-column: 1 / -1; display: grid; gap: 6px; max-height: 260px; overflow-y: auto; }
 .vault-merge-items { display: flex; gap: 2px; }
 .vault-merge-items .vault-art.mini { width: 36px; height: 36px; border-radius: 9px; }
+.vault-merge-items:empty { width: 36px; height: 36px; border-radius: 9px; border: 2px dashed #c9b8e8; }
 .vault-merge-items .vault-art-ic { font-size: .9rem; }
 .vault-merge-body { display: grid; gap: 2px; min-width: 0; }
 .vault-merge-body b { font-size: .85rem; }
