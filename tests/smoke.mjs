@@ -346,21 +346,21 @@ const vault = await page.evaluate(() => {
   for (let i = 0; i < 400; i++) { const it = SVT.vaultRoll("garage", 1); keys.add([it.product, it.color, it.finish, it.size, it.mods.slice().sort().join()].join("|")); ids.add(it.dna + it.id); }
   out.unique = keys.size; out.dnas = ids.size; out.items = S.vault.items.length; out.firstRare = S.vault.items[0].rar >= V.FIRST_ROLL_MIN;
   out.coinsLeft = SVT.vaultCoins("garage"); out.wildLeft = SVT.vaultWild(); SVT.vaultRoll("garage", 5); out.wildAfter = SVT.vaultWild();
-  // slots: a giant item cannot go in a hand; a keychain can
-  const giant = S.vault.items.find((x) => x.size === 5), key = S.vault.items.find((x) => x.size === 0);
-  out.fit = giant && key ? { giantHand: SVT.vaultFits(giant, "hand_l"), giantFloor: SVT.vaultFits(giant, "floor_l"), keyHand: SVT.vaultFits(key, "hand_r") } : null;
-  if (giant) { SVT.vaultWear("hand_l", giant.id); out.giantInHand = SVT.vaultSlotOf(giant.id); SVT.vaultWear("floor_r", giant.id); out.giantOnFloor = SVT.vaultSlotOf(giant.id); }
+  // slots: a floor thing cannot go in a hand, a hand thing cannot go on the floor
+  const big = S.vault.items.find((x) => SVT.itemCat(x) === "floor"), small = S.vault.items.find((x) => SVT.itemCat(x) === "hand");
+  out.fit = big && small ? { bigHand: SVT.vaultFits(big, "hand_l"), bigFloor: SVT.vaultFits(big, "floor_l"), smallHand: SVT.vaultFits(small, "hand_r"), smallFloor: SVT.vaultFits(small, "floor_l") } : null;
+  if (big) { SVT.vaultWear("hand_l", big.id); out.bigInHand = SVT.vaultSlotOf(big.id); SVT.vaultWear("floor_r", big.id); out.bigOnFloor = SVT.vaultSlotOf(big.id); }
   out.worn = SVT.vaultWorn().length;
   return out;
 });
 console.log("vault", JSON.stringify(vault));
-if (vault.coin !== 10 || vault.wild !== 50 || !vault.done || !vault.canReplay || !vault.replaying || vault.canReplayAgain) errors.push("Vault: coin on beat or replay start wrong");
+if (vault.coin !== 10 || vault.wild !== 150 || !vault.done || !vault.canReplay || !vault.replaying || vault.canReplayAgain) errors.push("Vault: coin on beat or replay start wrong");
 if (!vault.mapTitle.includes("of 5 open") || !vault.replayRow) errors.push("Vault: replay row or slot count wrong: " + vault.mapTitle);
 if (vault.coin2 !== 20 || vault.beats !== 2 || !vault.closed) errors.push("Vault: beating the replay did not pay a second coin");
 if (Math.abs(vault.p1[0] - 0.5) > 0.02 || Math.abs(vault.p1[4] - 0.018) > 0.004 || vault.p5[0] !== 0 || Math.abs(vault.p5[4] - 0.15) > 0.01) errors.push("Vault: odds off " + JSON.stringify([vault.p1, vault.p5]));
 if (vault.hard[0] + vault.hard[1] + vault.hard[2] + vault.hard[3] !== 0 || !(vault.soft[4] > 0.018)) errors.push("Vault: pity is not applied");
 if (vault.unique !== 400 || vault.dnas !== 400 || vault.items !== 400 || !vault.firstRare || vault.coinsLeft !== 0 || vault.wildLeft !== 7 || vault.wildAfter !== 2) errors.push("Vault: items not unique or coins not spent in the right order " + JSON.stringify([vault.coinsLeft, vault.wildLeft, vault.wildAfter]));
-if (!vault.fit || vault.fit.giantHand || !vault.fit.giantFloor || !vault.fit.keyHand || vault.giantInHand || vault.giantOnFloor !== "floor_r") errors.push("Vault: slot fitting wrong " + JSON.stringify(vault));
+if (!vault.fit || vault.fit.bigHand || !vault.fit.bigFloor || !vault.fit.smallHand || vault.fit.smallFloor || vault.bigInHand || vault.bigOnFloor !== "floor_r") errors.push("Vault: slot fitting wrong " + JSON.stringify(vault.fit));
 if (vault.worn < 4) errors.push("Vault: Chip is not wearing the first items");
 await page.evaluate(() => SVT.setView("home")); await page.waitForTimeout(300);
 const wornEls = await page.locator(".worn").count();
@@ -398,17 +398,36 @@ const bonus = await page.evaluate(() => {
   const big = v.items.filter((x) => x.rar >= 4).slice(0, 6); big.forEach((x) => { x.boost = 1.5; });
   v.show = {}; SVT.vaultSlots().forEach((sl, i) => { if (big[i]) { const fit = v.items.find((x) => x.boost === 1.5 && !SVT.vaultSlotOf(x.id) && SVT.vaultFits(x, sl.id)); if (fit) SVT.vaultWear(sl.id, fit.id); } });
   out.capped = SVT.vaultMult() <= B.MAX_BONUS;
-  // one-tap equip: a keychain goes to a free hand/hat/neck slot; a giant goes to the floor
+  // slots by product category: every product on every floor of every lab gets one, and a hand-held thing goes to
+  // a hand, a floor thing to the floor; an item already on Chip can't be equipped twice; per-slot lists are rarest first
   v.show = {}; SVT.vaultRecalc();
-  const key = v.items.find((x) => x.size === 0), giant = v.items.find((x) => x.size === 5);
-  out.keySlot = SVT.vaultEquip(key.id).id; out.giantSlot = SVT.vaultEquip(giant.id).id;
-  out.eligibleOk = SVT.vaultEligible("floor_l").every((x) => x.size >= 2) && SVT.vaultEligible("hat").every((x) => x.size <= 1 || SVT.vaultFits(x, "hat"));
+  const cats = {}; SVT.LABS.forEach((l) => l.products.forEach((p) => { cats[SVT.productCat(p)] = (cats[SVT.productCat(p)] || 0) + 1; }));
+  out.cats = cats;
+  out.catSamples = { calc: SVT.productCat("Four-function calculator"), watch: SVT.productCat("Smartwatch"), ai: SVT.productCat("AI neural accelerator"), neck: SVT.productCat("LED necklace"), headphones: SVT.productCat("Noise-cancelling headphones"), server: SVT.productCat("Rack server"), shoe: SVT.productCat("Smart running shoe"), jacket: SVT.productCat("Wearable LED jacket") };
+  const handItem = v.items.find((x) => SVT.itemCat(x) === "hand"), floorItem = v.items.find((x) => SVT.itemCat(x) === "floor");
+  out.handSlot = SVT.vaultEquip(handItem.id).id; out.floorSlot = SVT.vaultEquip(floorItem.id).id;
+  out.twice = SVT.vaultEquip(handItem.id); // already on Chip: refused
+  out.notListedTwice = !SVT.vaultEligible("hand_r").some((x) => x.id === handItem.id) && SVT.vaultEligible("hand_l").some((x) => x.id === handItem.id);
+  const el = SVT.vaultEligible("floor_r");
+  out.eligibleOk = el.every((x) => SVT.itemCat(x) === "floor") && el.every((x, i) => !i || el[i - 1].rar >= x.rar);
+  out.wristOnlyWrist = v.items.filter((x) => SVT.itemCat(x) === "wrist").every((x) => SVT.vaultFits(x, "wrist") && !SVT.vaultFits(x, "hand_l") && !SVT.vaultFits(x, "neck"));
+  // merging: 3 of the same product and rarity (not on Chip) become 1 of the next rarity
+  const grp = {}; v.items.forEach((x) => { if (!SVT.vaultSlotOf(x.id) && x.rar < 5) (grp[x.lab + "|" + x.product + "|" + x.rar] = grp[x.lab + "|" + x.product + "|" + x.rar] || []).push(x); });
+  const g = Object.values(grp).find((a) => a.length >= 3);
+  const before = v.items.length, mergesBefore = SVT.vaultMerges().length;
+  const merged = g ? SVT.vaultMerge(g[0].lab, g[0].product, g[0].rar) : null;
+  out.merge = merged ? { ok: merged.rar === g[0].rar + 1 && merged.product === g[0].product, count: before - v.items.length, listed: mergesBefore > 0, gone: g.filter((x) => !SVT.vaultItem(x.id)).length === 3, boostOk: merged.boost >= 1 } : null;
   return out;
 });
 console.log("bonus", JSON.stringify(bonus));
 if (!bonus.allHaveBoost || !bonus.mythicBoost) errors.push("Vault: item boosts missing");
 if (bonus.mult !== bonus.sum || Math.abs(bonus.ratio - bonus.mult) > 1e-6 || !bonus.raidSame || !bonus.capped) errors.push("Vault: bonus multiplier wrong " + JSON.stringify(bonus));
-if (!["hand_l", "hand_r", "hat", "neck"].includes(bonus.keySlot) || !bonus.giantSlot.startsWith("floor") || !bonus.eligibleOk) errors.push("Vault: one-tap equip or per-slot inventory wrong " + JSON.stringify(bonus));
+if (Object.values(bonus.cats).reduce((a, b) => a + b, 0) !== 900 || Object.keys(bonus.cats).length !== 7) errors.push("Vault: not every product has a slot category " + JSON.stringify(bonus.cats));
+if (JSON.stringify(bonus.catSamples) !== JSON.stringify({ calc: "hand", watch: "wrist", ai: "head", neck: "neck", headphones: "head", server: "floor", shoe: "feet", jacket: "body" })) errors.push("Vault: product categories wrong " + JSON.stringify(bonus.catSamples));
+if (!bonus.handSlot.startsWith("hand") || !bonus.floorSlot.startsWith("floor") || bonus.twice !== null || !bonus.notListedTwice || !bonus.eligibleOk || !bonus.wristOnlyWrist) errors.push("Vault: one-tap equip or per-slot inventory wrong " + JSON.stringify(bonus));
+if (!bonus.merge || !bonus.merge.ok || bonus.merge.count !== 2 || !bonus.merge.listed || !bonus.merge.gone || !bonus.merge.boostOk) errors.push("Vault: merge wrong " + JSON.stringify(bonus.merge));
+await page.evaluate(() => SVT.openMerge()); await page.waitForTimeout(300);
+await page.screenshot({ path: out + "/27-vault-merge.png" });
 await page.evaluate(() => SVT.openChip("hand_l")); await page.waitForTimeout(300);
 await page.screenshot({ path: out + "/25-vault-chip.png" });
 if (!(await page.locator(".vault-pick").count())) errors.push("Vault: Chip tab slot inventory empty");

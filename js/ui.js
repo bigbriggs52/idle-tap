@@ -946,8 +946,12 @@ window.SVT = window.SVT || {};
   }
 
   // Chip's collectibles from the Tech Vault, pinned to his slots (hands, hat, neck, and the floor beside him).
+  // The layer sits exactly over Chip's 200x270 box, so each slot's anchor (in his SVG coordinates) lands on his
+  // hand, wrist, head, neck, chest or feet, and the floor slots land on the grass beside him.
   function wornItems() {
-    return SVT.vaultWorn().map(({ slot, item }) => h("button", { class: "worn worn-" + slot.id, "aria-label": slot.name + ": " + SVT.itemName(item), onclick: () => { toast(SVT.itemName(item) + " · " + item.rarity + (item.boost > 1 ? " · ⚡ ×" + item.boost : ""), "big"); SVT.openChip(slot.id); } }, SVT.itemArt(item, "mini")));
+    return h("div", { class: "worn-layer", "aria-hidden": "false" }, SVT.vaultWorn().map(({ slot, item }) =>
+      h("button", { class: "worn worn-" + slot.id, style: "left:" + (slot.x / 2) + "%;top:" + (slot.y / 2.7) + "%;--ws:" + slot.size + "px;z-index:" + slot.z, "aria-label": slot.name + ": " + SVT.itemName(item),
+        onclick: () => { toast(SVT.itemName(item) + " · " + item.rarity + (item.boost > 1 ? " · ⚡ ×" + item.boost : ""), "big"); SVT.openChip(slot.id); } }, SVT.itemArt(item, "mini"))));
   }
 
   // The Rush bubble shows the boost countdown, and its "!" badge only while a run is ready.

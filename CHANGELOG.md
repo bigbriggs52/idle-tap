@@ -2,6 +2,14 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.20.0 (2026-10-23)
+
+- Chip now really wears his collectibles. Nine slots sit on his body: left hand, right hand, wrist, head, neck, body, feet, and the floor on either side of him. Each item is drawn at that spot on the home screen, so he holds the calculator, wears the watch, carries the AI chip on his head and hangs the lanyard round his neck. Big things like arcade cabinets and servers stand next to him.
+- Every one of the 900 products across all 30 labs now has a category (hand, wrist, head, neck, body, feet or floor), and an item only goes in a slot of its own kind. Neck wear goes round the neck only; anything he cannot wear goes on the floor beside him. Old saves move their worn items to the matching slot.
+- Per-slot inventories are sorted rarest first (then biggest bonus). An item that is already on Chip is not listed again and cannot be equipped twice; Equip on a worn item tells you where it already is.
+- Merging: in the Items tab, three unequipped items of the same product and rarity merge into one new item of that product at the next rarity, with a fresh look and a fresh bonus roll (Mythic cannot be merged further). The Merge section shows every set you can merge.
+- Opening a new lab on the map now pays 50 wild coins. Existing saves get 50 for every lab already open, once.
+
 ## v0.19.0 (2026-10-23)
 
 - Item bonuses: some collectibles now boost lab income while Chip wears them. The chance and size grow with rarity: Common 20% chance of ×1.05, Uncommon 35% of ×1.1, Rare 50% of ×1.15, Epic 70% of ×1.25, Legendary always ×1.35, Mythic always ×1.5. Items you already own roll their bonus when the game loads.
