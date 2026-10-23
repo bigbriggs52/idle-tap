@@ -1118,3 +1118,27 @@ button:active:not(:disabled) { filter: brightness(.9); transition-duration: 0s; 
 .worn-floor_l { left: -6px; bottom: 0; animation-delay: -2s; } .worn-floor_r { right: -6px; bottom: 0; animation-delay: -.5s; }
 @media (max-height: 700px) { .worn-hat { top: -22px; } .worn-hand_l, .worn-hand_r { top: 90px; } .worn-neck { bottom: 72px; } }
 @media (prefers-reduced-motion: reduce) { .vault, .vault-card.r-mythic, .vault-seg.lock, .vault-art.f-holographic .vault-art-dev, .worn { animation: none; } }
+
+/* v0.19: equip buttons, the Chip tab with a slot grid and per-slot inventories, the bonus pill */
+.vault-equip-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.vault-equip-row .btn { min-width: 0; }
+.vault-equip { flex: 1; font-family: var(--f-display); }
+.vault-equip.off { background: #fff; border-color: #c0392b; color: #c0392b; }
+.vault-card.wearing { box-shadow: 0 0 0 4px #3dbb4a66, 0 4px 0 color-mix(in srgb, var(--rc) 60%, #000); }
+.vault-slots[hidden] { display: none; }
+.vault-total { display: grid; justify-items: center; gap: 2px; padding: 10px; border-radius: 14px; background: linear-gradient(#fff6d6, #ffe08a); border: 3px solid #e0a21a; color: #6a4300; text-align: center; }
+.vault-total b { font: 1.4rem var(--f-display); }
+.vault-total small { font-size: .72rem; font-weight: 700; }
+.vault-slotgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.vault-slotcard { display: grid; justify-items: center; gap: 3px; padding: 8px 4px; border-radius: 14px; border: 3px solid #dcc8ff; background: #fff; cursor: pointer; --rc: #dcc8ff; }
+.vault-slotcard b { font-size: .8rem; }
+.vault-slotcard small { font-size: .68rem; color: #6b5a8a; font-weight: 700; }
+.vault-slotcard.on { border-color: #8e44ad; background: #f3e8ff; box-shadow: 0 0 0 3px #8e44ad33; }
+.vault-slotcard-empty { width: 54px; height: 54px; display: grid; place-items: center; font-size: 1.6rem; border-radius: 12px; border: 2px dashed #c7b3f2; background: #faf6ff; }
+.vault-pick { display: grid; grid-template-columns: 54px 1fr; gap: 8px; align-items: center; text-align: left; padding: 6px; border-radius: 12px; border: 3px solid var(--rc); background: #fff; cursor: pointer; }
+.vault-pick.on { background: #eaffe0; box-shadow: 0 0 0 3px #3dbb4a55; }
+.vault-pick.elsewhere { opacity: .7; }
+.vault-pick-body { display: grid; gap: 2px; min-width: 0; }
+.vault-pick-body b { font-size: .85rem; }
+.vault-pick-body small { font-size: .7rem; font-weight: 700; color: var(--rc); }
+.worn-total { position: absolute; left: 50%; bottom: 44px; translate: -50% 0; z-index: 3; padding: 3px 10px; border-radius: 99px; border: 3px solid #fff; background: linear-gradient(#ffe36a, #f2b100); color: #5a3a00; font: .95rem var(--f-display); box-shadow: 0 3px 0 #9a6a00; cursor: pointer; }

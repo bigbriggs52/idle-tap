@@ -137,6 +137,16 @@ window.SVT = window.SVT || {};
     if (n - own) S.vault.wild -= n - own;
     return true;
   };
+  // Income bonus from the items Chip wears: their boosts add up, capped at MAX_BONUS. Cached; call vaultRecalc after
+  // a change to S.vault.show or S.vault.items.
+  let vaultMult = 1;
+  SVT.vaultMult = () => vaultMult;
+  SVT.vaultRecalc = () => {
+    let x = 1;
+    for (const k in S.vault.show) { const it = S.vault.items.find((i) => i.id === S.vault.show[k]); if (it && it.boost > 1) x += it.boost - 1; }
+    vaultMult = Math.min(B.VAULT.MAX_BONUS, Math.round(x * 100) / 100);
+    return vaultMult;
+  };
   // Beating a lab pays COIN_PER_BEAT coins stamped with that lab. Labs beaten before the Vault existed pay on load.
   function payCoin(id) {
     S.vault.coins[id] = (S.vault.coins[id] || 0) + B.VAULT.COIN_PER_BEAT;
@@ -221,7 +231,7 @@ window.SVT = window.SVT || {};
   SVT.nodeMult = (lab, kind, n, t) => {
     const m = SVT.mgrOf(lab, kind, n);
     // Viking Raid omens tilt each part of the mine; managers there only automate (no abilities).
-    const omen = SVT.isRaid(lab) ? SVT.raidStage(lab).mult[kind] : SVT.rushMult(t);
+    const omen = SVT.isRaid(lab) ? SVT.raidStage(lab).mult[kind] : SVT.rushMult(t) * vaultMult;
     if (!m) return omen;
     const r = SVT.rank(m.rank);
     let x = (1 + r.passive) * omen;
@@ -614,6 +624,9 @@ window.SVT = window.SVT || {};
     if (!S.rush) S.rush = newRush(); // v0.16 adds Assembly Line Rush
     if (!S.vault) S.vault = newVault(); // v0.17 adds the Tech Vault
     if (!S.vault.show || typeof S.vault.show !== "object") S.vault.show = {};
+    // v0.19: items can carry an income boost; items from before get theirs rolled now.
+    S.vault.items.forEach((it) => { if (it.boost === undefined) { const b = B.VAULT.BONUS[it.rar]; it.boost = Math.random() < b.chance ? b.mult : 1; } });
+    SVT.vaultRecalc();
     if (S.vault.wild === undefined) { // v0.18: 50 starter coins, and beats pay 10 instead of 1 (top up past beats)
       S.vault.wild = B.VAULT.START_COINS;
       for (const id in S.vault.beats) S.vault.coins[id] = (S.vault.coins[id] || 0) + S.vault.beats[id] * (B.VAULT.COIN_PER_BEAT - 1);

@@ -2,6 +2,13 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.19.0 (2026-10-23)
+
+- Item bonuses: some collectibles now boost lab income while Chip wears them. The chance and size grow with rarity: Common 20% chance of ×1.05, Uncommon 35% of ×1.1, Rare 50% of ×1.15, Epic 70% of ×1.25, Legendary always ×1.35, Mythic always ×1.5. Items you already own roll their bonus when the game loads.
+- Worn bonuses add up (×1.2 and ×1.5 make ×1.7), capped at ×3. They apply to every lab, not Viking Raid. The total shows on the home screen under Chip, on the Vault's Chip tab, and on each item card.
+- Easier equipping: every item card has one Equip button that puts it in the best slot it fits (or swaps out the weakest item there), and a Take off button. "Choose slot" still lets you pick a specific spot.
+- New Chip tab in the Vault: his six slots in a grid. Tap a slot to see its own inventory, only the items that fit it, best bonus first, and tap an item to put it there. Tapping an item on Chip on the home screen opens that slot.
+
 ## v0.18.1 (2026-10-23)
 
 - Fix: swiping down no longer refreshes the page. The browser's pull-to-refresh is turned off on the whole game, and a downward drag with nothing left to scroll up is swallowed before the browser sees it. Scrolling the mine, the map and the panels works as before.

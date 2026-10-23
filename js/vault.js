@@ -96,10 +96,13 @@ window.SVT = window.SVT || {};
     item.dna = dna();
     item.at = Date.now();
     item.stake = coins;
+    const bonus = V.BONUS[rar];
+    item.boost = rnd() < bonus.chance ? bonus.mult : 1;
     v.items.push(item);
     // The first items go straight onto Chip, into the first free slot.
     const free = SLOTS.find((sl) => !v.show[sl.id] && SVT.vaultFits(item, sl.id));
     if (free) v.show[free.id] = item.id;
+    SVT.vaultRecalc();
     SVT.save();
     return item;
   };
@@ -124,8 +127,24 @@ window.SVT = window.SVT || {};
     const v = S();
     for (const k in v.show) if (v.show[k] === id) delete v.show[k];
     if (id && SVT.vaultFits(SVT.vaultItem(id), slot)) v.show[slot] = id;
+    SVT.vaultRecalc();
     SVT.save();
   };
+  SVT.vaultSlots = () => SLOTS;
+  SVT.vaultEligible = (slot) => S().items.filter((it) => SVT.vaultFits(it, slot)).sort((a, b) => b.boost - a.boost || b.rar - a.rar || b.id - a.id);
+  // One-tap equip: the first free slot the item fits; if none is free, the fitting slot holding the weakest item.
+  SVT.vaultEquip = (id) => {
+    const it = SVT.vaultItem(id), v = S();
+    if (!it) return null;
+    // Its size's own slots first, then the hat or neck a wearable also fits.
+    const fits = SLOTS.filter((sl) => SVT.vaultFits(it, sl.id)).sort((a, b) => SLOT_FIT[it.size].includes(b.id) - SLOT_FIT[it.size].includes(a.id));
+    let slot = fits.find((sl) => !v.show[sl.id]);
+    if (!slot) slot = fits.slice().sort((a, b) => { const A = SVT.vaultItem(v.show[a.id]), Bb = SVT.vaultItem(v.show[b.id]); return (A ? A.boost : 0) - (Bb ? Bb.boost : 0) || (A ? A.rar : 0) - (Bb ? Bb.rar : 0); })[0];
+    if (!slot) return null;
+    SVT.vaultWear(slot.id, id);
+    return slot;
+  };
+  const boostText = (it) => (it.boost > 1 ? "⚡ ×" + it.boost + " income" : "no bonus");
   SVT.vaultSlotOf = (id) => Object.keys(S().show).find((k) => S().show[k] === id) || null;
   SVT.vaultWorn = () => SLOTS.map((sl) => ({ slot: sl, item: S().show[sl.id] ? SVT.vaultItem(S().show[sl.id]) : null })).filter((x) => x.item);
 
@@ -146,7 +165,7 @@ window.SVT = window.SVT || {};
   };
 
   // ---------- UI ----------
-  let box = null, busy = false, labPick = null, stake = 1, tab = "roll";
+  let box = null, busy = false, labPick = null, stake = 1, tab = "roll", slotPick = null;
   function close() { if (box) box.remove(); box = null; busy = false; document.removeEventListener("keydown", onKey); }
   function onKey(e) { if (e.key === "Escape") close(); }
   function shell(...kids) {
@@ -161,6 +180,7 @@ window.SVT = window.SVT || {};
       h("div", { class: "vault-tabs" },
         h("button", { class: "vault-tab" + (tab === "roll" ? " on" : ""), onclick: () => { tab = "roll"; openVault(); }, text: "Roll" }),
         h("button", { class: "vault-tab" + (tab === "gallery" ? " on" : ""), onclick: () => { tab = "gallery"; openVault(); }, text: "Items (" + S().items.length + ")" }),
+        h("button", { class: "vault-tab" + (tab === "chip" ? " on" : ""), onclick: () => { tab = "chip"; slotPick = null; openVault(); }, text: "Chip ⚡×" + SVT.vaultMult() }),
         h("button", { class: "vault-tab" + (tab === "trophies" ? " on" : ""), onclick: () => { tab = "trophies"; openVault(); }, text: "Trophies" })),
       ...kids);
     document.body.append(box);
@@ -179,6 +199,7 @@ window.SVT = window.SVT || {};
     const v = S();
     if (tab === "gallery") return gallery();
     if (tab === "trophies") return trophies();
+    if (tab === "chip") return chipTab();
     // Labs you can roll at: ones with their own coins, plus any open lab while you have wild coins.
     const labs = SVT.LABS.filter((l) => SVT.vaultSpendable(l.id) > 0);
     if (!labs.find((l) => l.id === labPick)) labPick = labs.length ? labs[0].id : null;
@@ -230,26 +251,67 @@ window.SVT = window.SVT || {};
     setTimeout(lock, 700);
   }
 
+  const refresh = () => { if (SVT.render) SVT.render(); openVault(); };
+  // An item card. One tap on Equip puts it in the best slot it fits (Take off removes it); "Choose slot" opens the
+  // slot row for a specific spot.
   function itemCard(it, big) {
     const { h } = SVT.ui;
     const code = SVT.itemCode(it);
     const worn = SVT.vaultSlotOf(it.id);
-    // Slot picker: tap a slot to put the item on Chip there; tap the slot it is in to take it off.
-    const slots = h("div", { class: "vault-slots" }, SLOTS.map((sl) => {
+    const fitsAny = SLOTS.some((sl) => SVT.vaultFits(it, sl.id));
+    const slots = h("div", { class: "vault-slots", hidden: true }, SLOTS.map((sl) => {
       const mine = worn === sl.id, taken = !mine && !!S().show[sl.id], fits = SVT.vaultFits(it, sl.id);
       return h("button", { class: "vault-slot" + (mine ? " on" : !fits ? " nofit" : taken ? " taken" : ""), disabled: !fits, "aria-label": sl.name + (mine ? ", wearing this" : !fits ? ", does not fit" : taken ? ", holds another item" : ""), title: sl.name,
-        onclick: () => { SVT.vaultWear(sl.id, mine ? null : it.id); if (SVT.render) SVT.render(); openVault(); } },
+        onclick: () => { SVT.vaultWear(sl.id, mine ? null : it.id); refresh(); } },
         h("span", { text: sl.icon }), h("small", { text: sl.name }));
     }));
-    return h("div", { class: "vault-card r-" + it.rarity + (big ? " big" : "") },
+    const equip = h("button", { class: "btn vault-equip" + (worn ? " off" : " fund-cta"), disabled: !worn && !fitsAny,
+      onclick: () => { if (worn) SVT.vaultWear(null, it.id); else { const sl = SVT.vaultEquip(it.id); if (sl) SVT.ui.toast("🤖 Chip: " + sl.name + " → " + SVT.itemProduct(it)); } refresh(); },
+      text: worn ? "Take off (" + SLOTS.find((x) => x.id === worn).name + ")" : "Equip" });
+    const choose = h("button", { class: "btn small vault-choose", onclick: () => { slots.hidden = !slots.hidden; }, text: "Choose slot ▾" });
+    return h("div", { class: "vault-card r-" + it.rarity + (big ? " big" : "") + (worn ? " wearing" : "") },
       SVT.itemArt(it),
       h("div", { class: "vault-card-body" },
         h("b", { class: "vault-card-name", text: SVT.itemName(it) }),
-        h("span", { class: "vault-card-rar r-" + it.rarity, text: RAR[it.rar].name + (it.rar >= 4 ? " ★" : "") }),
+        h("span", { class: "vault-card-rar r-" + it.rarity, text: RAR[it.rar].name + (it.rar >= 4 ? " ★" : "") + " · " + boostText(it) }),
         h("div", { class: "vault-code" }, code.map((t, i) => h("span", { class: "vault-code-seg c" + i, text: t }))),
-        h("p", { class: "muted small vault-wear-label", text: worn ? "Chip wears this: " + SLOTS.find((x) => x.id === worn).name : "Give it to Chip (" + SIZES[it.size][0].toLowerCase() + " size fits the lit slots):" }),
+        h("div", { class: "vault-equip-row" }, equip, choose),
         slots));
   }
+
+  // Chip tab: his six slots, each with its own inventory of the items that fit it. Tap a slot to see them, tap an item
+  // to put it there. The total income bonus from everything he wears is shown at the top.
+  function chipTab() {
+    const { h } = SVT.ui;
+    const v = S();
+    const worn = SVT.vaultWorn();
+    const total = SVT.vaultMult();
+    const slotCard = (sl) => {
+      const it = v.show[sl.id] ? SVT.vaultItem(v.show[sl.id]) : null, n = SVT.vaultEligible(sl.id).length;
+      return h("button", { class: "vault-slotcard" + (slotPick === sl.id ? " on" : "") + (it ? " r-" + it.rarity : ""), "aria-label": sl.name, onclick: () => { slotPick = slotPick === sl.id ? null : sl.id; openVault(); } },
+        it ? SVT.itemArt(it, "mini") : h("span", { class: "vault-slotcard-empty", text: sl.icon }),
+        h("b", { text: sl.name }),
+        h("small", { text: it ? boostText(it) : n + " fit" }));
+    };
+    let list = null;
+    if (slotPick) {
+      const sl = SLOTS.find((x) => x.id === slotPick), items = SVT.vaultEligible(slotPick), cur = v.show[slotPick];
+      list = h("div", { class: "vault-shelf" },
+        h("h3", { text: sl.icon + " " + sl.name + ": " + items.length + (items.length === 1 ? " item fits" : " items fit") }),
+        cur ? h("button", { class: "btn small", onclick: () => { SVT.vaultWear(slotPick, null); refresh(); }, text: "Empty this slot" }) : null,
+        items.length ? h("p", { class: "muted small", text: "Tap an item to put it here. Best bonus first." }) : h("p", { class: "vault-empty", text: "Nothing you own fits here yet. " + fitHint(slotPick) }),
+        items.map((it) => { const where = SVT.vaultSlotOf(it.id);
+          return h("button", { class: "vault-pick r-" + it.rarity + (it.id === cur ? " on" : where ? " elsewhere" : ""), onclick: () => { if (it.id !== cur) { SVT.vaultWear(slotPick, it.id); refresh(); } } },
+            SVT.itemArt(it, "mini"),
+            h("span", { class: "vault-pick-body" }, h("b", { text: SVT.itemName(it) }), h("small", { class: "r-" + it.rarity, text: RAR[it.rar].name + " · " + boostText(it) + (it.id === cur ? " · here" : where ? " · on " + SLOTS.find((x) => x.id === where).name.toLowerCase() : "") })));
+        }));
+    }
+    shell(h("div", { class: "vault-body" },
+      h("div", { class: "vault-total" }, h("b", { text: "⚡ ×" + total + " lab income" }), h("small", { text: worn.length + " of " + SLOTS.length + " slots worn · bonuses add up, max ×" + V.MAX_BONUS + " · not in Viking Raid" })),
+      h("div", { class: "vault-slotgrid" }, SLOTS.map(slotCard)),
+      list || h("p", { class: "muted small", text: "Tap a slot to see what fits it: keychain and pocket items go in a hand, on the hat or round the neck; standard and jumbo in a hand or on the floor; desk and giant on the floor. Wearables like watches and headsets also fit the hat or neck." })));
+  }
+  const fitHint = (slot) => (slot === "hat" || slot === "neck" ? "Keychain and pocket items fit, and wearables of any size." : slot.startsWith("hand") ? "Anything up to jumbo size fits." : "Standard size and bigger fits.");
   function reveal(it) {
     const { h, toast } = SVT.ui;
     busy = false;
@@ -287,15 +349,12 @@ window.SVT = window.SVT || {};
       h("h3", { class: "vault-h", text: "📦 Inventory (" + v.items.length + " items)" }),
       h("div", { class: "vault-odds" }, RAR.map((r, i) => h("div", { class: "vault-odd r-" + r.id }, h("b", { text: r.name }), h("span", { text: String(counts[i]) })))),
       h("p", { class: "muted small", text: v.spent + " coins spent so far · " + v.pity + " since your last Legendary." }),
-      h("h3", { class: "vault-h", text: "🤖 Chip's slots" }),
-      h("div", { class: "vault-labs" }, SLOTS.map((sl) => { const it = v.show[sl.id] ? SVT.vaultItem(v.show[sl.id]) : null;
-        return h("button", { class: "vault-lab slot" + (it ? " r-" + it.rarity : ""), onclick: () => { tab = "gallery"; openVault(); } },
-          h("span", { text: sl.icon + " " + sl.name }), it ? h("b", { class: "r-" + it.rarity, text: SVT.itemName(it) }) : h("span", { class: "muted small", text: "empty" })); })),
-      v.items.length ? h("button", { class: "btn", onclick: () => { tab = "gallery"; openVault(); }, text: "Open the item shelves" }) : null));
+      h("button", { class: "btn", onclick: () => { tab = "chip"; slotPick = null; openVault(); }, text: "🤖 Chip's slots · ⚡ ×" + SVT.vaultMult() })));
   }
 
   SVT.openVault = () => { tab = "roll"; openVault(); };
   SVT.openGallery = () => { tab = "gallery"; openVault(); };
+  SVT.openChip = (slot) => { tab = "chip"; slotPick = slot || null; openVault(); };
   SVT.closeVault = close;
   SVT.VAULT_DATA = { COLORS, FINISHES, SIZES, MODS, SIGNATURE };
 })();

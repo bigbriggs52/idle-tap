@@ -935,7 +935,8 @@ window.SVT = window.SVT || {};
         h("div", { class: "side left" },
           bubble("b-map", "🗺", "Map", () => setView("map")),
           bubble("b-raid", "⚔️", "Viking Raid", openRaid, raidReady)),
-        h("div", { class: "hero" }, sign, h("div", { class: "hero-bot", html: SVT.mascot("hold") }), wornItems()),
+        h("div", { class: "hero" }, sign, h("div", { class: "hero-bot", html: SVT.mascot("hold") }), wornItems(),
+          SVT.vaultMult() > 1 ? h("button", { class: "worn-total", "aria-label": "Item bonus", onclick: () => SVT.openChip(), text: "⚡ ×" + SVT.vaultMult() }) : null),
         h("div", { class: "side right" },
           rushBubble(bubble("b-rush", "🏭", "Rush", SVT.openRush, true)),
           bubble("b-vault", "🎁", "Vault", SVT.openVault, SVT.vaultCoins() > 0))),
@@ -946,7 +947,7 @@ window.SVT = window.SVT || {};
 
   // Chip's collectibles from the Tech Vault, pinned to his slots (hands, hat, neck, and the floor beside him).
   function wornItems() {
-    return SVT.vaultWorn().map(({ slot, item }) => h("button", { class: "worn worn-" + slot.id, "aria-label": slot.name + ": " + SVT.itemName(item), onclick: () => { toast(SVT.itemName(item) + " · " + item.rarity, "big"); SVT.openGallery(); } }, SVT.itemArt(item, "mini")));
+    return SVT.vaultWorn().map(({ slot, item }) => h("button", { class: "worn worn-" + slot.id, "aria-label": slot.name + ": " + SVT.itemName(item), onclick: () => { toast(SVT.itemName(item) + " · " + item.rarity + (item.boost > 1 ? " · ⚡ ×" + item.boost : ""), "big"); SVT.openChip(slot.id); } }, SVT.itemArt(item, "mini")));
   }
 
   // The Rush bubble shows the boost countdown, and its "!" badge only while a run is ready.

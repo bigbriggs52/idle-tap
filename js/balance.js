@@ -19,9 +19,9 @@ window.SVT = window.SVT || {};
   }
 
   const B = {
-    VERSION: "0.18.1",
+    VERSION: "0.19.0",
     // Release time in UTC, set with each release. Shown after the version in the player's local time.
-    BUILT: "2026-10-23T05:41Z",
+    BUILT: "2026-10-23T06:10Z",
     FLOORS: 30,
     FLOOR_MAX: 800,
     HUB_MAX: 2400,
@@ -101,6 +101,10 @@ window.SVT = window.SVT || {};
       },
       PITY: { SOFT: 50, SOFT_STEP: 0.012, HARD: 75 },
       FIRST_ROLL_MIN: 2, // index into RARITIES: the first roll ever is at least Rare
+      // Some items boost lab income while Chip wears them. BONUS[rarity index] = { chance the item has one, its
+      // multiplier }. Worn bonuses add up (x1.2 and x1.5 make x1.7), capped at MAX_BONUS. Labs only, not Viking Raid.
+      BONUS: [{ chance: 0.2, mult: 1.05 }, { chance: 0.35, mult: 1.1 }, { chance: 0.5, mult: 1.15 }, { chance: 0.7, mult: 1.25 }, { chance: 1, mult: 1.35 }, { chance: 1, mult: 1.5 }],
+      MAX_BONUS: 3,
     },
     ABILITIES: {
       floor: [

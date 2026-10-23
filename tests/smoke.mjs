@@ -377,9 +377,46 @@ await page.screenshot({ path: out + "/22-vault-reveal.png" });
 if (!(await page.locator(".vault-reveal .vault-card").isVisible())) errors.push("Vault: reveal card missing");
 await page.evaluate(() => SVT.openGallery()); await page.waitForTimeout(300);
 await page.screenshot({ path: out + "/23-vault-gallery.png" });
-await page.click(".vault-tab >> nth=2"); await page.waitForTimeout(300);
+await page.click(".vault-tab >> nth=3"); await page.waitForTimeout(300);
 await page.screenshot({ path: out + "/24-vault-trophies.png" });
 if (!(await page.locator(".vault-lab.trophy").count())) errors.push("Vault: trophies tab missing the beaten lab");
+// item bonuses: worn boosts add up (capped), apply to labs but not the raid; one-tap equip picks a fitting slot
+const bonus = await page.evaluate(() => {
+  const S = SVT.state(), v = S.vault, B = SVT.B.VAULT, out = {};
+  out.allHaveBoost = v.items.every((x) => x.boost >= 1);
+  out.mythicBoost = v.items.filter((x) => x.rar === 5).every((x) => x.boost === B.BONUS[5].mult);
+  v.show = {};
+  const strong = v.items.filter((x) => x.boost > 1 && SVT.vaultFits(x, "hand_l")).sort((a, b) => b.boost - a.boost);
+  SVT.vaultWear("hand_l", strong[0].id); SVT.vaultWear("hand_r", strong[1].id);
+  out.sum = Math.round((1 + (strong[0].boost - 1) + (strong[1].boost - 1)) * 100) / 100; out.mult = SVT.vaultMult();
+  const L = S.labs.arcade; S.rush.until = 0;
+  out.ratio = SVT.rates(L).income / (SVT.B.floorOutput(1, L.floors[0].lvl) * SVT.prestigeMult(L) * 0 + 1); // placeholder
+  const base = (() => { const m = SVT.vaultMult(); v.show = {}; SVT.vaultRecalc(); const r = SVT.rates(L).income; SVT.vaultWear("hand_l", strong[0].id); SVT.vaultWear("hand_r", strong[1].id); return r; })();
+  out.ratio = SVT.rates(L).income / base;
+  out.raidSame = !S.labs.raid || (() => { const R = S.labs.raid, a = SVT.rates(R).income; v.show = {}; SVT.vaultRecalc(); const b = SVT.rates(R).income; SVT.vaultWear("hand_l", strong[0].id); SVT.vaultWear("hand_r", strong[1].id); return a === b; })();
+  // cap: six x1.5 items would be x4; the total stops at MAX_BONUS
+  const big = v.items.filter((x) => x.rar >= 4).slice(0, 6); big.forEach((x) => { x.boost = 1.5; });
+  v.show = {}; SVT.vaultSlots().forEach((sl, i) => { if (big[i]) { const fit = v.items.find((x) => x.boost === 1.5 && !SVT.vaultSlotOf(x.id) && SVT.vaultFits(x, sl.id)); if (fit) SVT.vaultWear(sl.id, fit.id); } });
+  out.capped = SVT.vaultMult() <= B.MAX_BONUS;
+  // one-tap equip: a keychain goes to a free hand/hat/neck slot; a giant goes to the floor
+  v.show = {}; SVT.vaultRecalc();
+  const key = v.items.find((x) => x.size === 0), giant = v.items.find((x) => x.size === 5);
+  out.keySlot = SVT.vaultEquip(key.id).id; out.giantSlot = SVT.vaultEquip(giant.id).id;
+  out.eligibleOk = SVT.vaultEligible("floor_l").every((x) => x.size >= 2) && SVT.vaultEligible("hat").every((x) => x.size <= 1 || SVT.vaultFits(x, "hat"));
+  return out;
+});
+console.log("bonus", JSON.stringify(bonus));
+if (!bonus.allHaveBoost || !bonus.mythicBoost) errors.push("Vault: item boosts missing");
+if (bonus.mult !== bonus.sum || Math.abs(bonus.ratio - bonus.mult) > 1e-6 || !bonus.raidSame || !bonus.capped) errors.push("Vault: bonus multiplier wrong " + JSON.stringify(bonus));
+if (!["hand_l", "hand_r", "hat", "neck"].includes(bonus.keySlot) || !bonus.giantSlot.startsWith("floor") || !bonus.eligibleOk) errors.push("Vault: one-tap equip or per-slot inventory wrong " + JSON.stringify(bonus));
+await page.evaluate(() => SVT.openChip("hand_l")); await page.waitForTimeout(300);
+await page.screenshot({ path: out + "/25-vault-chip.png" });
+if (!(await page.locator(".vault-pick").count())) errors.push("Vault: Chip tab slot inventory empty");
+await page.click(".vault-pick >> nth=1"); await page.waitForTimeout(200);
+if (!(await page.locator(".vault-pick.on").count())) errors.push("Vault: tapping an item in a slot inventory did not equip it");
+await page.evaluate(() => SVT.closeVault()); await page.evaluate(() => SVT.setView("home")); await page.waitForTimeout(300);
+if (!(await page.locator(".worn-total").count())) errors.push("Vault: bonus pill missing on the home screen");
+await page.screenshot({ path: out + "/26-home-bonus.png" });
 await page.evaluate(() => SVT.closeVault());
 const overscroll = await page.evaluate(() => getComputedStyle(document.documentElement).overscrollBehaviorY + "|" + getComputedStyle(document.body).overscrollBehaviorY);
 console.log("overscroll", overscroll);
