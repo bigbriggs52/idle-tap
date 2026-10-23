@@ -29,7 +29,7 @@ await page.screenshot({ path: out + "/02-start.png" });
 // give money, buy upgrades, hire, unlock floors up to the Seed wall
 await page.evaluate(() => SVT.debug.addCash(1e7));
 await page.evaluate(() => SVT.setBuy(10));
-await page.click(".floor .lvl-btn >> nth=0");
+await page.click(".lift-tower .lvl-btn"); // v0.26: floors cap at Lv 10, so x10 three times needs the lift
 for (let i = 0; i < 3; i++) await page.click("#sheet .btn.up");
 await page.click('#sheet [aria-label="Close"]');
 // tap the empty manager seat -> Hire (pinned at the bottom): the new manager is assigned there straight away
@@ -101,7 +101,7 @@ const kinds = await page.evaluate(async () => {
 console.log("ability kinds", JSON.stringify(kinds));
 await page.screenshot({ path: out + "/04c-ability-kinds.png" });
 const sp = kinds.speed, st = kinds.storage, dc = kinds.discount;
-if (sp === "none" || !sp.kindOk || sp.cls !== "ab-speed" || sp.sp !== String(sp.boost) || sp.speedMult !== sp.boost || Math.abs(sp.ratio - sp.boost) > 0.05 || sp.leftDrop < 0.4 * sp.boost * 0.8) errors.push("Speed ability not visible or wrong: " + JSON.stringify(sp));
+if (sp === "none" || !sp.kindOk || sp.cls !== "ab-speed" || sp.sp !== String(sp.boost) || sp.speedMult !== sp.boost || Math.abs(sp.ratio - sp.boost) > 0.05 || (sp.boost * 0.45 < 2.5 && sp.leftDrop < 0.4 * sp.boost * 0.8)) errors.push("Speed ability not visible or wrong: " + JSON.stringify(sp));
 if (st === "none" || !st.kindOk || st.cls !== "ab-storage" || st.speedMult !== 1 || Math.abs(st.loadMult / st.nodeMult - 1) > 1e-6 || Math.abs(st.ratio - st.boost) > 0.05) errors.push("Storage ability wrong: " + JSON.stringify(st));
 if (dc === "none" || !dc.kindOk || dc.cls !== "ab-discount" || !dc.deal || Math.abs(dc.cost - (1 - dc.discount)) > 0.02) errors.push("Price ability wrong: " + JSON.stringify(dc));
 // rarity odds: 100k rolls should land near the stated odds
@@ -221,11 +221,11 @@ if (cyc.lift !== "idle") errors.push("Lift moved without a tap");
 // upgrade badge: ▲ / ▲▲ / ▲▲▲ for 1 / 10 / 50 affordable levels
 const tri = await page.evaluate(async () => {
   const L = SVT.lab(), out = [];
-  const lv = L.floors[0].lvl, to = (k) => k - (lv % k);
-  const k = SVT.costScale(L, "floor", 1), cost = (n) => SVT.B.bulk("floor", 1, lv, n, 0, 0, k).cost;
+  const lv = L.freight.lvl, to = (k) => k - (lv % k); // v0.26: floors cap at Lv 10, so the lift carries this test
+  const k = SVT.costScale(L, "freight", 0), cost = (n) => SVT.B.bulk("freight", 0, lv, n, 0, 0, k).cost;
   for (const c of [0, cost(1), cost(to(10)), cost(to(50))]) {
     L.cash = c * 1.0001; await new Promise((r) => setTimeout(r, 400));
-    out.push(document.querySelector(".floor .lvl-btn").dataset.tri);
+    out.push(document.querySelector(".lift-tower .lvl-btn").dataset.tri);
   }
   return out.join("");
 });
@@ -234,22 +234,22 @@ if (tri !== "0123") errors.push("Upgrade badge tiers wrong: " + tri);
 // ×10 rounds up to the next multiple: Lv 56 ×10 -> 60, Lv 60 ×10 -> 70. Max lands on a multiple of 50 when one is
 // affordable (Lv 56 with cash for 140 -> 100; Lv 56 with cash for 60 -> 60), and the max level when the cash reaches it.
 const steps = await page.evaluate(() => {
-  const L = SVT.lab(), f = L.floors[0], out = [];
+  const L = SVT.lab(), f = L.freight, out = []; // the lift: floors cap at Lv 10 since v0.26
   L.cash = 1e30;
-  for (const [lv, b] of [[56, 10], [60, 10]]) { f.lvl = lv; SVT.setBuy(b); out.push(lv + SVT.quote(L, "floor", 1).count); }
+  for (const [lv, b] of [[56, 10], [60, 10]]) { f.lvl = lv; SVT.setBuy(b); out.push(lv + SVT.quote(L, "freight", 0).count); }
   SVT.setBuy("max");
-  const costTo = (lv, to) => SVT.B.bulk("floor", 1, lv, to - lv, 0, 0, SVT.costScale(L, "floor", 1)).cost;
-  f.lvl = 56; L.cash = costTo(56, 140); out.push(56 + SVT.quote(L, "floor", 1).count);
-  L.cash = costTo(56, 60); out.push(56 + SVT.quote(L, "floor", 1).count);
-  L.cash = 1e300; out.push(56 + SVT.quote(L, "floor", 1).count);
+  const costTo = (lv, to) => SVT.B.bulk("freight", 0, lv, to - lv, 0, 0, SVT.costScale(L, "freight", 0)).cost;
+  f.lvl = 56; L.cash = costTo(56, 140); out.push(56 + SVT.quote(L, "freight", 0).count);
+  L.cash = costTo(56, 60); out.push(56 + SVT.quote(L, "freight", 0).count);
+  L.cash = 1e300; out.push(56 + SVT.quote(L, "freight", 0).count);
   L.cash = 1e30;
   SVT.setBuy("next");
-  for (const lv of [56, 60, 9]) { f.lvl = lv; out.push(lv + SVT.quote(L, "floor", 1).count); }
-  SVT.setBuy(1);
+  for (const lv of [56, 60, 9]) { f.lvl = lv; out.push(lv + SVT.quote(L, "freight", 0).count); }
+  f.lvl = 1; SVT.setBuy(1);
   return out.join(",");
 });
 console.log("step buys", steps);
-if (steps !== "60,70,100,60,800,60,65,10") errors.push("x10 or Max rounding is wrong: " + steps);
+if (steps !== "60,70,100,60,400,60,65,10") errors.push("x10 or Max rounding is wrong: " + steps);
 // back-to-top arrow: hidden at the top, shows when scrolled down, glides back to the top
 await page.evaluate(() => { SVT.setView("lab"); const L = SVT.lab(); while (L.floors.length < 12) L.floors.push({ lvl: 1, stock: 0, left: 0 }); SVT.render(); });
 await page.waitForTimeout(200);
@@ -270,12 +270,16 @@ if (topHidden || topY > 2) errors.push("Back-to-top button wrong: shown at top="
 const beat = await page.evaluate(() => {
   SVT.switchLab("garage");
   const L = SVT.lab();
-  L.round = 4; while (L.floors.length < 30) L.floors.push({ lvl: 1, stock: 0, left: 0 });
+  L.round = SVT.B.ROUNDS.length - 1; while (L.floors.length < 30) L.floors.push({ lvl: 1, stock: 0, left: 0 });
+  const early = SVT.raise(); // v0.26: the IPO needs the whole lab maxed first
+  const wild0 = SVT.vaultWild();
+  L.floors.forEach((f) => (f.lvl = SVT.B.FLOOR_MAX)); L.freight.lvl = SVT.B.HUB_MAX; L.commercial.lvl = SVT.B.HUB_MAX;
   const ok = SVT.raise();
-  return { ok, beaten: SVT.labBeaten(SVT.state().labs.garage), lab6: !!SVT.state().labs.cinema, active: SVT.state().activeLab, back: SVT.switchLab("garage") };
+  return { ok, early, roundCoins: SVT.vaultWild() - wild0, beaten: SVT.labBeaten(SVT.state().labs.garage), lab6: !!SVT.state().labs.cinema, active: SVT.state().activeLab, back: SVT.switchLab("garage") };
 });
 console.log("beat garage", JSON.stringify(beat));
 if (!beat.ok || !beat.beaten || !beat.lab6 || beat.active === "garage" || beat.back !== false) errors.push("Beating Garage HQ did not close it and open lab 6");
+if (beat.early !== false || beat.roundCoins !== 5 + 50) errors.push("IPO gate or round coins wrong: " + JSON.stringify(beat)); // 5 for the IPO round + 50 for lab 6 opening
 await page.waitForTimeout(300);
 await page.screenshot({ path: out + "/15-map-beaten.png" });
 // Viking Raid: island card on the map, stage sheet, a stage with no abilities, clearing opens the next stage
@@ -394,7 +398,11 @@ const vault = await page.evaluate(() => {
   out.replayRow = !!document.querySelector(".loc.replaying");
   // beat the replay: another coin, lab closed again, replay cleared
   const L = S.labs.garage; S.activeLab = "garage";
-  for (let r = 0; r < SVT.B.ROUNDS.length; r++) { while (L.floors.length < SVT.B.ROUNDS[r].needFloor) L.floors.push({ lvl: 1, stock: 0, left: 0 }); SVT.raise(); }
+  for (let r = 0; r < SVT.B.ROUNDS.length; r++) {
+    while (L.floors.length < SVT.B.ROUNDS[r].needFloor) L.floors.push({ lvl: 1, stock: 0, left: 0 });
+    if (SVT.B.ROUNDS[r].maxed) { L.floors.forEach((f) => (f.lvl = SVT.B.FLOOR_MAX)); L.freight.lvl = SVT.B.HUB_MAX; L.commercial.lvl = SVT.B.HUB_MAX; }
+    SVT.raise();
+  }
   out.coin2 = SVT.vaultCoins("garage"); out.beats = S.vault.beats.garage; out.closed = SVT.labBeaten(S.labs.garage) && !S.vault.replay;
   // odds: 1 coin vs 5 coins, and pity
   const sim = (coins, pity, n) => { const c = [0, 0, 0, 0, 0, 0]; for (let i = 0; i < n; i++) c[SVT.vaultRollRarity(coins, pity)]++; return c.map((x) => x / n); };
@@ -414,7 +422,8 @@ const vault = await page.evaluate(() => {
   return out;
 });
 console.log("vault", JSON.stringify(vault));
-if (vault.coin !== 10 || vault.wild !== 150 || !vault.done || !vault.canReplay || !vault.replaying || vault.canReplayAgain) errors.push("Vault: coin on beat or replay start wrong");
+// wild: 50 starter + 2 x 50 for labs 2 and 6 opening + 2 x 5 for the Seed and IPO rounds raised above (v0.26)
+if (vault.coin !== 10 || vault.wild !== 160 || !vault.done || !vault.canReplay || !vault.replaying || vault.canReplayAgain) errors.push("Vault: coin on beat or replay start wrong");
 if (!vault.mapTitle.includes("of 5 open") || !vault.replayRow) errors.push("Vault: replay row or slot count wrong: " + vault.mapTitle);
 if (vault.coin2 !== 20 || vault.beats !== 2 || !vault.closed) errors.push("Vault: beating the replay did not pay a second coin");
 if (Math.abs(vault.p1[0] - 0.5) > 0.02 || Math.abs(vault.p1[4] - 0.018) > 0.004 || vault.p5[0] !== 0 || Math.abs(vault.p5[4] - 0.15) > 0.01) errors.push("Vault: odds off " + JSON.stringify([vault.p1, vault.p5]));

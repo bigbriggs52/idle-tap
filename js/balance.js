@@ -19,12 +19,16 @@ window.SVT = window.SVT || {};
   }
 
   const B = {
-    VERSION: "0.25.0",
+    VERSION: "0.26.0",
     // Release time in UTC, set with each release. Shown after the version in the player's local time.
-    BUILT: "2026-10-23T21:56Z",
+    BUILT: "2026-10-23T22:01Z",
     FLOORS: 30,
-    FLOOR_MAX: 800,
-    HUB_MAX: 2400,
+    // v0.26: lower caps, because the IPO now needs every floor, the lift and the warehouse at max level. Floors stop
+    // at their first big milestone (Lv 10). The hubs cap at Lv 400: that is the income every lab ends with, so the
+    // deep floors must stay affordable against it (grow <= 0.72), and tests/lab-probe.mjs showed Lv 300 cannot carry
+    // floor 30 in the later labs while Lv 600 can never be reached (hub prices outgrow hub capacity).
+    FLOOR_MAX: 10,
+    HUB_MAX: 400,
     FLOOR_GROWTH: 1.12,
     HUB_GROWTH: 1.14,
     FLOOR_STEP: 1.10, // small unlock every 5 levels on floors
@@ -42,14 +46,16 @@ window.SVT = window.SVT || {};
     freightBase: 10,
     commercialBase: 12,
 
-    // Floors that need a funding round before they can be unlocked (prestige walls).
-    WALLS: { 6: 0, 11: 1, 19: 2, 26: 3 },
+    // Floors that need a funding round before they can be unlocked (prestige walls). v0.26: a round every 5 floors.
+    WALLS: { 6: 0, 11: 1, 16: 2, 21: 3, 26: 4 },
+    // The last round (IPO) also needs every floor, the lift and the warehouse at max level (SVT.canRaise).
     ROUNDS: [
       { name: "Seed", mult: 2, needFloor: 5 },
       { name: "Series A", mult: 2, needFloor: 10 },
-      { name: "Series B", mult: 3, needFloor: 18 },
-      { name: "Series C", mult: 3, needFloor: 25 },
-      { name: "IPO", mult: 4, needFloor: 30 },
+      { name: "Series B", mult: 2, needFloor: 15 },
+      { name: "Series C", mult: 3, needFloor: 20 },
+      { name: "Series D", mult: 3, needFloor: 25 },
+      { name: "IPO", mult: 4, needFloor: 30, maxed: true },
     ],
 
     RANKS: [
@@ -85,6 +91,7 @@ window.SVT = window.SVT || {};
       START_COINS: 50,
       OPEN_COINS: 50, // wild coins each time a new lab opens on the map
       COIN_PER_BEAT: 10,
+      ROUND_COINS: 5, // wild coins every time a lab raises a funding round or its IPO (v0.26)
       RARITIES: [
         { id: "common", name: "Common", mods: 0 },
         { id: "uncommon", name: "Uncommon", mods: 1 },
@@ -183,18 +190,20 @@ window.SVT = window.SVT || {};
   };
   B.SELL_REFUND = 0.5;
 
-  // Per-lab price scaling (see SVT.costScale). Tuned with tests/pace.mjs.
+  // Per-lab price scaling (see SVT.costScale). v0.26: every lab's floor prices grow at most 7.2x per floor (grow 0.72)
+  // so floor 30 stays affordable with the hubs capped at Lv 400; the labs differ by scale, fitted with
+  // tests/lab-goals.mjs to about 2.2h, 2.9h, 4.3h, 7.6h, 13h to IPO for labs 1-5, then 14h rising 6% per lab to
+  // about 57h for lab 30.
   B.LAB_DIFF = {
-    // Efficient-player time to IPO: about 2.2h, 2.9h, 4.3h, 7.6h, 13h (labs 1-5).
-    garage: { scale: 0.05, grow: 0.55 },
-    arcade: { scale: 0.15, grow: 0.72 },
-    library: { scale: 0.3, grow: 0.8 },
-    maker: { scale: 0.5, grow: 0.85 },
-    studio: { scale: 0.7, grow: 0.87 },
+    garage: { scale: 0.024, grow: 0.55 },
+    arcade: { scale: 0.099, grow: 0.72 },
+    library: { scale: 0.34, grow: 0.72 },
+    maker: { scale: 0.99, grow: 0.72 },
+    studio: { scale: 2, grow: 0.72 },
   };
-  // Labs 6-30 keep ramping about 6% longer each: ~14h for lab 6 up to ~56h for lab 30 (scale 0.8).
-  const GROW_6_30 = [0.8641, 0.8679, 0.8719, 0.876, 0.8796, 0.8836, 0.8878, 0.8917, 0.8953, 0.8992, 0.9028, 0.9063, 0.9096, 0.9128, 0.9159, 0.919, 0.922, 0.925, 0.9279, 0.9307, 0.9334, 0.9362, 0.9389, 0.9416, 0.9443];
-  SVT.LABS.slice(5).forEach((l, i) => { B.LAB_DIFF[l.id] = { scale: 0.8, grow: GROW_6_30[i] }; });
+  // Labs 6-30: scale from tests/lab-goals.mjs (about 6% more time per lab), grow 0.72 everywhere.
+  const SCALE_6_30 = [2.2, 2.4, 2.6, 2.7, 2.9, 3.1, 3.3, 3.5, 3.7, 4, 4.2, 4.5, 4.8, 5.1, 5.4, 5.8, 6.1, 6.5, 6.9, 7.3, 7.8, 8.2, 8.7, 9.3, 9.8];
+  SVT.LABS.slice(5).forEach((l, i) => { B.LAB_DIFF[l.id] = { scale: SCALE_6_30[i], grow: 0.72 }; });
 
   B.tierOf = (n) => SVT.TIERS.findIndex((t) => n >= t.from && n <= t.to);
 
