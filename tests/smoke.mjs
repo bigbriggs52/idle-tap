@@ -93,7 +93,8 @@ const kinds = await page.evaluate(async () => {
     await new Promise((f) => setTimeout(f, 450));
     out[kind] = { ratio: +(rate() / r0).toFixed(3), boost: r.boost, cls: (scene().className.match(/ab-\w+/) || [])[0], sp: scene().style.getPropertyValue("--sp"), tag: scene().querySelector(".ab-tag").hidden,
       leftDrop: +(left0 - L.floors[0].left).toFixed(2), speedMult: SVT.speedMult(L, "floor", 1), loadMult: +SVT.loadMult(L, "floor", 1).toFixed(3), nodeMult: +SVT.nodeMult(L, "floor", 1).toFixed(3),
-      deal: document.querySelector('.floor[data-floor="1"] .lvl-btn').classList.contains("deal"), cost: +(SVT.quote(L, "floor", 1).cost / c0).toFixed(2), discount: r.discount, kindOk: a && a.kind === kind };
+      deal: document.querySelector('.floor[data-floor="1"] .lvl-btn').classList.contains("deal"), cost: +(SVT.quote(L, "floor", 1).cost / c0).toFixed(2), discount: r.discount, kindOk: a && a.kind === kind,
+      minutes: r.minutes, durOk: Math.abs((m.activeUntil - SVT.now()) / 60 - r.minutes) < 0.05 }; // v0.29: the rank sets the duration
     m.activeUntil = 0; m.cdUntil = 0; SVT.unassign(m.id);
   }
   return out;
@@ -101,6 +102,7 @@ const kinds = await page.evaluate(async () => {
 console.log("ability kinds", JSON.stringify(kinds));
 await page.screenshot({ path: out + "/04c-ability-kinds.png" });
 const sp = kinds.speed, st = kinds.storage, dc = kinds.discount;
+for (const k of ["speed", "storage", "discount"]) if (kinds[k] !== "none" && !kinds[k].durOk) errors.push("Ability duration is not the rank's minutes (v0.29): " + JSON.stringify(kinds[k]));
 if (sp === "none" || !sp.kindOk || sp.cls !== "ab-speed" || sp.sp !== String(sp.boost) || sp.speedMult !== sp.boost || Math.abs(sp.ratio - sp.boost) > 0.05 || (sp.boost * 0.45 < 2.5 && sp.leftDrop < 0.4 * sp.boost * 0.8)) errors.push("Speed ability not visible or wrong: " + JSON.stringify(sp));
 if (st === "none" || !st.kindOk || st.cls !== "ab-storage" || st.speedMult !== 1 || Math.abs(st.loadMult / st.nodeMult - 1) > 1e-6 || Math.abs(st.ratio - st.boost) > 0.05) errors.push("Storage ability wrong: " + JSON.stringify(st));
 if (dc === "none" || !dc.kindOk || dc.cls !== "ab-discount" || !dc.deal || Math.abs(dc.cost - (1 - dc.discount)) > 0.02) errors.push("Price ability wrong: " + JSON.stringify(dc));
