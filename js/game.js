@@ -539,8 +539,7 @@ window.SVT = window.SVT || {};
     const t = now();
     if (!m || m.cdUntil > t) return false;
     const ab = SVT.ability(roleOf(kind), m.ability);
-    const dur = ab.kind === "discount" ? B.DISCOUNT_SECONDS : B.BOOST_SECONDS;
-    m.activeUntil = t + dur;
+    m.activeUntil = t + B.abilitySeconds(SVT.rank(m.rank)); // v0.29: the rank sets how long it lasts
     m.cdUntil = m.activeUntil + SVT.rank(m.rank).cooldown;
     emit("ability", { kind, n });
     emit("change");

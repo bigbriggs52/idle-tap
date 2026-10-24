@@ -202,9 +202,10 @@ window.SVT = window.SVT || {};
   function effectText(m) {
     const r = SVT.rank(m.rank), ab = SVT.ability(m.role, m.ability);
     const K = B.ABILITY_KINDS[ab.kind];
-    const what = ab.kind === "speed" ? "×" + r.boost + " speed for " + B.BOOST_SECONDS + "s"
-      : ab.kind === "storage" ? "×" + r.boost + " load for " + B.BOOST_SECONDS + "s"
-      : "−" + Math.round(r.discount * 100) + "% upgrades for " + B.DISCOUNT_SECONDS + "s";
+    const mins = r.minutes + " min";
+    const what = ab.kind === "speed" ? "×" + r.boost + " speed for " + mins
+      : ab.kind === "storage" ? "×" + r.boost + " load for " + mins
+      : "−" + Math.round(r.discount * 100) + "% upgrades for " + mins;
     return K.icon + " " + ab.name + ": " + what + (r.passive ? " · +" + r.passive * 100 + "% always" : "");
   }
 

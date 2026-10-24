@@ -19,9 +19,9 @@ window.SVT = window.SVT || {};
   }
 
   const B = {
-    VERSION: "0.28.0",
+    VERSION: "0.29.0",
     // Release time in UTC, set with each release. Shown after the version in the player's local time.
-    BUILT: "2026-10-24T05:10Z",
+    BUILT: "2026-10-24T14:45Z",
     FLOORS: 30,
     // v0.26: lower caps, because the IPO needs every floor, the lift and the warehouse at max level. The hubs cap at
     // Lv 400: that is the income every lab ends with, so the deep floors must stay affordable against it, and
@@ -59,16 +59,17 @@ window.SVT = window.SVT || {};
       { name: "IPO", mult: 4, needFloor: 30, maxed: true },
     ],
 
+    // v0.29: an ability runs for the rank's `minutes` (Legendary 10, Epic 7, Rare 4, Uncommon 2, Common 1, Super 15),
+    // then the rank's cooldown. The same timer serves every kind: speed, storage and price.
     RANKS: [
       // Rarest first. Every hire rolls independently against these odds.
-      { id: "super", name: "Super", odds: 0.005, boost: 10, discount: 0.90, cooldown: 6 * 60, passive: 1.00 },
-      { id: "legendary", name: "Legendary", odds: 0.01, boost: 7, discount: 0.80, cooldown: 8 * 60, passive: 0.50 },
-      { id: "epic", name: "Epic", odds: 0.03, boost: 5, discount: 0.70, cooldown: 10 * 60, passive: 0.25 },
-      { id: "rare", name: "Rare", odds: 0.10, boost: 4, discount: 0.60, cooldown: 12 * 60, passive: 0.10 },
-      { id: "uncommon", name: "Uncommon", odds: 0.30, boost: 3, discount: 0.50, cooldown: 14 * 60, passive: 0.05 },
-      { id: "common", name: "Common", odds: 0.555, boost: 2, discount: 0.40, cooldown: 15 * 60, passive: 0 },
+      { id: "super", name: "Super", odds: 0.005, boost: 10, discount: 0.90, minutes: 15, cooldown: 6 * 60, passive: 1.00 },
+      { id: "legendary", name: "Legendary", odds: 0.01, boost: 7, discount: 0.80, minutes: 10, cooldown: 8 * 60, passive: 0.50 },
+      { id: "epic", name: "Epic", odds: 0.03, boost: 5, discount: 0.70, minutes: 7, cooldown: 10 * 60, passive: 0.25 },
+      { id: "rare", name: "Rare", odds: 0.10, boost: 4, discount: 0.60, minutes: 4, cooldown: 12 * 60, passive: 0.10 },
+      { id: "uncommon", name: "Uncommon", odds: 0.30, boost: 3, discount: 0.50, minutes: 2, cooldown: 14 * 60, passive: 0.05 },
+      { id: "common", name: "Common", odds: 0.555, boost: 2, discount: 0.40, minutes: 1, cooldown: 15 * 60, passive: 0 },
     ],
-    BOOST_SECONDS: 60,
     // Assembly Line Rush (mini game): a 45-second sorting run with 3 lives. The score picks a timed income boost
     // for every lab (not Viking Raid). One run per cooldown; a new boost replaces the old one only if it is bigger.
     RUSH: {
@@ -82,7 +83,6 @@ window.SVT = window.SVT || {};
         { score: 65, mult: 5, minutes: 30 },
       ],
     },
-    DISCOUNT_SECONDS: 30,
     // Tech Vault (collectible roll): a new player starts with START_COINS wild coins (good at any open lab), and
     // beating a lab (IPO), first time or replay, pays COIN_PER_BEAT coins stamped with that lab. Coins roll one of
     // the lab's 30 products with a rarity, color, finish, size and mods. More coins in one roll lift the whole odds
@@ -206,6 +206,7 @@ window.SVT = window.SVT || {};
   const SCALE_6_30 = [3.1, 3.4, 3.5, 3.8, 4.1, 4.3, 4.6, 4.9, 5.2, 5.6, 5.9, 6.3, 6.7, 7.2, 7.6, 8.1, 8.6, 9.1, 9.7, 10, 11, 12, 12, 13, 14];
   SVT.LABS.slice(5).forEach((l, i) => { B.LAB_DIFF[l.id] = { scale: SCALE_6_30[i], grow: 0.6 }; });
 
+  B.abilitySeconds = (rank) => rank.minutes * 60;
   B.tierOf = (n) => SVT.TIERS.findIndex((t) => n >= t.from && n <= t.to);
 
   SVT.B = B;

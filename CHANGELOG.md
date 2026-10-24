@@ -2,6 +2,10 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.29.0 (2026-10-24)
+
+- Manager abilities last by rarity: Legendary 10 min, Epic 7, Rare 4, Uncommon 2, Common 1 (Super 15). Every kind uses the same timer, so a Price manager's discount lasts as long as a Speed or Storage boost of the same rarity (was 60 s for speed and storage, 30 s for price). Cooldowns after the run are unchanged (6 to 15 min). The manager card says how long the ability lasts.
+
 ## v0.28.0 (2026-10-24)
 
 - Floors go to Lv 100 again (the Lv 10 cap from v0.26 was too low). The lift and warehouse still stop at Lv 400, and the IPO still needs every floor at Lv 100 and both hubs at Lv 400.
