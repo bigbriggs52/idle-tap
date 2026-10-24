@@ -157,7 +157,13 @@ const supers = await page.evaluate(() => {
   SVT.save(); const saved = JSON.parse(localStorage.getItem("svt-save")); const sm = saved.labs[L.id].managers[vc.id];
   out.persist = sm.activeUntil === vc.activeUntil && sm.cdUntil === vc.cdUntil && saved.labs[L.id].lift.warpAt === L.lift.warpAt;
   SVT.openManagers("floor", "floor", 2); out.card = document.querySelector("#sheet .mcard.assigned .rarity").textContent; document.querySelector('#sheet [aria-label="Close"]').click();
-  [siphon, unicorn, hyper, courier, over, vc].forEach((m) => { SVT.unassign(m.id); SVT.sell(m.id); });
+  // v0.31.2: no selling. A hire from a slot does not replace a manager mid-ability.
+  SVT.assign(unicorn.id, "floor", 2); unicorn.activeUntil = SVT.now() + 60; unicorn.cdUntil = unicorn.activeUntil + 60;
+  SVT.openManagers("floor", "floor", 2); document.querySelector("#sheet .btn.hire").click();
+  out.noSwap = SVT.mgrOf(L, "floor", 2) === unicorn; out.noSell = typeof SVT.sell === "undefined" && !document.querySelector("#sheet .btn.sell");
+  unicorn.activeUntil = 0; unicorn.cdUntil = 0; document.querySelector('#sheet [aria-label="Close"]').click();
+  [siphon, unicorn, hyper, courier, over, vc].forEach((m) => { SVT.unassign(m.id); delete L.managers[m.id]; });
+  Object.values(L.managers).filter((m) => m.role === "floor" && m.id > vc.id).forEach((m) => { SVT.unassign(m.id); delete L.managers[m.id]; });
   quiet(); while (L.floors.length > 1) L.floors.pop(); SVT.render(); // back to one floor: the next step unlocks four more
   return out;
 });
@@ -169,6 +175,7 @@ if (supers.courier.warped1 !== 777 || supers.courier.nextIn !== 5 || supers.cour
 if (supers.over.cash !== 3 * 1.25 || Math.abs(supers.over.speed - 8 * 1.1) > 1e-9) errors.push("Overclocker wrong: " + JSON.stringify(supers.over));
 if (Math.abs(supers.cdMult - 0.85) > 1e-9 || supers.vc.floorOff !== 0.9 || supers.vc.liftOff !== 0.93 || /* 1 − 0.75 × 0.1: the Courier's passive cut stacks under the VC */ Math.abs(supers.vc.price - 0.1) > 0.01 || supers.vc.active !== 20 || supers.vc.cd !== Math.round(1200 * 0.85)) errors.push("Venture Capitalist wrong: " + JSON.stringify(supers.vc));
 if (!supers.persist) errors.push("Ability timers are not saved as absolute times");
+if (!supers.noSwap || !supers.noSell) errors.push("Hire replaced a mid-ability manager, or selling still exists (v0.31.2): " + JSON.stringify({ noSwap: supers.noSwap, noSell: supers.noSell }));
 if (!/Legendary · The Unicorn/.test(supers.card)) errors.push("Super manager card does not name the special: " + supers.card);
 if (sp === "none" || !sp.kindOk || sp.cls !== "ab-speed" || sp.sp !== String(sp.boost) || sp.speedMult !== sp.boost || Math.abs(sp.ratio - sp.boost) > 0.05 || (sp.boost * 0.45 < 2.5 && sp.leftDrop < 0.4 * sp.boost * 0.8)) errors.push("Speed ability not visible or wrong: " + JSON.stringify(sp));
 if (st === "none" || !st.kindOk || st.cls !== "ab-storage" || st.speedMult !== 1 || Math.abs(st.loadMult / st.nodeMult - 1) > 1e-6 || Math.abs(st.ratio - st.boost) > 0.05) errors.push("Storage ability wrong: " + JSON.stringify(st));

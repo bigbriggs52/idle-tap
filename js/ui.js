@@ -82,7 +82,7 @@ window.SVT = window.SVT || {};
   // icon goes before the title; tools sit top right by the close button; foot stays pinned under the scrolling body; sticky hides the close button.
   let curNav = null;
   function sheet(title, body, opts) {
-    // Rebuilding a panel that is already open (hire, assign, sell, buy) swaps it in place with no spring, so the
+    // Rebuilding a panel that is already open (hire, assign, buy) swaps it in place with no spring, so the
     // screen does not jump on every tap. Only a panel opened fresh, or swiped to, animates in.
     const wasOpen = !!document.getElementById("sheet");
     closeSheet();
@@ -257,8 +257,7 @@ window.SVT = window.SVT || {};
     function mgrRow(m) {
       const slot = SVT.slotOfMgr(L, m.id), btns = [];
       if (here && !slot) btns.push(h("button", { class: "btn use", onclick: () => { SVT.assign(m.id, kind, n); toast(m.name + " now runs " + SVT.slotName(here)); reopen(); }, text: "Assign" }));
-      if (slot) btns.push(h("button", { class: "btn small ghost", onclick: () => { SVT.unassign(m.id); reopen(); }, text: "Unassign" }));
-      else btns.push(h("button", { class: "btn small ghost sell", onclick: () => { SVT.sell(m.id); reopen(); }, text: "Sell $" + fmt(m.paid * B.SELL_REFUND) }));
+      if (slot) btns.push(h("button", { class: "btn small ghost", onclick: () => { SVT.unassign(m.id); reopen(); }, text: "Unassign" })); // v0.31.2: no selling
       return mgrCard(m, { busy: !!slot, where: slot ? "In use on " + SVT.slotName(slot) : null, buttons: btns });
     }
     const parts = [];
@@ -298,11 +297,13 @@ window.SVT = window.SVT || {};
     const hire = bind(h("button", { class: "btn fund-cta big hire", onclick: () => {
       const m = SVT.hire(role);
       if (!m) return;
-      // Hiring from a slot's panel puts the new manager straight to work there, unless a rarer one already works it.
+      // Hiring from a slot's panel puts the new manager straight to work there, unless a rarer one already works it
+      // or (v0.31.2) the one there is mid-ability: then the new hire waits on the bench.
       const cur = here ? SVT.mgrOf(lab(), kind, n) : null;
-      const put = here && (!cur || SVT.RANK_ORDER[m.rank] <= SVT.RANK_ORDER[cur.rank]);
+      const live = !!cur && SVT.isActive(cur);
+      const put = here && !live && (!cur || SVT.RANK_ORDER[m.rank] <= SVT.RANK_ORDER[cur.rank]);
       if (put) SVT.assign(m.id, kind, n);
-      toast("Hired " + SVT.rank(m.rank).name + " " + (SVT.isSuper(m) ? SVT.abilityOf(m).name + " (" + m.name + ")" : crewTitle(role) + " " + m.name) + (put ? " · now runs " + SVT.slotName(here) : ""), "r-" + m.rank);
+      toast("Hired " + SVT.rank(m.rank).name + " " + (SVT.isSuper(m) ? SVT.abilityOf(m).name + " (" + m.name + ")" : crewTitle(role) + " " + m.name) + (put ? " · now runs " + SVT.slotName(here) : live ? " · " + cur.name + "'s ability is running, so the new hire waits below" : ""), "r-" + m.rank);
       reopen();
     } },
       h("span", { text: "Hire manager" }), hireCost),
