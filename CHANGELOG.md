@@ -2,6 +2,12 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.28.0 (2026-10-24)
+
+- Floors go to Lv 100 again (the Lv 10 cap from v0.26 was too low). The lift and warehouse still stop at Lv 400, and the IPO still needs every floor at Lv 100 and both hubs at Lv 400.
+- To keep that payable, a floor level now costs 5% more than the one before (was 12%) and each deeper floor costs 6x the floor above (was 7.2x). Every lab's prices were refitted with tests/lab-goals.mjs so the times are unchanged: Garage HQ IPOs in about 2.4 h, then about 2.9, 4.2, 7.4 and 12.8 h, and labs 6 to 30 run from 14 h to 56 h.
+- Existing saves keep their levels; nothing is clamped.
+
 ## v0.27.0 (2026-10-23)
 
 - Every one of the 900 Vault products now has its own picture: no two items share an icon. A motor looks like a motor, a drone like a drone. Icons come from Material Design Icons, Game-icons.net, Tabler, IconPark and Phosphor (credits in Settings); tools/icon-map.mjs lists the icon for every product and tools/build-icons.mjs refuses to build if any icon is missing or used twice.
