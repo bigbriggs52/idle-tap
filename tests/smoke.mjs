@@ -72,7 +72,7 @@ const typed = await page.evaluate(async () => {
 });
 console.log("type filter", JSON.stringify(typed));
 if (!typed.n || !typed.allDiscount || typed.headers !== 0 || !typed.back) errors.push("Manager type filter is wrong: " + JSON.stringify(typed));
-if (!grouped.first.startsWith("#") || grouped.headers.length < 2 || !grouped.headers[0].startsWith("⚡ Speed")) errors.push("Managers are not grouped by ability type: " + JSON.stringify(grouped));
+if (!grouped.first.startsWith("#") || grouped.headers.length < 2 || !/^(🌟 Super|⚡ Speed)/.test(grouped.headers[0])) errors.push("Managers are not grouped by ability type: " + JSON.stringify(grouped));
 if (owned.total !== 4 || owned.assigned !== 3) errors.push("Owned/assigned counts wrong");
 await page.click('#sheet [aria-label="Close"]');
 // v0.22: the three ability kinds are visible. Speed runs the cycle faster (same output per second) and marks the
@@ -89,12 +89,12 @@ const kinds = await page.evaluate(async () => {
     L.floors[0].left = B.FLOOR_CYCLE; // a fresh cycle, so the countdown cannot wrap during the measurement
     const r0 = rate(), c0 = SVT.quote(L, "floor", 1).cost, s0 = stock(), left0 = L.floors[0].left;
     SVT.activate("floor", 1);
-    const a = SVT.activeAbility(L, "floor", 1), r = SVT.rank(m.rank);
+    const a = SVT.activeAbility(L, "floor", 1), st = SVT.abilityStats(m); // v0.30: the tier sets strength and timers
     await new Promise((f) => setTimeout(f, 450));
-    out[kind] = { ratio: +(rate() / r0).toFixed(3), boost: r.boost, cls: (scene().className.match(/ab-\w+/) || [])[0], sp: scene().style.getPropertyValue("--sp"), tag: scene().querySelector(".ab-tag").hidden,
+    out[kind] = { ratio: +(rate() / r0).toFixed(3), boost: st.mult, cls: (scene().className.match(/ab-\w+/) || [])[0], sp: scene().style.getPropertyValue("--sp"), tag: scene().querySelector(".ab-tag").hidden,
       leftDrop: +(left0 - L.floors[0].left).toFixed(2), speedMult: SVT.speedMult(L, "floor", 1), loadMult: +SVT.loadMult(L, "floor", 1).toFixed(3), nodeMult: +SVT.nodeMult(L, "floor", 1).toFixed(3),
-      deal: document.querySelector('.floor[data-floor="1"] .lvl-btn').classList.contains("deal"), cost: +(SVT.quote(L, "floor", 1).cost / c0).toFixed(2), discount: r.discount, kindOk: a && a.kind === kind,
-      minutes: r.minutes, durOk: Math.abs((m.activeUntil - SVT.now()) / 60 - r.minutes) < 0.05 }; // v0.29: the rank sets the duration
+      deal: document.querySelector('.floor[data-floor="1"] .lvl-btn').classList.contains("deal"), cost: +(SVT.quote(L, "floor", 1).cost / c0).toFixed(2), discount: st.off, kindOk: a && a.kind === kind,
+      rank: m.rank, active: st.active, cooldown: st.cooldown, durOk: Math.abs((m.activeUntil - SVT.now()) - st.active) < 1 && Math.abs((m.cdUntil - m.activeUntil) - st.cooldown) < 1 };
     m.activeUntil = 0; m.cdUntil = 0; SVT.unassign(m.id);
   }
   return out;
@@ -102,13 +102,80 @@ const kinds = await page.evaluate(async () => {
 console.log("ability kinds", JSON.stringify(kinds));
 await page.screenshot({ path: out + "/04c-ability-kinds.png" });
 const sp = kinds.speed, st = kinds.storage, dc = kinds.discount;
-for (const k of ["speed", "storage", "discount"]) if (kinds[k] !== "none" && !kinds[k].durOk) errors.push("Ability duration is not the rank's minutes (v0.29): " + JSON.stringify(kinds[k]));
+for (const k of ["speed", "storage", "discount"]) if (kinds[k] !== "none" && !kinds[k].durOk) errors.push("Ability timers do not follow the tier (v0.30): " + JSON.stringify(kinds[k]));
+// v0.30: the tier table itself, and the six super managers.
+const tiers = await page.evaluate(() => {
+  const B = SVT.B, L = SVT.lab(), out = { stats: B.ABILITY_STATS, supers: {} };
+  for (const role of ["floor", "freight", "commercial"]) for (const rank of ["epic", "legendary"]) {
+    const sp = B.ABILITIES[role].find((a) => a.kind === "special" && a.rank === rank);
+    out.supers[role + ":" + rank] = sp ? { id: sp.id, name: sp.name, active: sp.active, cooldown: sp.cooldown, passive: sp.passive } : null;
+  }
+  // Hiring Epic or Legendary gives the role's super manager; Common to Rare never do.
+  const seen = { super: 0, regular: 0, wrong: 0 };
+  const rnd = Math.random; let i = 0; const seq = [0.001, 0.02, 0.1, 0.5, 0.9, 0.01, 0.03];
+  Math.random = () => seq[i++ % seq.length];
+  L.cash = 1e15;
+  for (let k = 0; k < 14; k++) { const m = SVT.hire("freight"); const r = SVT.rank(m.rank), ab = SVT.abilityOf(m); if (!!r.super !== (ab.kind === "special")) seen.wrong++; if (r.super) { seen.super++; if (ab.rank !== m.rank) seen.wrong++; } else seen.regular++; }
+  Math.random = rnd;
+  out.hires = seen;
+  return out;
+});
+console.log("tiers", JSON.stringify(tiers));
+if (tiers.stats.common.speed.mult !== 2.5 || tiers.stats.common.speed.active !== 60 || tiers.stats.common.speed.cooldown !== 300 || tiers.stats.uncommon.storage.mult !== 3.5 || tiers.stats.rare.discount.off !== 0.7 || tiers.stats.rare.discount.active !== 30 || tiers.stats.rare.discount.cooldown !== 480) errors.push("Regular tier table is off: " + JSON.stringify(tiers.stats));
+if (Object.values(tiers.supers).some((x) => !x) || tiers.supers["floor:legendary"].id !== "midas" || tiers.supers["commercial:legendary"].active !== 20 || tiers.supers["freight:epic"].cooldown !== 900) errors.push("Super managers missing or wrong: " + JSON.stringify(tiers.supers));
+if (tiers.hires.wrong || !tiers.hires.super || !tiers.hires.regular) errors.push("Hiring does not hand out super managers by tier: " + JSON.stringify(tiers.hires));
+// Super manager actives and passives in the tick: Dropshipper sells from the floor at x5, Unicorn adds +25% lab-wide,
+// Hyperloop empties a crate in one go, Quantum Courier warps floor stock to the surface, Overclocker pays x3,
+// Venture Capitalist cuts every price by 90% and shortens cooldowns 15%. Timers are absolute, so they survive a reload.
+const supers = await page.evaluate(() => {
+  const B = SVT.B, L = SVT.lab(), out = {};
+  const give = (role, id) => { const m = SVT.hire(role); m.rank = B.ABILITIES[role].find((a) => a.id === id).rank; m.ability = id; return m; };
+  L.cash = 1e15; while (L.floors.length < 3) SVT.unlockFloor();
+  const siphon = give("floor", "siphon"), unicorn = give("floor", "midas"), hyper = give("freight", "turbine"), courier = give("freight", "wormhole"), over = give("commercial", "overclock"), vc = give("commercial", "baron");
+  SVT.assign(siphon.id, "floor", 1); SVT.assign(unicorn.id, "floor", 2); SVT.assign(hyper.id, "freight", 0); SVT.assign(over.id, "commercial", 0);
+  out.passiveSpeed = SVT.speedMult(L, "floor", 1); out.revenue = SVT.revenueMult(L); out.whSpeed = SVT.passives(L, "commercial", 0).speed; out.liftOff = SVT.discount(L, "freight", 0);
+  const price0 = SVT.quote(L, "floor", 3).cost;
+  const quiet = () => { L.floors.forEach((f) => { f.stock = 0; f.left = 0; }); L.lobby = 0; L.commercial.carry = 0; L.commercial.left = 0; L.lift.load = 0; L.lift.phase = "idle"; L.lift.y = 0; };
+  // Dropshipper: one cycle's output on floor 1 is paid x5 (x1.25 Unicorn) straight to cash, nothing lands in the crate.
+  quiet(); L.floors[1].left = 10; const c0 = L.cash; L.floors[0].left = 0.01; SVT.activate("floor", 1);
+  SVT.tick(0.1);
+  const outF = B.floorOutput(1, L.floors[0].lvl) * SVT.prestigeMult(L) * SVT.loadMult(L, "floor", 1) * B.FLOOR_CYCLE;
+  out.siphon = { cashGain: +((L.cash - c0) / outF).toFixed(3), stockSame: L.floors[0].stock === 0, active: siphon.activeUntil - SVT.now() };
+  // Hyperloop: the lift empties a big crate in one stop.
+  quiet(); L.floors[2].stock = 1e9; SVT.activate("freight", 0);
+  for (let i = 0; i < 60; i++) SVT.tick(0.5);
+  out.hyper = { crate: L.floors[2].stock, speed: SVT.speedMult(L, "freight", 0), lobbyUp: L.lobby + L.lift.load > 1e8 };
+  // Quantum Courier: everything on the floors jumps to the surface, then again 5 s later.
+  hyper.activeUntil = 0; hyper.cdUntil = 0; SVT.assign(courier.id, "freight", 0); quiet(); L.floors[2].stock = 777; L.lift.warpAt = 0; SVT.activate("freight", 0);
+  SVT.tick(0.1); const warped1 = L.lobby, nextIn = L.lift.warpAt - SVT.now();
+  out.courier = { warped1, nextIn: Math.round(nextIn), floor3: L.floors[2].stock, liftCap: SVT.passives(L, "freight", 0).load, liftOff: +SVT.discount(L, "freight", 0).toFixed(2) };
+  // Overclocker: x3 on deliveries, 8x cart speed. Venture Capitalist: −90% everywhere, −15% cooldowns.
+  SVT.activate("commercial", 0); out.over = { cash: SVT.cashMult(L, SVT.now(), true), speed: SVT.speedMult(L, "commercial", 0) };
+  over.activeUntil = 0; over.cdUntil = 0; SVT.assign(vc.id, "commercial", 0); out.cdMult = SVT.cooldownMult(L);
+  SVT.activate("commercial", 0); out.vc = { floorOff: +SVT.discount(L, "floor", 3).toFixed(2), liftOff: +SVT.discount(L, "freight", 0).toFixed(2), price: +(SVT.quote(L, "floor", 3).cost / price0).toFixed(3), active: Math.round(vc.activeUntil - SVT.now()), cd: Math.round(vc.cdUntil - vc.activeUntil) };
+  // Reload: timers are absolute in the save.
+  SVT.save(); const saved = JSON.parse(localStorage.getItem("svt-save")); const sm = saved.labs[L.id].managers[vc.id];
+  out.persist = sm.activeUntil === vc.activeUntil && sm.cdUntil === vc.cdUntil && saved.labs[L.id].lift.warpAt === L.lift.warpAt;
+  SVT.openManagers("floor", "floor", 2); out.card = document.querySelector("#sheet .mcard.assigned .rarity").textContent; document.querySelector('#sheet [aria-label="Close"]').click();
+  [siphon, unicorn, hyper, courier, over, vc].forEach((m) => { SVT.unassign(m.id); SVT.sell(m.id); });
+  quiet(); while (L.floors.length > 1) L.floors.pop(); SVT.render(); // back to one floor: the next step unlocks four more
+  return out;
+});
+console.log("supers", JSON.stringify(supers));
+if (Math.abs(supers.passiveSpeed - 1.15) > 1e-9 || Math.abs(supers.revenue - 1.25) > 1e-9 || Math.abs(supers.whSpeed - 1.1) > 1e-9 || Math.abs(supers.liftOff - 0.1) > 1e-9) errors.push("Super passives wrong: " + JSON.stringify(supers));
+if (Math.abs(supers.siphon.cashGain - 5 * 1.25) > 0.05 || !supers.siphon.stockSame || Math.abs(supers.siphon.active - 45) > 1) errors.push("Dropshipper does not sell from the floor at x5: " + JSON.stringify(supers.siphon));
+if (supers.hyper.crate !== 0 || Math.abs(supers.hyper.speed - 8) > 1e-9 || !supers.hyper.lobbyUp) errors.push("Hyperloop did not empty the crate at 8x: " + JSON.stringify(supers.hyper));
+if (supers.courier.warped1 !== 777 || supers.courier.nextIn !== 5 || supers.courier.floor3 !== 0 || Math.abs(supers.courier.liftCap - 1.2) > 1e-9 || supers.courier.liftOff !== 0.25) errors.push("Quantum Courier warp wrong: " + JSON.stringify(supers.courier));
+if (supers.over.cash !== 3 * 1.25 || Math.abs(supers.over.speed - 8 * 1.1) > 1e-9) errors.push("Overclocker wrong: " + JSON.stringify(supers.over));
+if (Math.abs(supers.cdMult - 0.85) > 1e-9 || supers.vc.floorOff !== 0.9 || supers.vc.liftOff !== 0.93 || /* 1 − 0.75 × 0.1: the Courier's passive cut stacks under the VC */ Math.abs(supers.vc.price - 0.1) > 0.01 || supers.vc.active !== 20 || supers.vc.cd !== Math.round(1200 * 0.85)) errors.push("Venture Capitalist wrong: " + JSON.stringify(supers.vc));
+if (!supers.persist) errors.push("Ability timers are not saved as absolute times");
+if (!/Legendary · The Unicorn/.test(supers.card)) errors.push("Super manager card does not name the special: " + supers.card);
 if (sp === "none" || !sp.kindOk || sp.cls !== "ab-speed" || sp.sp !== String(sp.boost) || sp.speedMult !== sp.boost || Math.abs(sp.ratio - sp.boost) > 0.05 || (sp.boost * 0.45 < 2.5 && sp.leftDrop < 0.4 * sp.boost * 0.8)) errors.push("Speed ability not visible or wrong: " + JSON.stringify(sp));
 if (st === "none" || !st.kindOk || st.cls !== "ab-storage" || st.speedMult !== 1 || Math.abs(st.loadMult / st.nodeMult - 1) > 1e-6 || Math.abs(st.ratio - st.boost) > 0.05) errors.push("Storage ability wrong: " + JSON.stringify(st));
 if (dc === "none" || !dc.kindOk || dc.cls !== "ab-discount" || !dc.deal || Math.abs(dc.cost - (1 - dc.discount)) > 0.02) errors.push("Price ability wrong: " + JSON.stringify(dc));
 // rarity odds: 100k rolls should land near the stated odds
 const dist = await page.evaluate(() => { const c = {}; for (let i = 0; i < 100000; i++) { const k = SVT.rollRank(); c[k] = (c[k] || 0) + 1; } return c; });
-const want = { super: 500, legendary: 1000, epic: 3000, rare: 10000, uncommon: 30000, common: 55500 };
+const want = { legendary: 1500, epic: 3000, rare: 10000, uncommon: 30000, common: 55500 }; // v0.30: Super folded into Legendary
 for (const k in want) if (Math.abs((dist[k] || 0) - want[k]) > Math.max(150, want[k] * 0.06)) errors.push("Rarity odds off for " + k);
 console.log("rarity rolls", JSON.stringify(dist));
 for (let i = 0; i < 4; i++) await page.click("text=/Unlock Floor/");

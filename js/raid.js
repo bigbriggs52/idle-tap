@@ -100,7 +100,7 @@ window.SVT = window.SVT || {};
   // What the UI shows for the raid lab, shaped like an entry in SVT.LABS.
   R.def = (s) => {
     const st = R.stage(s);
-    return { id: "raid", name: st.name, stageName: "Stage " + s + ": " + st.name, theme: "Viking Raid", icon: "⚔️", teams: TEAMS, tiers: TIERS, products: LOOT };
+    return { id: "raid", name: st.name, stageName: "Stage " + s + ": " + st.name, theme: "Viking Raid", icon: "⚔️", crew: ["Digger", "Lift Thrall", "Trader"], teams: TEAMS, tiers: TIERS, products: LOOT };
   };
 
   SVT.RAID = R;
