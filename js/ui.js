@@ -277,13 +277,13 @@ window.SVT = window.SVT || {};
         h("button", { class: "filter" + (ro === role ? " on" : ""), role: "tab", "aria-selected": ro === role ? "true" : "false", onclick: () => openManagers(ro, null, 0),
           title: B.ROLE_NAMES[ro] }, h("span", { "aria-hidden": "true", text: { floor: "🏭", freight: "🛗", commercial: "🏬" }[ro] }), h("small", { text: { floor: "Floors", freight: "Lift", commercial: "Warehouse" }[ro] + " " + SVT.owned(L, ro).length })))));
     }
-    // v0.31: Auto-assign puts the rarest managers on the deepest floors and the best lift and warehouse managers in.
+    // v0.31: Auto-assign puts the rarest Floor Leads on the deepest floors (floors only; cooling-down managers stay put).
     const auto = bind(h("button", { class: "btn auto-assign", onclick: () => {
-      const r = SVT.autoAssign(); const n = r.floor + r.freight + r.commercial;
-      toast(n ? "Auto-assigned " + n + " manager" + (n === 1 ? "" : "s") + ": rarest at the bottom" : "Everyone is already where their rarity puts them");
+      const r = SVT.autoAssign(), n = r.floor;
+      toast((n ? "Auto-assigned " + n + " floor manager" + (n === 1 ? "" : "s") + ": rarest at the bottom" : "Every floor manager is already where their rarity puts them") + (r.skipped ? " · " + r.skipped + " cooling down, left alone" : ""));
       reopen();
-    } }, h("span", { "aria-hidden": "true", text: "🪄" }), h("span", { text: " Auto-assign: best managers at the bottom" })),
-      (e) => setDisabled(e, !Object.keys(L.managers).length));
+    } }, h("span", { "aria-hidden": "true", text: "🪄" }), h("span", { text: " Auto-assign floors: best managers at the bottom" })),
+      (e) => setDisabled(e, !SVT.owned(L, "floor").length));
     parts.push(auto);
     // Ability-type filter: Speed, Storage or Price.
     parts.push(h("div", { class: "filters types", role: "tablist", "aria-label": "Manager type" }, MGR_TYPES.map(([t, ic, label]) =>

@@ -180,16 +180,23 @@ const autoAs = await page.evaluate(() => {
   const mk = (role, rank) => { const m = SVT.hire(role); m.rank = rank; const sp = B.ABILITIES[role].find((a) => a.kind === "special" && a.rank === rank); m.ability = sp ? sp.id : B.ABILITIES[role][0].id; return m; };
   const c = mk("floor", "common"), r = mk("floor", "rare"), l = mk("floor", "legendary"), u = mk("floor", "uncommon"), lc = mk("freight", "common"), le = mk("freight", "epic"), wc = mk("commercial", "rare");
   SVT.assign(c.id, "floor", 4); // a Common sitting on the bottom floor must move up
+  SVT.assign(lc.id, "freight", 0); // v0.31.1: the lift and warehouse are left alone (the Epic stays on the bench)
   SVT.openManagers("floor", null, 0);
   const btn = document.querySelector("#sheet .auto-assign"); btn.click();
   const at = (n) => (SVT.mgrOf(L, "floor", n) || {}).rank;
   const out = { ranks: [at(1), at(2), at(3), at(4)], lift: (SVT.mgrOf(L, "freight", 0) || {}).rank, wh: (SVT.mgrOf(L, "commercial", 0) || {}).rank, floorsUsed: Object.keys(L.assign).filter((k) => k.startsWith("floor:")).length, btn: !!btn };
+  // A cooling-down manager stays where it is and is skipped: the Legendary on floor 2 cools down, so the Rare takes the bottom.
+  Object.keys(L.assign).filter((k) => k.startsWith("floor:")).forEach((k) => delete L.assign[k]);
+  SVT.assign(l.id, "floor", 2); l.cdUntil = SVT.now() + 600;
+  const r2 = SVT.autoAssign();
+  out.cool = { ranks: [at(1), at(2), at(3), at(4)], skipped: r2.skipped }; l.cdUntil = 0;
   SVT.save(); document.querySelector('#sheet [aria-label="Close"]').click();
   L.managers = keepM; L.assign = keepA; while (L.floors.length > 1) L.floors.pop(); SVT.render();
   return out;
 });
 console.log("auto-assign", JSON.stringify(autoAs));
-if (!autoAs.btn || autoAs.ranks.join() !== "common,uncommon,rare,legendary" || autoAs.lift !== "epic" || autoAs.wh !== "rare" || autoAs.floorsUsed !== 4) errors.push("Auto-assign order wrong: " + JSON.stringify(autoAs));
+if (!autoAs.btn || autoAs.ranks.join() !== "common,uncommon,rare,legendary" || autoAs.lift !== "common" || autoAs.wh !== undefined || autoAs.floorsUsed !== 4) errors.push("Auto-assign order wrong: " + JSON.stringify(autoAs));
+if (autoAs.cool.ranks.join() !== "common,legendary,uncommon,rare" || autoAs.cool.skipped !== 1) errors.push("Auto-assign moved or seated a cooling-down manager: " + JSON.stringify(autoAs.cool));
 // rarity odds: 100k rolls should land near the stated odds
 const dist = await page.evaluate(() => { const c = {}; for (let i = 0; i < 100000; i++) { const k = SVT.rollRank(); c[k] = (c[k] || 0) + 1; } return c; });
 const want = { legendary: 1500, epic: 3000, rare: 10000, uncommon: 30000, common: 55500 }; // v0.30: Super folded into Legendary
