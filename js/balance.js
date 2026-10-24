@@ -19,17 +19,18 @@ window.SVT = window.SVT || {};
   }
 
   const B = {
-    VERSION: "0.27.0",
+    VERSION: "0.28.0",
     // Release time in UTC, set with each release. Shown after the version in the player's local time.
-    BUILT: "2026-10-23T22:30Z",
+    BUILT: "2026-10-24T05:10Z",
     FLOORS: 30,
-    // v0.26: lower caps, because the IPO now needs every floor, the lift and the warehouse at max level. Floors stop
-    // at their first big milestone (Lv 10). The hubs cap at Lv 400: that is the income every lab ends with, so the
-    // deep floors must stay affordable against it (grow <= 0.72), and tests/lab-probe.mjs showed Lv 300 cannot carry
-    // floor 30 in the later labs while Lv 600 can never be reached (hub prices outgrow hub capacity).
-    FLOOR_MAX: 10,
+    // v0.26: lower caps, because the IPO needs every floor, the lift and the warehouse at max level. The hubs cap at
+    // Lv 400: that is the income every lab ends with, so the deep floors must stay affordable against it, and
+    // tests/lab-probe.mjs showed Lv 300 cannot carry floor 30 in the later labs while Lv 600 can never be reached (hub
+    // prices outgrow hub capacity). v0.28: floors cap at Lv 100 (was 10); to keep 100 levels of 30 floors payable
+    // against Lv 400 hubs, a floor level costs 5% more than the last (was 12%) and each deeper floor 6x the one above.
+    FLOOR_MAX: 100,
     HUB_MAX: 400,
-    FLOOR_GROWTH: 1.12,
+    FLOOR_GROWTH: 1.05,
     HUB_GROWTH: 1.14,
     FLOOR_STEP: 1.10, // small unlock every 5 levels on floors
     HUB_STEP: 1.02,   // small unlock every 5 levels on hubs
@@ -190,20 +191,20 @@ window.SVT = window.SVT || {};
   };
   B.SELL_REFUND = 0.5;
 
-  // Per-lab price scaling (see SVT.costScale). v0.26: every lab's floor prices grow at most 7.2x per floor (grow 0.72)
-  // so floor 30 stays affordable with the hubs capped at Lv 400; the labs differ by scale, fitted with
+  // Per-lab price scaling (see SVT.costScale). v0.28: every lab's floor prices grow 6x per floor (grow 0.6, was 0.72)
+  // so 100 levels of floor 30 stay affordable with the hubs capped at Lv 400; the labs differ by scale, fitted with
   // tests/lab-goals.mjs to about 2.2h, 2.9h, 4.3h, 7.6h, 13h to IPO for labs 1-5, then 14h rising 6% per lab to
   // about 57h for lab 30.
   B.LAB_DIFF = {
-    garage: { scale: 0.024, grow: 0.55 },
-    arcade: { scale: 0.099, grow: 0.72 },
-    library: { scale: 0.34, grow: 0.72 },
-    maker: { scale: 0.99, grow: 0.72 },
-    studio: { scale: 2, grow: 0.72 },
+    garage: { scale: 0.014, grow: 0.55 },
+    arcade: { scale: 0.099, grow: 0.6 },
+    library: { scale: 0.46, grow: 0.6 },
+    maker: { scale: 1.4, grow: 0.6 },
+    studio: { scale: 2.8, grow: 0.6 },
   };
-  // Labs 6-30: scale from tests/lab-goals.mjs (about 6% more time per lab), grow 0.72 everywhere.
-  const SCALE_6_30 = [2.2, 2.4, 2.6, 2.7, 2.9, 3.1, 3.3, 3.5, 3.7, 4, 4.2, 4.5, 4.8, 5.1, 5.4, 5.8, 6.1, 6.5, 6.9, 7.3, 7.8, 8.2, 8.7, 9.3, 9.8];
-  SVT.LABS.slice(5).forEach((l, i) => { B.LAB_DIFF[l.id] = { scale: SCALE_6_30[i], grow: 0.72 }; });
+  // Labs 6-30: scale from tests/lab-goals.mjs (about 6% more time per lab), grow 0.6 everywhere.
+  const SCALE_6_30 = [3.1, 3.4, 3.5, 3.8, 4.1, 4.3, 4.6, 4.9, 5.2, 5.6, 5.9, 6.3, 6.7, 7.2, 7.6, 8.1, 8.6, 9.1, 9.7, 10, 11, 12, 12, 13, 14];
+  SVT.LABS.slice(5).forEach((l, i) => { B.LAB_DIFF[l.id] = { scale: SCALE_6_30[i], grow: 0.6 }; });
 
   B.tierOf = (n) => SVT.TIERS.findIndex((t) => n >= t.from && n <= t.to);
 

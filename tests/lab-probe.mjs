@@ -4,6 +4,8 @@ import { loadGame, play } from "./pace.mjs";
 const SVT = loadGame(), B = SVT.B;
 if (process.env.FLOOR_MAX) B.FLOOR_MAX = +process.env.FLOOR_MAX;
 if (process.env.HUB_MAX) B.HUB_MAX = +process.env.HUB_MAX;
+if (process.env.FLOOR_GROWTH) B.FLOOR_GROWTH = +process.env.FLOOR_GROWTH;
+if (process.env.GROW) for (const id in B.LAB_DIFF) B.LAB_DIFF[id].grow = +process.env.GROW;
 const h = (s) => (s / 3600).toFixed(2) + "h";
 for (const id of (process.argv[2] || "garage").split(",")) {
   if (process.env.SCALE) B.LAB_DIFF[id].scale = +process.env.SCALE;
