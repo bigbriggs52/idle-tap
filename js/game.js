@@ -611,17 +611,7 @@ window.SVT = window.SVT || {};
     emit("change");
     return true;
   };
-  // Selling refunds half the hire price. Only managers who are not working can be sold.
-  SVT.sell = (id) => {
-    const lab = SVT.lab();
-    const m = lab.managers[id];
-    if (!m || SVT.slotOfMgr(lab, id)) return false;
-    lab.cash += m.paid * B.SELL_REFUND;
-    delete lab.managers[id];
-    emit("assign", { id });
-    emit("change");
-    return true;
-  };
+  // v0.31.2: managers cannot be sold (user rule); benched managers simply wait in the Owned list.
 
   SVT.activate = (kind, n) => {
     const lab = SVT.lab();

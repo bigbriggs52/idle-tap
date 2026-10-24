@@ -2,6 +2,11 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.31.2 (2026-10-24)
+
+- Managers can no longer be sold. Benched managers wait in the Owned list until you assign them.
+- Hiring from a floor, lift or warehouse panel no longer swaps out the manager working there while that manager's ability is running; the new hire goes to the bench instead and the toast says why.
+
 ## v0.31.1 (2026-10-24)
 
 - Auto-assign now touches floors only: the lift and the warehouse keep whoever you put there. A manager whose ability is running or cooling down is never moved or seated; it stays on its floor and the sort works around it. The toast says how many were left alone.
