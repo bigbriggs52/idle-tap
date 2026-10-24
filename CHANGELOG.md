@@ -2,6 +2,10 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.31.1 (2026-10-24)
+
+- Auto-assign now touches floors only: the lift and the warehouse keep whoever you put there. A manager whose ability is running or cooling down is never moved or seated; it stays on its floor and the sort works around it. The toast says how many were left alone.
+
 ## v0.31.0 (2026-10-24)
 
 - Auto-assign button in the Managers panel: the rarest Floor Lead runs the deepest floor, the next rarest the floor above it, and so on up the mine, so super managers sit at the bottom and Commons at the top. The lift and the warehouse get the best manager you own for them. Managers already at work are re-sorted too, and floors left over go unmanned.

@@ -580,28 +580,27 @@ window.SVT = window.SVT || {};
     emit("change");
     return true;
   };
-  // v0.31: Auto-assign. Floors get the best owned Floor Leads from the bottom up: the rarest manager runs the deepest
-  // floor, the next rarest the floor above, and so on; the lift and the warehouse get the best owned manager of their
-  // role. Managers already at work are included in the sort, so everyone ends up where their rarity says.
+  // v0.31: Auto-assign, floors only (v0.31.1: the lift and the warehouse are left alone). The best owned Floor Leads
+  // go in from the bottom up: the rarest manager runs the deepest floor, the next rarest the floor above, and so on.
+  // A manager whose ability is running or cooling down stays exactly where it is and is never moved or seated.
   SVT.autoAssign = () => {
-    const lab = SVT.lab();
-    const moved = { floor: 0, freight: 0, commercial: 0 };
-    const place = (m, kind, n) => {
-      const key = SVT.slotKey(kind, n);
-      if (lab.assign[key] === m.id) return;
+    const lab = SVT.lab(), t = now();
+    const busy = (m) => m.activeUntil > t || m.cdUntil > t;
+    const pool = SVT.owned(lab, "floor").filter((m) => !busy(m)); // rarest first, newest first within a rarity
+    let moved = 0, i = 0;
+    for (let n = lab.floors.length; n >= 1; n--) {
+      const key = SVT.slotKey("floor", n), cur = lab.managers[lab.assign[key]];
+      if (cur && busy(cur)) continue; // leave a cooling-down manager on its floor
+      const m = pool[i++];
+      if (!m) { if (cur) { delete lab.assign[key]; moved++; } continue; }
+      if (lab.assign[key] === m.id) continue;
       const from = SVT.slotOfMgr(lab, m.id);
       if (from) delete lab.assign[from];
-      lab.assign[key] = m.id; moved[kind]++;
-    };
-    const floors = SVT.owned(lab, "floor"); // rarest first, newest first within a rarity
-    for (let n = lab.floors.length, i = 0; n >= 1; n--) {
-      if (i < floors.length) place(floors[i++], "floor", n);
-      else delete lab.assign[SVT.slotKey("floor", n)];
+      lab.assign[key] = m.id; moved++;
     }
-    for (const kind of ["freight", "commercial"]) { const best = SVT.owned(lab, kind)[0]; if (best) place(best, kind, 0); }
     emit("assign", { auto: true });
     emit("change");
-    return moved;
+    return { floor: moved, skipped: SVT.owned(lab, "floor").length - pool.length };
   };
   SVT.unassign = (id) => {
     const lab = SVT.lab();
