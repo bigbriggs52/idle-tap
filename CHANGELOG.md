@@ -2,6 +2,10 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.31.0 (2026-10-24)
+
+- Auto-assign button in the Managers panel: the rarest Floor Lead runs the deepest floor, the next rarest the floor above it, and so on up the mine, so super managers sit at the bottom and Commons at the top. The lift and the warehouse get the best manager you own for them. Managers already at work are re-sorted too, and floors left over go unmanned.
+
 ## v0.30.0 (2026-10-24)
 
 - Managers overhauled into five tiers. Common, Uncommon and Rare managers are regular managers with one of three abilities whose power and timers come from the tier: Speed ×2.5 / ×4 / ×6 and Storage ×2 / ×3.5 / ×5 for 1 / 2 / 3 min with a 5 / 10 / 15 min cooldown, Price −30% / −50% / −70% for 15 / 20 / 30 s with a 3 / 5 / 8 min cooldown. The old Super rank folded into Legendary (now 1.5%).

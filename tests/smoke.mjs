@@ -173,6 +173,23 @@ if (!/Legendary · The Unicorn/.test(supers.card)) errors.push("Super manager ca
 if (sp === "none" || !sp.kindOk || sp.cls !== "ab-speed" || sp.sp !== String(sp.boost) || sp.speedMult !== sp.boost || Math.abs(sp.ratio - sp.boost) > 0.05 || (sp.boost * 0.45 < 2.5 && sp.leftDrop < 0.4 * sp.boost * 0.8)) errors.push("Speed ability not visible or wrong: " + JSON.stringify(sp));
 if (st === "none" || !st.kindOk || st.cls !== "ab-storage" || st.speedMult !== 1 || Math.abs(st.loadMult / st.nodeMult - 1) > 1e-6 || Math.abs(st.ratio - st.boost) > 0.05) errors.push("Storage ability wrong: " + JSON.stringify(st));
 if (dc === "none" || !dc.kindOk || dc.cls !== "ab-discount" || !dc.deal || Math.abs(dc.cost - (1 - dc.discount)) > 0.02) errors.push("Price ability wrong: " + JSON.stringify(dc));
+// v0.31: Auto-assign puts the rarest floor managers on the deepest floors, best lift and warehouse managers in.
+const autoAs = await page.evaluate(() => {
+  const L = SVT.lab(), B = SVT.B; L.cash = 1e15; while (L.floors.length < 4) L.floors.push({ lvl: 1, stock: 0, left: 0 });
+  const keepM = L.managers, keepA = L.assign; L.managers = {}; L.assign = {}; // restored below
+  const mk = (role, rank) => { const m = SVT.hire(role); m.rank = rank; const sp = B.ABILITIES[role].find((a) => a.kind === "special" && a.rank === rank); m.ability = sp ? sp.id : B.ABILITIES[role][0].id; return m; };
+  const c = mk("floor", "common"), r = mk("floor", "rare"), l = mk("floor", "legendary"), u = mk("floor", "uncommon"), lc = mk("freight", "common"), le = mk("freight", "epic"), wc = mk("commercial", "rare");
+  SVT.assign(c.id, "floor", 4); // a Common sitting on the bottom floor must move up
+  SVT.openManagers("floor", null, 0);
+  const btn = document.querySelector("#sheet .auto-assign"); btn.click();
+  const at = (n) => (SVT.mgrOf(L, "floor", n) || {}).rank;
+  const out = { ranks: [at(1), at(2), at(3), at(4)], lift: (SVT.mgrOf(L, "freight", 0) || {}).rank, wh: (SVT.mgrOf(L, "commercial", 0) || {}).rank, floorsUsed: Object.keys(L.assign).filter((k) => k.startsWith("floor:")).length, btn: !!btn };
+  SVT.save(); document.querySelector('#sheet [aria-label="Close"]').click();
+  L.managers = keepM; L.assign = keepA; while (L.floors.length > 1) L.floors.pop(); SVT.render();
+  return out;
+});
+console.log("auto-assign", JSON.stringify(autoAs));
+if (!autoAs.btn || autoAs.ranks.join() !== "common,uncommon,rare,legendary" || autoAs.lift !== "epic" || autoAs.wh !== "rare" || autoAs.floorsUsed !== 4) errors.push("Auto-assign order wrong: " + JSON.stringify(autoAs));
 // rarity odds: 100k rolls should land near the stated odds
 const dist = await page.evaluate(() => { const c = {}; for (let i = 0; i < 100000; i++) { const k = SVT.rollRank(); c[k] = (c[k] || 0) + 1; } return c; });
 const want = { legendary: 1500, epic: 3000, rare: 10000, uncommon: 30000, common: 55500 }; // v0.30: Super folded into Legendary
