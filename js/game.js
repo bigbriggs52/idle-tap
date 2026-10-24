@@ -53,7 +53,7 @@ window.SVT = window.SVT || {};
   // wears on the home screen (slot -> item id).
   function newVault() { return { coins: {}, wild: B.VAULT.START_COINS, beats: {}, items: [], pity: 0, spent: 0, serial: 0, replay: null, show: {} }; }
   function newState() {
-    return { rounds6: true, v: 3, activeLab: "garage", buy: "next", labs: { garage: newLab("garage") }, raid: { cleared: 0 }, rush: newRush(), vault: newVault(), lastSeen: Date.now(), seenIntro: false };
+    return { rounds6: true, mgr5: true, v: 3, activeLab: "garage", buy: "next", labs: { garage: newLab("garage") }, raid: { cleared: 0 }, rush: newRush(), vault: newVault(), lastSeen: Date.now(), seenIntro: false };
   }
 
   let S = newState();
@@ -231,34 +231,82 @@ window.SVT = window.SVT || {};
     return (SVT.nodeOf(lab, kind, n).left || 0) > 0;
   };
   SVT.cycleTime = (kind) => (kind === "floor" ? B.FLOOR_CYCLE : B.WH_TRIP);
-  // Throughput multiplier from the node's manager: passive bonus x active boost (speed or storage).
-  SVT.nodeMult = (lab, kind, n, t) => {
-    const m = SVT.mgrOf(lab, kind, n);
-    // Viking Raid omens tilt each part of the mine (abilities work there too since v0.23).
-    const omen = SVT.isRaid(lab) ? SVT.raidStage(lab).mult[kind] : SVT.rushMult(t) * vaultMult;
-    if (!m) return omen;
-    const r = SVT.rank(m.rank);
-    let x = (1 + r.passive) * omen;
-    const ab = SVT.ability(roleOf(kind), m.ability);
-    if (ab.kind !== "discount" && m.activeUntil > (t || now())) x *= r.boost;
-    return x;
+  // ---------- manager effects (v0.30) ----------
+  // Effective stat = base stat x passive multiplier x active multiplier. Passives come from a super manager assigned
+  // to the node (or, for revenue and cooldowns, anywhere in the lab); actives from the running ability. Timers
+  // (activeUntil, cdUntil, lift.warpAt) are absolute times stored in the save, so they carry across reloads.
+  SVT.abilityOf = (m) => SVT.ability(m.role, m.ability);
+  SVT.isSuper = (m) => !!m && SVT.abilityOf(m).kind === "special";
+  SVT.isActive = (m, t) => !!m && m.activeUntil > (t || now());
+  // Active seconds, cooldown seconds and headline numbers of a manager's ability.
+  SVT.abilityStats = (m) => {
+    const ab = SVT.abilityOf(m);
+    if (ab.kind === "special") return { active: ab.active, cooldown: ab.cooldown, mult: ab.speed || ab.direct || ab.cash || 1, off: ab.allDiscount || 0 };
+    const st = B.ABILITY_STATS[m.rank][ab.kind];
+    return { active: st.active, cooldown: st.cooldown, mult: st.mult || 1, off: st.off || 0 };
   };
-  // The ability running on a node right now: { kind, mult } or null. Speed shows as faster cycles, trips and
-  // animation; storage as bigger loads; discount on the upgrade prices.
+  // The super manager on a node, if any: { ab, m, live }.
+  const superOn = (lab, kind, n, t) => {
+    const m = SVT.mgrOf(lab, kind, n);
+    return SVT.isSuper(m) ? { ab: SVT.abilityOf(m), m, live: SVT.isActive(m, t) } : null;
+  };
+  // Lab-wide multipliers from outside the manager system: omens in Viking Raid, Rush and Vault bonuses in the labs.
+  const worldMult = (lab, kind, t) => (SVT.isRaid(lab) ? SVT.raidStage(lab).mult[kind] : SVT.rushMult(t) * vaultMult);
+  // Passives of the node's super manager (always on while assigned): speed, load and that node's price cut.
+  SVT.passives = (lab, kind, n) => {
+    const s = superOn(lab, kind, n), p = (s && s.ab.passive) || {};
+    return { speed: 1 + (p.speed || 0), load: 1 + (p.load || 0), discount: p.discount || 0 };
+  };
+  // Lab-wide passives: +revenue (The Unicorn) and shorter cooldowns (The Venture Capitalist). The best one counts.
+  const labPassive = (lab, key) => {
+    let best = 0;
+    for (const k in lab.assign) { const m = lab.managers[lab.assign[k]]; if (m && SVT.isSuper(m)) best = Math.max(best, (SVT.abilityOf(m).passive || {})[key] || 0); }
+    return best;
+  };
+  SVT.revenueMult = (lab) => 1 + labPassive(lab, "revenue");
+  SVT.cooldownMult = (lab) => 1 - labPassive(lab, "cooldowns");
+  // The ability running on a node right now, or null. Regular: { kind, mult } plus speed/load/off; special: kind
+  // "special" with id, icon and its effects (speed, load, direct = sell from the floor at x cash, cash = x on
+  // deliveries, vacuum = the lift empties crates in one go, warp = seconds between floor-to-surface jumps, off =
+  // lab-wide price cut).
   SVT.activeAbility = (lab, kind, n, t) => {
     const m = SVT.mgrOf(lab, kind, n);
-    if (!m || !(m.activeUntil > (t || now()))) return null;
-    const ab = SVT.ability(roleOf(kind), m.ability), r = SVT.rank(m.rank);
-    return { kind: ab.kind, mult: ab.kind === "discount" ? r.discount : r.boost };
+    if (!SVT.isActive(m, t)) return null;
+    const ab = SVT.abilityOf(m);
+    if (ab.kind === "special") {
+      return { kind: "special", id: ab.id, name: ab.name, icon: ab.icon, mult: ab.speed || ab.direct || ab.cash || ab.allDiscount || 1, speed: ab.speed || 1, load: 1,
+        direct: ab.direct || 0, cash: ab.cash || 1, vacuum: !!ab.vacuum, warp: ab.warp || 0, off: ab.allDiscount || 0 };
+    }
+    const st = B.ABILITY_STATS[m.rank][ab.kind];
+    return { kind: ab.kind, id: ab.id, name: ab.name, icon: B.ABILITY_KINDS[ab.kind].icon, mult: ab.kind === "discount" ? st.off : st.mult,
+      speed: ab.kind === "speed" ? st.mult : 1, load: ab.kind === "storage" ? st.mult : 1, direct: 0, cash: 1, vacuum: false, warp: 0, off: ab.kind === "discount" ? st.off : 0 };
   };
-  // How much faster the node runs (speed ability), and how much more each cycle or trip carries (everything else).
-  SVT.speedMult = (lab, kind, n, t) => { const a = SVT.activeAbility(lab, kind, n, t); return a && a.kind === "speed" ? a.mult : 1; };
-  SVT.loadMult = (lab, kind, n, t) => SVT.nodeMult(lab, kind, n, t) / SVT.speedMult(lab, kind, n, t);
+  // How much faster the node runs: passive speed x active speed. Cycles, trips and animations all follow it.
+  SVT.speedMult = (lab, kind, n, t) => {
+    const a = SVT.activeAbility(lab, kind, n, t);
+    return SVT.passives(lab, kind, n).speed * (a ? a.speed : 1);
+  };
+  // How much more each cycle, trip or cart carries: passive load x active load x world multipliers.
+  SVT.loadMult = (lab, kind, n, t) => {
+    const a = SVT.activeAbility(lab, kind, n, t);
+    return SVT.passives(lab, kind, n).load * (a ? a.load : 1) * worldMult(lab, kind, t);
+  };
+  // Throughput multiplier of a node: speed x load.
+  SVT.nodeMult = (lab, kind, n, t) => SVT.speedMult(lab, kind, n, t) * SVT.loadMult(lab, kind, n, t);
+  // Cash multiplier on everything the lab earns: the Unicorn's +25%, and x3 on deliveries while the Overclocker runs.
+  SVT.cashMult = (lab, t, delivered) => {
+    let x = SVT.revenueMult(lab);
+    if (delivered) { const a = SVT.activeAbility(lab, "commercial", 0, t); if (a) x *= a.cash; }
+    return x;
+  };
+  // Price cut on a node: its own Price ability or the lab-wide Venture Capitalist cut (the bigger one), on top of the
+  // super manager's passive cut. 0.4 means 40% off.
+  SVT.labDiscount = (lab, t) => { const a = SVT.activeAbility(lab, "commercial", 0, t); return a ? a.off : 0; };
   SVT.discount = (lab, kind, n, t) => {
-    const m = SVT.mgrOf(lab, kind, n);
-    if (!m) return 0;
-    const ab = SVT.ability(roleOf(kind), m.ability);
-    return ab.kind === "discount" && m.activeUntil > (t || now()) ? SVT.rank(m.rank).discount : 0;
+    const a = SVT.activeAbility(lab, kind, n, t);
+    const own = a && a.kind === "discount" ? a.off : 0;
+    const active = Math.max(own, SVT.labDiscount(lab, t));
+    return 1 - (1 - SVT.passives(lab, kind, n).discount) * (1 - active);
   };
 
   // Rates in $/s (what each node could move if running).
@@ -266,12 +314,15 @@ window.SVT = window.SVT || {};
     t = t || now();
     const P = SVT.prestigeMult(lab), depth = lab.floors.length;
     const floors = lab.floors.map((f, i) => B.floorOutput(i + 1, f.lvl) * P * SVT.nodeMult(lab, "floor", i + 1, t));
-    const build = floors.reduce((a, b) => a + b, 0);
+    // Floors selling straight from the floor (Dropshipper, Unicorn) bypass the lift and the warehouse.
+    let build = 0, direct = 0;
+    floors.forEach((r, i) => { const a = SVT.activeAbility(lab, "floor", i + 1, t); if (a && a.direct) direct += r * a.direct; else build += r; });
     const freight = B.freightCap(lab.freight.lvl, depth) * P * SVT.nodeMult(lab, "freight", 0, t);
     const commercial = B.commercialCap(lab.commercial.lvl) * P * SVT.nodeMult(lab, "commercial", 0, t);
     const min = Math.min(build, freight, commercial);
     const limit = min === build ? "build" : min === freight ? "freight" : "commercial";
-    return { floors, build, freight, commercial, income: min, limit };
+    const income = min * SVT.cashMult(lab, t, true) + direct * SVT.cashMult(lab, t);
+    return { floors, build, freight, commercial, direct, income, limit };
   };
 
   // ---------- lift ----------
@@ -305,6 +356,8 @@ window.SVT = window.SVT || {};
       } else if (L.phase === "load") {
         if (L.timer > 0) { if (L.timer > dt) { L.timer -= dt; return; } dt -= L.timer; L.timer = 0; }
         const f = lab.floors[L.at - 1], cap = SVT.liftCapacity(lab, t), rate = SVT.liftLoadRate(lab, t);
+        const hyper = SVT.activeAbility(lab, "freight", 0, t);
+        if (hyper && hyper.vacuum && f) { L.load += f.stock; f.stock = 0; L.phase = "down"; continue; } // The Hyperloop: the whole crate in one go
         const want = Math.min(cap - L.load, f ? f.stock : 0);
         if (want > 1e-9) {
           const used = Math.min(dt, want / rate), take = Math.min(want, rate * used);
@@ -331,16 +384,22 @@ window.SVT = window.SVT || {};
   // A tap runs one cycle or trip; a manager starts the next one straight away.
   // `left` counts down in base seconds (a full cycle is FLOOR_CYCLE, a trip WH_TRIP) and runs sp times faster
   // under a speed ability, so the countdown bars, the cart and the workers all visibly speed up.
+  // Returns the cash a floor sold directly (Dropshipper / Unicorn active: the cycle's output skips the lift and the
+  // warehouse and is paid at x value straight away).
   function stepFloor(lab, f, n, dt, t) {
     const mgr = !!SVT.mgrOf(lab, "floor", n), T = B.FLOOR_CYCLE, sp = SVT.speedMult(lab, "floor", n, t);
     dt *= sp;
-    let guard = 50;
+    let guard = 50, earned = 0;
     while (dt > 1e-9 && guard-- > 0) {
-      if (!(f.left > 0)) { if (!mgr) return; f.left = T; }
-      if (f.left > dt) { f.left -= dt; return; }
+      if (!(f.left > 0)) { if (!mgr) return earned; f.left = T; }
+      if (f.left > dt) { f.left -= dt; return earned; }
       dt -= f.left; f.left = 0;
-      f.stock += B.floorOutput(n, f.lvl) * SVT.prestigeMult(lab) * SVT.loadMult(lab, "floor", n, t) * T;
+      const out = B.floorOutput(n, f.lvl) * SVT.prestigeMult(lab) * SVT.loadMult(lab, "floor", n, t) * T;
+      const a = SVT.activeAbility(lab, "floor", n, t);
+      if (a && a.direct) { const cash = out * a.direct * SVT.cashMult(lab, t); lab.cash += cash; lab.lifetime += cash; earned += cash; }
+      else f.stock += out;
     }
+    return earned;
   }
   function stepWarehouse(lab, dt, t) {
     const c = lab.commercial, mgr = !!SVT.mgrOf(lab, "commercial", 0);
@@ -362,7 +421,8 @@ window.SVT = window.SVT || {};
       }
       if (c.left > dt) { c.left -= dt; return earned; }
       dt -= c.left; c.left = 0;
-      earned += c.carry || 0; lab.cash += c.carry || 0; lab.lifetime += c.carry || 0; c.carry = 0;
+      const pay = (c.carry || 0) * SVT.cashMult(lab, t, true); // v0.30: Unicorn +25%, Overclocker x3 on deliveries
+      earned += pay; lab.cash += pay; lab.lifetime += pay; c.carry = 0;
     }
     return earned;
   }
@@ -373,9 +433,16 @@ window.SVT = window.SVT || {};
     c.carry = 0; c.loaded = false; c.left = B.WH_TRIP;
   };
   function tickLab(lab, dt, t) {
-    lab.floors.forEach((f, i) => stepFloor(lab, f, i + 1, dt, t));
+    let earned = 0;
+    lab.floors.forEach((f, i) => { earned += stepFloor(lab, f, i + 1, dt, t); });
+    // The Quantum Courier: every `warp` seconds, everything on every floor jumps to the top of the shaft.
+    const warp = SVT.activeAbility(lab, "freight", 0, t);
+    if (warp && warp.warp) {
+      const L = lab.lift || (lab.lift = newLift());
+      if (!(L.warpAt > t)) { lab.floors.forEach((f) => { lab.lobby += f.stock; f.stock = 0; }); L.warpAt = t + warp.warp; lab.warped = t; }
+    }
     stepLift(lab, dt, t);
-    const earned = stepWarehouse(lab, dt, t);
+    earned += stepWarehouse(lab, dt, t);
     const a = Math.min(1, dt / 8); // income arrives per trip, so smooth over a few trips
     lab.rate = lab.rate * (1 - a) + (earned / dt) * a;
     if (SVT.isRaid(lab) && !lab.won && SVT.raidProgress(lab).p >= 1) {
@@ -488,8 +555,9 @@ window.SVT = window.SVT || {};
     const cost = SVT.hireCost(lab, role);
     if (lab.cash < cost) return false;
     lab.cash -= cost;
-    const rank = SVT.rollRank();
-    const list = B.ABILITIES[role];
+    const rank = SVT.rollRank(), r = SVT.rank(rank);
+    // Epic and Legendary hires are the role's named super manager; the rest roll one of the three regular abilities.
+    const list = B.ABILITIES[role].filter((a) => (r.super ? a.rank === rank : a.kind !== "special"));
     const ability = list[Math.floor(Math.random() * list.length)].id;
     const names = SVT.MANAGER_NAMES;
     const mgr = { id: lab.nextMgr++, role, rank, ability, name: names[Math.floor(Math.random() * names.length)], paid: cost, activeUntil: 0, cdUntil: 0 };
@@ -538,9 +606,9 @@ window.SVT = window.SVT || {};
     const m = SVT.mgrOf(lab, kind, n);
     const t = now();
     if (!m || m.cdUntil > t) return false;
-    const ab = SVT.ability(roleOf(kind), m.ability);
-    m.activeUntil = t + B.abilitySeconds(SVT.rank(m.rank)); // v0.29: the rank sets how long it lasts
-    m.cdUntil = m.activeUntil + SVT.rank(m.rank).cooldown;
+    const st = SVT.abilityStats(m); // v0.30: the tier (or the super manager's special) sets both timers
+    m.activeUntil = t + st.active;
+    m.cdUntil = m.activeUntil + st.cooldown * SVT.cooldownMult(lab);
     emit("ability", { kind, n });
     emit("change");
     return true;
@@ -647,6 +715,16 @@ window.SVT = window.SVT || {};
         if (d && d.v === 2 && d.labs && d.labs.garage) S = migrateV2(d);
         else if (d && d.v === 3 && d.labs && d.labs.garage) S = d;
       } catch (e) {}
+    }
+    if (!S.mgr5) { // v0.30: five tiers. Super managers become Legendary; Epic and Legendary managers get their role's special.
+      for (const id in S.labs) for (const mid in S.labs[id].managers) {
+        const m = S.labs[id].managers[mid];
+        if (m.rank === "super") m.rank = "legendary";
+        const r = SVT.rank(m.rank);
+        if (r && r.super) { const sp = B.ABILITIES[m.role].find((a) => a.kind === "special" && a.rank === m.rank); if (sp) m.ability = sp.id; }
+        else if (r && (B.ABILITIES[m.role].find((a) => a.id === m.ability) || {}).kind === "special") m.ability = B.ABILITIES[m.role][0].id;
+      }
+      S.mgr5 = true;
     }
     if (S.buy === 100 || S.buy === 50) S.buy = "max"; // v0.20.1 drops the ×50 chip (and v0.6 dropped ×100): Max rounds to 50s
     if (!S.raid) S.raid = { cleared: 0 }; // v0.12 adds the Viking Raid island

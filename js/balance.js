@@ -19,9 +19,9 @@ window.SVT = window.SVT || {};
   }
 
   const B = {
-    VERSION: "0.29.0",
+    VERSION: "0.30.0",
     // Release time in UTC, set with each release. Shown after the version in the player's local time.
-    BUILT: "2026-10-24T14:45Z",
+    BUILT: "2026-10-24T16:00Z",
     FLOORS: 30,
     // v0.26: lower caps, because the IPO needs every floor, the lift and the warehouse at max level. The hubs cap at
     // Lv 400: that is the income every lab ends with, so the deep floors must stay affordable against it, and
@@ -59,17 +59,24 @@ window.SVT = window.SVT || {};
       { name: "IPO", mult: 4, needFloor: 30, maxed: true },
     ],
 
-    // v0.29: an ability runs for the rank's `minutes` (Legendary 10, Epic 7, Rare 4, Uncommon 2, Common 1, Super 15),
-    // then the rank's cooldown. The same timer serves every kind: speed, storage and price.
+    // v0.30: five tiers. Common, Uncommon and Rare managers run one of three regular abilities (speed, storage,
+    // price) whose strength, active time and cooldown come from the tier (ABILITY_STATS). Epic and Legendary
+    // managers are super managers: each role has one named Epic and one named Legendary (the "special" entries in
+    // ABILITIES) with a game-changing active and a permanent passive. The old Super rank folded into Legendary.
     RANKS: [
       // Rarest first. Every hire rolls independently against these odds.
-      { id: "super", name: "Super", odds: 0.005, boost: 10, discount: 0.90, minutes: 15, cooldown: 6 * 60, passive: 1.00 },
-      { id: "legendary", name: "Legendary", odds: 0.01, boost: 7, discount: 0.80, minutes: 10, cooldown: 8 * 60, passive: 0.50 },
-      { id: "epic", name: "Epic", odds: 0.03, boost: 5, discount: 0.70, minutes: 7, cooldown: 10 * 60, passive: 0.25 },
-      { id: "rare", name: "Rare", odds: 0.10, boost: 4, discount: 0.60, minutes: 4, cooldown: 12 * 60, passive: 0.10 },
-      { id: "uncommon", name: "Uncommon", odds: 0.30, boost: 3, discount: 0.50, minutes: 2, cooldown: 14 * 60, passive: 0.05 },
-      { id: "common", name: "Common", odds: 0.555, boost: 2, discount: 0.40, minutes: 1, cooldown: 15 * 60, passive: 0 },
+      { id: "legendary", name: "Legendary", odds: 0.015, super: true },
+      { id: "epic", name: "Epic", odds: 0.03, super: true },
+      { id: "rare", name: "Rare", odds: 0.10 },
+      { id: "uncommon", name: "Uncommon", odds: 0.30 },
+      { id: "common", name: "Common", odds: 0.555 },
     ],
+    // Regular abilities by tier: mult (speed or load), off (price cut), active seconds, cooldown seconds after the run.
+    ABILITY_STATS: {
+      common: { speed: { mult: 2.5, active: 60, cooldown: 300 }, storage: { mult: 2, active: 60, cooldown: 300 }, discount: { off: 0.30, active: 15, cooldown: 180 } },
+      uncommon: { speed: { mult: 4, active: 120, cooldown: 600 }, storage: { mult: 3.5, active: 120, cooldown: 600 }, discount: { off: 0.50, active: 20, cooldown: 300 } },
+      rare: { speed: { mult: 6, active: 180, cooldown: 900 }, storage: { mult: 5, active: 180, cooldown: 900 }, discount: { off: 0.70, active: 30, cooldown: 480 } },
+    },
     // Assembly Line Rush (mini game): a 45-second sorting run with 3 lives. The score picks a timed income boost
     // for every lab (not Viking Raid). One run per cooldown; a new boost replaces the old one only if it is bigger.
     RUSH: {
@@ -115,27 +122,40 @@ window.SVT = window.SVT || {};
       BONUS: [{ chance: 0.2, mult: 1.05 }, { chance: 0.35, mult: 1.1 }, { chance: 0.5, mult: 1.15 }, { chance: 0.7, mult: 1.25 }, { chance: 1, mult: 1.35 }, { chance: 1, mult: 1.5 }],
       MAX_BONUS: 3,
     },
-    // v0.21: three ability kinds. "speed" runs the node faster (shorter cycles, a quicker lift and cart), "storage"
-    // makes every cycle, lift trip and cart load carry more, "discount" cuts upgrade prices. Speed and storage both
-    // multiply throughput by the rank's boost; you see the difference in how the lab moves.
+    // Regular abilities (Common to Rare): "speed" runs the node faster (shorter cycles, a quicker lift and cart),
+    // "storage" makes every cycle, lift trip and cart load carry more, "discount" cuts that node's upgrade prices.
+    // Super managers (Epic, Legendary) each have one named special with its own active and a passive that is always
+    // on while they are assigned. Timers are absolute times in the save, so they survive a reload.
     ABILITIES: {
       floor: [
         { id: "crunch", name: "Crunch Time", kind: "speed" },
         { id: "hackathon", name: "Big Batch", kind: "storage" },
         { id: "budget", name: "Budget Cut", kind: "discount" },
+        { id: "siphon", name: "The Dropshipper", kind: "special", rank: "epic", icon: "📦", active: 45, cooldown: 15 * 60, direct: 5,
+          passive: { speed: 0.15 }, text: "Products skip the lift and the warehouse and sell straight from the floor at 5× value.", passiveText: "+15% build speed on its floor, always" },
+        { id: "midas", name: "The Unicorn", kind: "special", rank: "legendary", icon: "🦄", active: 30, cooldown: 30 * 60, direct: 15,
+          passive: { revenue: 0.25 }, text: "Every build cycle sells straight from the floor at 15× value.", passiveText: "+25% to everything this lab earns while assigned anywhere" },
       ],
       freight: [
         { id: "express", name: "Express Lift", kind: "speed" },
         { id: "bulk", name: "Bulk Freight", kind: "storage" },
         { id: "vendor", name: "Vendor Deal", kind: "discount" },
+        { id: "turbine", name: "The Hyperloop", kind: "special", rank: "epic", icon: "🌀", active: 45, cooldown: 15 * 60, speed: 8, vacuum: true,
+          passive: { discount: 0.10 }, text: "Lift at 8× speed, and it empties every crate it stops at in one go.", passiveText: "−10% on lift upgrades, always" },
+        { id: "wormhole", name: "The Quantum Courier", kind: "special", rank: "legendary", icon: "🕳️", active: 30, cooldown: 30 * 60, warp: 5,
+          passive: { discount: 0.25, load: 0.20 }, text: "Every 5 s, everything on every floor jumps to the top of the shaft.", passiveText: "−25% on lift upgrades and +20% lift capacity, always" },
       ],
       commercial: [
         { id: "blitz", name: "Launch Blitz", kind: "speed" },
         { id: "fleet", name: "Fleet Expansion", kind: "storage" },
         { id: "contract", name: "Bulk Contract", kind: "discount" },
+        { id: "overclock", name: "The Overclocker", kind: "special", rank: "epic", icon: "🔥", active: 45, cooldown: 15 * 60, speed: 8, cash: 3,
+          passive: { speed: 0.10 }, text: "Carts at 8× speed and 3× cash on every delivery.", passiveText: "+10% cart speed, always" },
+        { id: "baron", name: "The Venture Capitalist", kind: "special", rank: "legendary", icon: "💼", active: 20, cooldown: 20 * 60, allDiscount: 0.90,
+          passive: { cooldowns: 0.15 }, text: "−90% on every upgrade in the lab: floors, lift and warehouse.", passiveText: "Every manager's cooldown in this lab is 15% shorter, always" },
       ],
     },
-    ABILITY_KINDS: { speed: { icon: "⚡", name: "Speed" }, storage: { icon: "📦", name: "Storage" }, discount: { icon: "💸", name: "Price" } },
+    ABILITY_KINDS: { special: { icon: "🌟", name: "Super" }, speed: { icon: "⚡", name: "Speed" }, storage: { icon: "📦", name: "Storage" }, discount: { icon: "💸", name: "Price" } },
     ROLE_NAMES: { floor: "Floor Lead", freight: "Logistics Lead", commercial: "Commercial Director" },
   };
 
@@ -206,7 +226,6 @@ window.SVT = window.SVT || {};
   const SCALE_6_30 = [3.1, 3.4, 3.5, 3.8, 4.1, 4.3, 4.6, 4.9, 5.2, 5.6, 5.9, 6.3, 6.7, 7.2, 7.6, 8.1, 8.6, 9.1, 9.7, 10, 11, 12, 12, 13, 14];
   SVT.LABS.slice(5).forEach((l, i) => { B.LAB_DIFF[l.id] = { scale: SCALE_6_30[i], grow: 0.6 }; });
 
-  B.abilitySeconds = (rank) => rank.minutes * 60;
   B.tierOf = (n) => SVT.TIERS.findIndex((t) => n >= t.from && n <= t.to);
 
   SVT.B = B;

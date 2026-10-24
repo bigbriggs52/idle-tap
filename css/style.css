@@ -1215,3 +1215,22 @@ button:active:not(:disabled) { filter: brightness(.9); transition-duration: 0s; 
 .lvl-btn.deal:active { box-shadow: 0 1px 0 #136b3b; }
 .lvl-btn .deal-tag { display: none; position: absolute; bottom: -10px; left: 50%; transform: translateX(-50%); padding: 1px 6px; border-radius: 9px; border: 2px solid #fff; background: #ffd23f; color: #5a3b00; font: 800 .6rem var(--f-display); font-style: normal; text-shadow: none; white-space: nowrap; }
 .lvl-btn.deal .deal-tag { display: block; }
+
+/* v0.30: super managers. Their actives reuse the speed/storage/price looks above and add their own glow. */
+.ab-siphon.scene, .ab-midas.scene { box-shadow: inset 0 0 0 2px #ffd23fcc, 0 0 14px #ffd23f99; }
+.ab-midas.scene { background-image: linear-gradient(135deg, #fff3c455, transparent 60%); }
+.ab-siphon .crate, .ab-midas .crate { opacity: .35; }
+.ab-siphon > .ab-tag { background: #b07cff; color: #fff; }
+.ab-midas > .ab-tag { background: linear-gradient(#ffe066, #e0a21a); color: #4a3000; }
+.tower.ab-turbine, .shaft.ab-turbine { box-shadow: inset 0 0 0 2px #4fb3ff99, 0 0 12px #4fb3ff88; }
+.shaft.ab-turbine .car { box-shadow: 0 0 16px #4fb3ff, 0 0 0 2px #4fb3ff88; }
+.ab-turbine > .ab-tag { background: #4fb3ff; color: #06283d; }
+.tower.ab-wormhole, .shaft.ab-wormhole { box-shadow: inset 0 0 0 2px #b07cff99, 0 0 12px #b07cff88; animation: warp-pulse 5s linear infinite; }
+.ab-wormhole > .ab-tag { background: #b07cff; color: #fff; }
+@keyframes warp-pulse { 0%, 80% { filter: none; } 90% { filter: brightness(1.5) saturate(1.4); } 100% { filter: none; } }
+.tower.ab-overclock, .yard.ab-overclock { box-shadow: inset 0 0 0 2px #ff7a1a99, 0 0 12px #ff7a1a88; }
+.ab-overclock > .ab-tag { background: #ff7a1a; color: #fff; }
+.tower.ab-baron { box-shadow: inset 0 0 0 2px #5fd38a99, 0 0 12px #5fd38a88; }
+.ab-baron > .ab-tag { background: #5fd38a; color: #0f3d22; }
+.mcard .rarity { font-size: .68rem; }
+@media (prefers-reduced-motion: reduce) { .tower.ab-wormhole, .shaft.ab-wormhole { animation: none; } }

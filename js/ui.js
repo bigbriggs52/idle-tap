@@ -199,14 +199,16 @@ window.SVT = window.SVT || {};
 
   // ---------- managers ----------
   const roleOf = (kind) => kind;
+  // Job title from the lab's theme (v0.30): a floor manager in the Arcade District is a Cabinet Builder.
+  const CREW_IDX = { floor: 0, freight: 1, commercial: 2 };
+  const crewTitle = (role) => ((def().crew || [])[CREW_IDX[role]]) || B.ROLE_NAMES[role];
+  const secs = (x) => (x >= 60 && x % 60 === 0 ? x / 60 + " min" : x + " s");
   function effectText(m) {
-    const r = SVT.rank(m.rank), ab = SVT.ability(m.role, m.ability);
+    const ab = SVT.ability(m.role, m.ability), st = SVT.abilityStats(m);
+    if (ab.kind === "special") return ab.icon + " " + secs(st.active) + " · " + secs(st.cooldown) + " cooldown. " + ab.text + " Passive: " + ab.passiveText + ".";
     const K = B.ABILITY_KINDS[ab.kind];
-    const mins = r.minutes + " min";
-    const what = ab.kind === "speed" ? "×" + r.boost + " speed for " + mins
-      : ab.kind === "storage" ? "×" + r.boost + " load for " + mins
-      : "−" + Math.round(r.discount * 100) + "% upgrades for " + mins;
-    return K.icon + " " + ab.name + ": " + what + (r.passive ? " · +" + r.passive * 100 + "% always" : "");
+    const what = ab.kind === "speed" ? "×" + st.mult + " speed" : ab.kind === "storage" ? "×" + st.mult + " load" : "−" + Math.round(st.off * 100) + "% upgrades";
+    return K.icon + " " + ab.name + ": " + what + " for " + secs(st.active) + " · " + secs(st.cooldown) + " cooldown";
   }
 
   // Manager card: portrait, name, rarity, boost, timer and buttons (Idle Miner's manager list).
@@ -221,7 +223,7 @@ window.SVT = window.SVT || {};
     return h("li", { class: "mcard r-" + m.rank + (o.busy ? " busy" : "") + (o.assigned ? " assigned" : "") },
       h("div", { class: "portrait" }, avatar(m), o.assigned ? h("span", { class: "tagline", text: "Assigned" }) : null),
       h("div", { class: "minfo" },
-        h("b", { text: m.name }), h("span", { class: "rarity", text: r.name }),
+        h("b", { text: m.name }), h("span", { class: "rarity", text: r.name + " · " + (SVT.isSuper(m) ? SVT.abilityOf(m).name : crewTitle(m.role)) }),
         h("span", { class: "boost-text", text: effectText(m) }), abilityTimer(m),
         o.where ? h("span", { class: "where", text: o.where }) : null),
       h("div", { class: "mbtns" }, o.buttons));
@@ -241,10 +243,10 @@ window.SVT = window.SVT || {};
     // type (speed, storage, then price) with the best rarity at the top of each group. SVT.owned is already in
     // rarity order, so the index keeps that inside a group.
     const busy = (m) => !!SVT.slotOfMgr(L, m.id);
-    const KIND = { speed: 0, storage: 1, discount: 2 }, kindOf = (m) => SVT.ability(m.role, m.ability).kind;
+    const KIND = { special: 0, speed: 1, storage: 2, discount: 3 }, kindOf = (m) => SVT.ability(m.role, m.ability).kind;
     const list = SVT.owned(L, role).filter((m) => m !== current && (mgrType === "all" || kindOf(m) === mgrType)).map((m, i) => [m, i])
       .sort((a, b) => busy(a[0]) - busy(b[0]) || KIND[kindOf(a[0])] - KIND[kindOf(b[0])] || a[1] - b[1]).map((x) => x[0]);
-    const GROUP = { speed: "⚡ Speed: runs faster", storage: "📦 Storage: bigger loads", discount: "💸 Price: cheaper upgrades" };
+    const GROUP = { special: "🌟 Super managers: game changers", speed: "⚡ Speed: runs faster", storage: "📦 Storage: bigger loads", discount: "💸 Price: cheaper upgrades" };
     let lastGroup = null;
     const cards = list.flatMap((m) => {
       const key = (busy(m) ? "busy-" : "free-") + kindOf(m);
@@ -282,7 +284,7 @@ window.SVT = window.SVT || {};
     const emptyText = here && current ? "No other " + B.ROLE_NAMES[role] + "s yet." : mgrType !== "all" ? "No " + B.ABILITY_KINDS[mgrType].name.toLowerCase() + " managers here yet." : "None yet. Hire one below.";
     parts.push(h("div", { class: "sec-label", text: here ? "Your " + B.ROLE_NAMES[role] + "s:" : B.ROLE_NAMES[role] + "s:" }),
       h("ul", { class: "mlist" }, cards.length ? cards : h("li", { class: "muted empty", text: emptyText })),
-      h("p", { class: "muted small odds", text: "Each hire rolls Super 0.5%, Legendary 1%, Epic 3%, Rare 10%, Uncommon 30% or Common 55.5%. Funding rounds send every manager away." }));
+      h("p", { class: "muted small odds", text: "Each hire rolls Legendary 1.5%, Epic 3%, Rare 10%, Uncommon 30% or Common 55.5%. Epic and Legendary hires are super managers with a game-changing ability and a permanent passive. Funding rounds send every manager away." }));
     // Children stay put (only their text changes), so a finger on the button never loses its target mid-tap.
     const hireCost = h("b");
     const hire = bind(h("button", { class: "btn fund-cta big hire", onclick: () => {
@@ -292,7 +294,7 @@ window.SVT = window.SVT || {};
       const cur = here ? SVT.mgrOf(lab(), kind, n) : null;
       const put = here && (!cur || SVT.RANK_ORDER[m.rank] <= SVT.RANK_ORDER[cur.rank]);
       if (put) SVT.assign(m.id, kind, n);
-      toast("Hired " + SVT.rank(m.rank).name + " " + m.name + (put ? " · now runs " + SVT.slotName(here) : ""), "r-" + m.rank);
+      toast("Hired " + SVT.rank(m.rank).name + " " + (SVT.isSuper(m) ? SVT.abilityOf(m).name + " (" + m.name + ")" : crewTitle(role) + " " + m.name) + (put ? " · now runs " + SVT.slotName(here) : ""), "r-" + m.rank);
       reopen();
     } },
       h("span", { text: "Hire manager" }), hireCost),
@@ -356,7 +358,7 @@ window.SVT = window.SVT || {};
     }
     if (kind === "freight") rows.push(["Waiting on floors", () => "$" + fmt(totalWaiting(lab()))]);
     if (kind === "commercial") rows.push(["Waiting to ship", () => "$" + fmt(lab().lobby)]);
-    rows.push(["Manager bonus", () => { const m = SVT.nodeMult(lab(), kind, n), a = SVT.activeAbility(lab(), kind, n); return (m > 1 ? multText(m) : "None") + (a && a.kind !== "discount" ? " (" + B.ABILITY_KINDS[a.kind].icon + " ×" + a.mult + " " + a.kind + ")" : ""); }]);
+    rows.push(["Manager bonus", () => { const m = SVT.nodeMult(lab(), kind, n), a = SVT.activeAbility(lab(), kind, n); return (m > 1 ? multText(m) : "None") + (a && a.kind !== "discount" ? " (" + a.icon + " " + a.name + ")" : ""); }]);
     rows.push(["Prestige bonus", () => multText(SVT.prestigeMult(lab()))]);
     rows.push(["Lab income", () => { const r = SVT.rates(lab()); return "$" + fmt(r.income) + "/s · limited by " + { build: "floors", freight: "lift", commercial: "warehouse" }[r.limit]; }]);
     return rows;
@@ -558,7 +560,7 @@ window.SVT = window.SVT || {};
       el.hidden = !m;
       if (el.hidden) return;
       const t = SVT.now(), live = m.activeUntil > t, cd = !live && m.cdUntil > t, ab = SVT.ability(kind, m.ability);
-      setText(el, live ? SVT.fmtTime(m.activeUntil - t) : cd ? SVT.fmtTime(m.cdUntil - t) : B.ABILITY_KINDS[ab.kind].icon);
+      setText(el, live ? SVT.fmtTime(m.activeUntil - t) : cd ? SVT.fmtTime(m.cdUntil - t) : ab.icon || B.ABILITY_KINDS[ab.kind].icon);
       setDisabled(el, live || cd); toggle(el, "live", live); toggle(el, "ready", !live && !cd);
     });
     return el;
@@ -602,14 +604,15 @@ window.SVT = window.SVT || {};
     let shown = "";
     return bind(el, (e) => {
       const a = SVT.activeAbility(lab(), kind, n);
-      const key = a ? a.kind + a.mult : "";
+      const key = a ? a.id + a.mult : "";
       if (key === shown) return;
       shown = key;
-      e.classList.remove("ab-speed", "ab-storage", "ab-discount");
-      if (a) e.classList.add("ab-" + a.kind);
-      e.style.setProperty("--sp", a && a.kind === "speed" ? String(a.mult) : "1");
+      e.className = e.className.replace(/\s*\bab-[\w-]+/g, "");
+      // Speed-type effects (incl. the Hyperloop and the Overclocker) speed every animation up through --sp.
+      if (a) { e.classList.add("ab-" + a.kind); if (a.speed > 1) e.classList.add("ab-speed"); if (a.load > 1) e.classList.add("ab-storage"); if (a.off > 0) e.classList.add("ab-discount"); if (a.kind === "special") e.classList.add("ab-" + a.id); }
+      e.style.setProperty("--sp", a && a.speed > 1 ? String(a.speed) : "1");
       tag.hidden = !a;
-      if (a) setText(tag, B.ABILITY_KINDS[a.kind].icon + (a.kind === "discount" ? " −" + Math.round(a.mult * 100) + "%" : " ×" + a.mult));
+      if (a) setText(tag, a.icon + " " + (a.direct ? "×" + a.direct + " cash" : a.cash > 1 ? "×" + a.speed + " · ×" + a.cash + " cash" : a.warp ? "warp" : a.off ? "−" + Math.round(a.off * 100) + "%" : "×" + a.mult));
     });
   }
 

@@ -2,6 +2,14 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.30.0 (2026-10-24)
+
+- Managers overhauled into five tiers. Common, Uncommon and Rare managers are regular managers with one of three abilities whose power and timers come from the tier: Speed ×2.5 / ×4 / ×6 and Storage ×2 / ×3.5 / ×5 for 1 / 2 / 3 min with a 5 / 10 / 15 min cooldown, Price −30% / −50% / −70% for 15 / 20 / 30 s with a 3 / 5 / 8 min cooldown. The old Super rank folded into Legendary (now 1.5%).
+- Epic and Legendary hires are super managers: one named Epic and one named Legendary per role, each with a game-changing active and a passive that is always on while assigned. Floors: The Dropshipper (45 s / 15 min: the floor's products skip the lift and warehouse and sell at ×5; passive +15% build speed) and The Unicorn (30 s / 30 min: every cycle sells at ×15; passive +25% on everything the lab earns while assigned anywhere). Lift: The Hyperloop (45 s / 15 min: lift at ×8 and it empties every crate in one go; passive −10% lift upgrades) and The Quantum Courier (30 s / 30 min: every 5 s all floor stock jumps to the top of the shaft; passive −25% lift upgrades, +20% lift capacity). Warehouse: The Overclocker (45 s / 15 min: carts at ×8 and ×3 cash on deliveries; passive +10% cart speed) and The Venture Capitalist (20 s / 20 min: −90% on every upgrade in the lab; passive: every manager's cooldown in the lab 15% shorter).
+- Effective stats are base × passive × active everywhere in the tick; Unicorn and Overclocker cash multipliers apply at the moment of sale. Ability timers are absolute times in the save, so a reload keeps every countdown and cooldown.
+- Managers now carry a job title from their lab's theme (a Rare floor manager in the Arcade District is a Rare Cabinet Builder; Viking Raid has Diggers, Lift Thralls and Traders), and the manager list has a Super group and filter. Existing saves: Super managers become Legendary, and Epic or Legendary managers become their role's super manager.
+- Super managers work in Viking Raid too, like every other ability.
+
 ## v0.29.0 (2026-10-24)
 
 - Manager abilities last by rarity: Legendary 10 min, Epic 7, Rare 4, Uncommon 2, Common 1 (Super 15). Every kind uses the same timer, so a Price manager's discount lasts as long as a Speed or Storage boost of the same rarity (was 60 s for speed and storage, 30 s for price). Cooldowns after the run are unchanged (6 to 15 min). The manager card says how long the ability lasts.
