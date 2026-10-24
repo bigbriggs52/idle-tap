@@ -580,6 +580,29 @@ window.SVT = window.SVT || {};
     emit("change");
     return true;
   };
+  // v0.31: Auto-assign. Floors get the best owned Floor Leads from the bottom up: the rarest manager runs the deepest
+  // floor, the next rarest the floor above, and so on; the lift and the warehouse get the best owned manager of their
+  // role. Managers already at work are included in the sort, so everyone ends up where their rarity says.
+  SVT.autoAssign = () => {
+    const lab = SVT.lab();
+    const moved = { floor: 0, freight: 0, commercial: 0 };
+    const place = (m, kind, n) => {
+      const key = SVT.slotKey(kind, n);
+      if (lab.assign[key] === m.id) return;
+      const from = SVT.slotOfMgr(lab, m.id);
+      if (from) delete lab.assign[from];
+      lab.assign[key] = m.id; moved[kind]++;
+    };
+    const floors = SVT.owned(lab, "floor"); // rarest first, newest first within a rarity
+    for (let n = lab.floors.length, i = 0; n >= 1; n--) {
+      if (i < floors.length) place(floors[i++], "floor", n);
+      else delete lab.assign[SVT.slotKey("floor", n)];
+    }
+    for (const kind of ["freight", "commercial"]) { const best = SVT.owned(lab, kind)[0]; if (best) place(best, kind, 0); }
+    emit("assign", { auto: true });
+    emit("change");
+    return moved;
+  };
   SVT.unassign = (id) => {
     const lab = SVT.lab();
     const from = SVT.slotOfMgr(lab, id);

@@ -1234,3 +1234,7 @@ button:active:not(:disabled) { filter: brightness(.9); transition-duration: 0s; 
 .ab-baron > .ab-tag { background: #5fd38a; color: #0f3d22; }
 .mcard .rarity { font-size: .68rem; }
 @media (prefers-reduced-motion: reduce) { .tower.ab-wormhole, .shaft.ab-wormhole { animation: none; } }
+
+/* v0.31: Auto-assign button in the Managers panel */
+.btn.auto-assign { width: 100%; justify-content: center; margin: 2px 0; padding: 8px 10px; border-radius: 12px; border: 2px solid #8e5bd6; background: linear-gradient(#f3e9ff, #dcc7fb); color: #3f1f73; font-weight: 800; }
+.btn.auto-assign:disabled { opacity: .5; }
