@@ -111,6 +111,7 @@ window.SVT = window.SVT || {};
     }
     const wrap = h("div", { class: "sheet-wrap", id: "sheet", onclick: (e) => { if (e.target.id === "sheet" && !opts.sticky) closeSheet(); } }, box);
     document.body.append(wrap);
+    document.body.classList.add("sheet-open");
     curNav = nav || null;
   }
   function closeSheet() {
@@ -118,6 +119,7 @@ window.SVT = window.SVT || {};
     detail = null; curNav = null;
     if (!s) return;
     s.remove();
+    document.body.classList.remove("sheet-open");
     binds = binds.filter((b) => !s.contains(b.e));
   }
   document.addEventListener("keydown", (e) => {
@@ -142,7 +144,9 @@ window.SVT = window.SVT || {};
     return h("header", { class: "top" },
       h("div", { class: "lab-title" }, h("span", { class: "lab-icon", text: d.icon }), h("div", null, h("b", { text: d.name }), roundBadge)),
       h("div", { class: "cash-pill" }, h("span", { class: "coin big", "aria-hidden": "true", text: "$" }), h("div", null, h("span", { class: "cash-label", text: "Cash" }), cash, rate)),
-      h("button", { class: "home-btn", "aria-label": "Home screen", onclick: () => setView("home"), text: "🏠" }),
+      h("div", { class: "top-btns" },
+        h("button", { class: "top-gear", "aria-label": "Settings", onclick: openSettings, text: "⚙" }),
+        h("button", { class: "home-btn", "aria-label": "Home screen", onclick: () => setView("home"), text: "🏠" })),
       inRaid() ? goalBar() : null);
   }
   // Viking Raid: upgrades bought this stage against everything needed to max the mine.
@@ -194,7 +198,8 @@ window.SVT = window.SVT || {};
       item("👔", "Managers", () => openManagers("floor", null, 0), { "aria-label": "Owned managers" }),
       item("🗺", "Map", () => setView("map"), { class: "nav-btn center" }),
       rushNav(item),
-      item("⚙", "Settings", openSettings, { "aria-label": "Settings" }));
+      // v0.32: Settings lives top right by the 🏠 button; the last slot opens Chip's upgrades (Vault items).
+      item("🤖", "Chip", () => SVT.openChip(), { "aria-label": "Chip upgrades" }));
   }
 
   // ---------- managers ----------
@@ -1061,7 +1066,7 @@ window.SVT = window.SVT || {};
     const L = lab();
     const next = SVT.nextRound(L);
     const ladder = h("ol", { class: "ladder" }, B.ROUNDS.map((r, i) => h("li", { class: i < L.round ? "done" : i === L.round ? "next" : "" },
-      h("b", { text: r.name }), h("span", { text: " ×" + r.mult + " income · needs Floor " + r.needFloor + (r.maxed ? " and every floor at Lv " + B.FLOOR_MAX + ", lift and warehouse at Lv " + B.HUB_MAX : "") + (B.WALLS[r.needFloor + 1] === i ? " · opens Floor " + (r.needFloor + 1) : "") + " · +" + B.VAULT.ROUND_COINS + " 🪙" }))));
+      h("b", { text: r.name }), h("span", { text: " ×" + r.mult + " · Floor " + r.needFloor + (r.maxed ? " + lab maxed" : "") + (B.WALLS[r.needFloor + 1] === i ? " · opens " + (r.needFloor + 1) : "") }))));
     let armed = false;
     const btn = h("button", { class: "btn fund-cta big" });
     const can = SVT.canRaise(L);
@@ -1073,12 +1078,12 @@ window.SVT = window.SVT || {};
       if (!armed) { armed = true; btn.textContent = ipo ? "Tap again: beat this lab and close it" : "Tap again to confirm: this lab resets"; btn.classList.add("armed"); return; }
       if (SVT.raise()) closeSheet();
     });
-    sheet("Funding", h("div", { class: "sheet-body" },
-      h("p", { text: "Current multiplier: ×" + SVT.prestigeMult(L) }),
-      h("p", { class: "muted", text: "Every 5 floors start a new tech era and need funding before you can open them. Raising a round resets this lab's floors, hubs, cash and managers. You will need to hire new managers, but the whole lab earns more forever, and every round pays " + B.VAULT.ROUND_COINS + " Vault coins. The IPO needs the whole lab maxed out first." }),
+    // v0.32: the Raise button is pinned under the list, so the round you can raise is never below the fold.
+    sheet("Funding", h("div", { class: "sheet-body funding" },
+      h("p", { class: "muted", text: "Current multiplier ×" + SVT.prestigeMult(L) + ". Every 5 floors need a round. Raising one resets this lab's floors, hubs, cash and managers, but the lab earns more forever and pays " + B.VAULT.ROUND_COINS + " 🪙." }),
       ladder,
-      h("p", { class: "muted small", text: "Raising the IPO beats this lab: it closes for good with a 🏆" + (opensOnIpo(L) ? " and " + opensOnIpo(L).name + " opens on the map." : ".") }),
-      btn));
+      h("p", { class: "muted small", text: "The IPO needs the whole lab maxed, beats this lab and closes it with a 🏆" + (opensOnIpo(L) ? ". " + opensOnIpo(L).name + " opens on the map." : ".") })),
+      { icon: "💰", foot: h("div", { class: "panel-foot" }, btn) });
   }
   // The lab that beating this one opens (five places further on the map), if any.
   function opensOnIpo(L) {

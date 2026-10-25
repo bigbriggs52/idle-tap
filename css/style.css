@@ -1238,3 +1238,14 @@ button:active:not(:disabled) { filter: brightness(.9); transition-duration: 0s; 
 /* v0.31: Auto-assign button in the Managers panel */
 .btn.auto-assign { width: 100%; justify-content: center; margin: 2px 0; padding: 8px 10px; border-radius: 12px; border: 2px solid #8e5bd6; background: linear-gradient(#f3e9ff, #dcc7fb); color: #3f1f73; font-weight: 800; }
 .btn.auto-assign:disabled { opacity: .5; }
+
+/* v0.32: Settings top right by Home; the bottom bar belongs to the lab screen only and hides under any panel. */
+.lab-view > .top .top-btns { justify-self: end; display: flex; gap: 6px; }
+.top-gear { width: 46px; height: 46px; border-radius: 14px; border: 3px solid #3a5577; background: linear-gradient(#c9d9ea, #7a93b0); color: #fff; font-size: 1.35rem; cursor: pointer; box-shadow: inset 0 3px 0 #ffffff70, inset 0 -4px 0 #3a5577, 0 3px 6px #17252c40; }
+.top-gear:active { transform: scale(.9); }
+.sheet-open .bottom-nav, .sheet-open .jump-btns { display: none; }
+.sheet-body.funding { gap: 8px; }
+.sheet-body.funding .ladder { gap: 2px; font-size: .92rem; }
+.sheet-body.funding .ladder li span { font-size: .8rem; }
+.sheet-body.funding p { margin: 0; }
+@media (max-width: 420px) { .lab-view > .top .top-btns .home-btn, .lab-view > .top .top-gear { width: 40px; height: 40px; font-size: 1.15rem; border-radius: 12px; } }

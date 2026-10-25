@@ -2,6 +2,12 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.32.0 (2026-10-25)
+
+- Funding panel fits on one phone screen: the Raise button is pinned under the round list, the explanation is shorter and the rounds are one line each. No more scrolling to raise Seed.
+- Settings is a ⚙ button top right of the lab, next to 🏠. The bottom bar's last slot is now 🤖 Chip, which opens Chip's upgrades (your Vault items).
+- The bottom bar belongs to the lab screen only: it hides while any panel is open, and the home, map, Rush and Vault screens never show it.
+
 ## v0.31.2 (2026-10-24)
 
 - Managers can no longer be sold. Benched managers wait in the Owned list until you assign them.
