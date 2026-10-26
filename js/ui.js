@@ -41,8 +41,10 @@ window.SVT = window.SVT || {};
   const def = () => SVT.labDef(SVT.state().activeLab);
 
   function productName(n) { return def().products[n - 1]; }
-  function teamName(n) { return def().teams[B.tierOf(n)]; }
-  function tierName(n) { const d = def(); return d.tiers ? d.tiers[B.tierOf(n)] : SVT.TIERS[B.tierOf(n)].name; }
+  // Viking mines have up to 50 shafts, so the raid def brings its own tier split (10 shafts a tier).
+  const tierOf = (n) => (def().tierOf ? def().tierOf(n) : B.tierOf(n));
+  function teamName(n) { return def().teams[tierOf(n)]; }
+  function tierName(n) { const d = def(); return d.tiers ? d.tiers[tierOf(n)] : SVT.TIERS[tierOf(n)].name; }
   const inRaid = () => SVT.isRaid(lab());
   function teamSize(L) {
     let c = 1;
@@ -725,7 +727,7 @@ window.SVT = window.SVT || {};
   }
 
   function floorRow(n) {
-    const tier = B.tierOf(n);
+    const tier = tierOf(n);
     const scene = runBind(h("div", { class: "scene floor-scene", onclick: () => SVT.tap("floor", n) },
       h("div", { class: "rock", "aria-hidden": "true" }),
       productionLine(n),
@@ -922,36 +924,44 @@ window.SVT = window.SVT || {};
   // The island card on the map: a separate place with 50 generated mines.
   function raidCard() {
     const S = SVT.state(), R = SVT.RAID;
-    const right = h("span", { class: "muted", text: S.raid.cleared >= R.STAGES ? "All 50 cleared" : "Stage " + SVT.raidNext() + " of " + R.STAGES });
+    const right = h("span", { class: "muted", text: S.raid.cleared >= R.STAGES ? "All " + R.STAGES + " cleared" : "Stage " + SVT.raidNext() + " of " + R.STAGES });
     return h("button", { class: "loc island", onclick: openRaid },
       h("span", { class: "lab-icon", text: "⚔️" }),
-      h("span", { class: "loc-name" }, h("b", { text: "Viking Raid" }), h("span", { class: "muted", text: "50 mines · managers and abilities work" })), right);
+      h("span", { class: "loc-name" }, h("b", { text: "Viking Raid" }), h("span", { class: "muted", text: R.BATCHES + " batches of " + R.PER + " mines · 🛡 " + SVT.vikingTokens() + " tokens · ⛵ " + SVT.boatsUnlocked() + " of " + R.BOATS + " boats" })), right);
   }
   function stageTime(s) { const t = SVT.RAID.time(s); return t < 3600 ? "~" + Math.round(t / 60) + " min" : "~" + (Math.round(t / 360) / 10) + " h"; }
-  // Stage list: cleared stages, the next one to raid, and the locked ones after it.
-  function openRaid() {
+  // Stage list: a tab per batch of 50, then the batch's stages: cleared, the next one to raid, and the locked ones.
+  function openRaid(batchPick) {
     const S = SVT.state(), R = SVT.RAID, next = SVT.raidNext(), cur = S.labs.raid;
     let pick = cur && !cur.won ? cur.stage : next;
+    let batch = batchPick || R.batchOf(pick);
     const info = h("div", { class: "raid-info" });
     const go = h("button", { class: "btn fund-cta big" });
     const live = () => !!cur && cur.stage === pick && !cur.won;
-    const stages = h("div", { class: "stages" }, Array.from({ length: R.STAGES }, (_, i) => {
-      const s = i + 1, done = s <= S.raid.cleared, open = s <= next;
-      return h("button", {
-        class: "stage" + (done ? " done" : open ? " open" : " locked"), "data-s": s, "aria-label": "Stage " + s + (done ? ", cleared" : open ? "" : ", locked"),
-        onclick: () => { if (!open) { toast("🔒 Clear stage " + (s - 1) + " first"); return; } pick = s; show(); },
-      }, done ? "✓" : open ? String(s) : "🔒");
+    const tabs = h("div", { class: "batch-tabs" }, Array.from({ length: R.BATCHES }, (_, i) => {
+      const b = i + 1, from = i * R.PER, done = Math.max(0, Math.min(R.PER, S.raid.cleared - from)), open = S.raid.cleared >= from;
+      return h("button", { class: "batch-tab" + (open ? "" : " locked"), "data-b": b, "aria-label": "Batch " + b + ": " + R.BATCH_NAMES[i],
+        onclick: () => { if (!open) { toast("🔒 Clear batch " + i + " first"); return; } batch = b; show(); } },
+        h("b", { text: "Batch " + b }), h("span", { text: done + " / " + R.PER }));
     }));
+    const stages = h("div", { class: "stages" });
     const show = () => {
+      tabs.querySelectorAll(".batch-tab").forEach((b) => toggle(b, "sel", +b.dataset.b === batch));
+      stages.replaceChildren(...Array.from({ length: R.PER }, (_, i) => {
+        const s = (batch - 1) * R.PER + i + 1, done = s <= S.raid.cleared, open = s <= next;
+        return h("button", {
+          class: "stage" + (done ? " done" : open ? " open" : " locked") + (s === pick ? " sel" : ""), "data-s": s, "aria-label": "Stage " + s + (done ? ", cleared" : open ? "" : ", locked"),
+          onclick: () => { if (!open) { toast("🔒 Clear stage " + (s - 1) + " first"); return; } pick = s; show(); },
+        }, h("span", { text: String(i + 1) }));
+      }));
       const st = R.stage(pick);
       info.replaceChildren(
         h("div", { class: "raid-title" }, h("b", { text: "Stage " + pick + ": " + st.name }), h("span", { class: "muted", text: stageTime(pick) })),
-        h("p", { class: "muted small", text: "Goal: open all " + st.floors + " shafts, take every shaft to Lv " + st.max.floor + " and the lift and warehouse to Lv " + st.max.freight }),
-        st.omens.length ? h("ul", { class: "omens" }, st.omens.map((o) => h("li", { class: o.mult > 1 === (o.stat !== "cost") ? "good" : "bad" }, h("b", { text: o.name }), " " + o.text))) : h("p", { class: "muted small", text: "No omens on this mine." }));
+        h("div", { class: "muted small", text: st.batchName + " " + st.level + " of " + R.PER + " · " + st.floors + (st.floors === 1 ? " shaft" : " shafts") + " to Lv " + st.max.floor + ", lift and warehouse to Lv " + st.max.freight + " · 🛡 " + (pick <= S.raid.cleared ? R.TOKENS.replay + " token (replay)" : st.tokens + (st.tokens === 1 ? " token" : " tokens")) }),
+        st.omens.length ? h("ul", { class: "omens" }, st.omens.map((o) => h("li", null, h("b", { text: o.name }), h("span", { class: "muted", text: " · " + o.text })))) : h("p", { class: "muted small", text: "No omens on this mine." }));
       go.textContent = live() ? "Continue stage " + pick : pick <= S.raid.cleared ? "Raid stage " + pick + " again" : "Raid stage " + pick;
-      stages.querySelectorAll(".stage").forEach((b) => toggle(b, "sel", +b.dataset.s === pick));
     };
-    let armed = 0;
+    let armed = null;
     go.addEventListener("click", () => {
       // Starting another stage drops an unfinished one, so that takes a second tap.
       if (!live() && cur && !cur.won && armed !== pick) { armed = pick; go.textContent = "Tap again: stage " + cur.stage + " progress is lost"; return; }
@@ -960,14 +970,33 @@ window.SVT = window.SVT || {};
     });
     show();
     sheet("Viking Raid", h("div", { class: "sheet-body raid-panel" },
-      h("p", { class: "muted", text: "A separate island of Viking mines. Dig the shafts, lift the loot and ship it like in your labs, with managers and their abilities but no funding rounds. Max out the mine to clear a stage and open the next: open every shaft, take every shaft to Lv 25 and the lift and warehouse to Lv 100. Each stage adds a shaft and costs more." }),
-      info, stages), { icon: "⚔️", foot: h("div", { class: "panel-foot" }, go) });
+      h("div", { class: "token-row" }, h("span", { class: "token-pill", text: "🛡 " + SVT.vikingTokens() + " Viking tokens" }), h("button", { class: "btn small", onclick: openBoats, text: "⛵ Boats " + SVT.boatsUnlocked() + "/" + R.BOATS })),
+      h("p", { class: "muted small", text: "Five batches of 50 Viking mines. Stage 1 has one shaft and every stage adds one; each batch digs deeper (higher max levels) and starts a little harder than the last stage before it. Managers, abilities, Rush boosts and Chip's items all count. Max out the mine to clear a stage: open every shaft, take every shaft and the lift and warehouse to the batch's max level. Clears pay Viking tokens, which unlock boats for Chip." }),
+      tabs, info, stages), { icon: "⚔️", foot: h("div", { class: "panel-foot" }, go) });
   }
   SVT.openRaid = openRaid;
-  function showRaidClear(s) {
-    const R = SVT.RAID, last = s >= R.STAGES;
+  // Boats: the 50 boats Chip can sail, unlocked with Viking tokens. Tap an unlocked boat to sail it.
+  function openBoats() {
+    const R = SVT.RAID, have = SVT.vikingTokens(), top = SVT.boatsUnlocked(), cur = SVT.boatIndex();
+    const cards = SVT.BOATS.map((b) => {
+      const cost = R.boatCost(b.k), open = b.k <= top, on = b.k === cur;
+      return h("button", { class: "boat-card" + (open ? "" : " locked") + (on ? " on" : ""), "aria-label": b.name + (open ? "" : ", locked"),
+        onclick: () => { if (!open) { toast("🔒 " + b.name + " needs 🛡 " + cost + " Viking tokens (you have " + have + ")"); return; } SVT.pickBoat(b.k); openBoats(); render(); } },
+        h("div", { class: "boat-pic", html: SVT.boatSvg(b.k) }),
+        h("b", { text: b.k + ". " + b.name }),
+        h("small", { text: open ? (on ? "⛵ Sailing now" : "Tap to sail") : "🔒 " + cost + " tokens" }));
+    });
+    sheet("Chip's boats", h("div", { class: "sheet-body boats-panel" },
+      h("div", { class: "token-row" }, h("span", { class: "token-pill", text: "🛡 " + have + " Viking tokens" }), h("span", { class: "muted small", text: top + " of " + R.BOATS + " boats unlocked" })),
+      h("p", { class: "muted small", text: "Clearing a Viking mine pays tokens (1 to 5 a stage, more in later batches; a replay pays 1). Tokens are kept separate from Vault coins and never spent: every boat you reach stays yours. Chip sails the boat you pick on the home screen." }),
+      h("div", { class: "boat-grid" }, cards)), { icon: "⛵" });
+  }
+  SVT.openBoats = openBoats;
+  function showRaidClear(s, d) {
+    const R = SVT.RAID, last = s >= R.STAGES, boat = SVT.boatIndex();
     sheet("Stage " + s + " cleared!", h("div", { class: "sheet-body" },
-      h("p", { text: last ? "You raided all 50 mines on the island. Skål!" : R.stage(s).name + " is yours. Stage " + (s + 1) + ", " + R.stage(s + 1).name + ", is open." }),
+      h("p", { text: last ? "You raided all " + R.STAGES + " mines on the island. Skål!" : R.stage(s).name + " is yours. Stage " + (s + 1) + ", " + R.stage(s + 1).name + ", is open." }),
+      h("p", { class: "muted", text: "🛡 +" + (d && d.tokens || 0) + (d && d.tokens === 1 ? " Viking token" : " Viking tokens") + " · " + SVT.vikingTokens() + " in all · ⛵ sailing " + SVT.BOATS[boat - 1].name + (boat < R.BOATS ? " · next boat at 🛡 " + R.boatCost(boat + 1) : "") }),
       last ? null : h("button", { class: "btn fund-cta big", onclick: () => { closeSheet(); SVT.startRaid(s + 1); setView("lab"); }, text: "Raid stage " + (s + 1) }),
       h("button", { class: "btn", onclick: closeSheet, text: "Keep playing here" })), { icon: "⚔️" });
   }
@@ -996,7 +1025,8 @@ window.SVT = window.SVT || {};
         h("span", { class: "hill h1" }), h("span", { class: "hill h2" }),
         h("span", { class: "hq" }, h("span", { class: "hq-roof" }), h("span", { class: "hq-win" }), h("span", { class: "hq-door" })),
         h("span", { class: "lawn" }), h("span", { class: "bush b1" }), h("span", { class: "bush b2" }),
-        h("span", { class: "mine-hole" }, h("span", { class: "mine-ladder" }))),
+        h("span", { class: "mine-hole" }, h("span", { class: "mine-ladder" })),
+        h("span", { class: "sea" }, h("span", { class: "wave w1" }), h("span", { class: "wave w2" }), h("span", { class: "wave w3" }))),
       h("div", { class: "home-top" },
         h("button", { class: "avatar-badge", "aria-label": "Chip says hi", onclick: () => toast("🤖 Chip: Let's build something big!"), html: SVT.mascot("head") }),
         h("div", { class: "cur-pill" }, h("span", { class: "cur-ic coin3d", "aria-hidden": "true", text: "$" }), cash),
@@ -1010,7 +1040,9 @@ window.SVT = window.SVT || {};
         h("div", { class: "side left" },
           bubble("b-map", "🗺", "Map", () => setView("map")),
           bubble("b-raid", "⚔️", "Viking Raid", openRaid, raidReady)),
-        h("div", { class: "hero" }, sign, h("div", { class: "hero-bot", html: SVT.mascot("hold") }), wornItems(),
+        h("div", { class: "hero" }, sign,
+          h("button", { class: "hero-boat", "aria-label": "Chip's boat: " + SVT.BOATS[SVT.boatIndex() - 1].name, html: SVT.boatSvg(SVT.boatIndex()), onclick: openBoats }),
+          h("div", { class: "hero-bot", html: SVT.mascot("hold") }), wornItems(),
           SVT.vaultMult() > 1 ? h("button", { class: "worn-total", "aria-label": "Item bonus", onclick: () => SVT.openChip(), text: "⚡ ×" + SVT.vaultMult() }) : null),
         h("div", { class: "side right" },
           rushBubble(bubble("b-rush", "🏭", "Rush", SVT.openRush, true)),
@@ -1172,7 +1204,7 @@ window.SVT = window.SVT || {};
     if (type === "unlock") {
       const last = d.crossed[d.crossed.length - 1];
       const where = d.kind === "floor" ? "Floor " + d.n : d.kind === "freight" ? "Freight Hub" : "Commercial Hub";
-      const tierList = SVT.TECH_UNLOCKS[d.kind === "floor" ? B.tierOf(d.n) : 0];
+      const tierList = SVT.TECH_UNLOCKS[d.kind === "floor" ? tierOf(d.n) : 0];
       const big = d.crossed.filter((c) => c.big);
       if (big.length) toast("⭐ " + where + " Lv " + big[big.length - 1].lvl + " milestone: " + multLabel(big[big.length - 1].mult) + (d.kind === "floor" ? " output, new team member" : " capacity"), "big");
       else toast("🔓 " + where + " Lv " + last.lvl + ": " + tierList[(last.lvl / 5) % tierList.length] + " " + multLabel(last.mult));
@@ -1186,7 +1218,8 @@ window.SVT = window.SVT || {};
     if (type === "labBeaten") { toast("🏆 You beat " + d.lab.name + "! +1 🪙 " + d.lab.name + " coin for the Vault" + (d.replay ? "." : ", and a new lab opens."), "big"); setView("map"); }
     if (type === "raidClear") {
       toast("⚔️ Viking Raid stage " + d.stage + " cleared!", "big");
-      if (inRaid() && !document.getElementById("sheet")) showRaidClear(d.stage);
+      if (d.tokens) toast("🛡 +" + d.tokens + " Viking " + (d.tokens === 1 ? "token" : "tokens"));
+      if (inRaid() && !document.getElementById("sheet")) showRaidClear(d.stage, d);
     }
   });
 

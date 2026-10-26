@@ -53,7 +53,9 @@ const rankIdx = await page.evaluate(() => SVT.RANK_ORDER);
 if (owned.order.some((r, i) => i && rankIdx[r] < rankIdx[owned.order[i - 1]])) errors.push("Owned list not sorted by rarity");
 const grouped = await page.evaluate(() => {
   const L = SVT.lab(); L.cash = 1e12;
-  for (let i = 0; i < 12; i++) SVT.hire("floor");
+  // At least 12 hires, and keep going (rarely needed) until a Budget Cut manager is on the roster: the type filter and
+  // price ability tests below need one, and a 12-roll streak without one happens about 1 time in 100.
+  for (let i = 0; i < 60 && (i < 12 || !Object.values(L.managers).some((m) => m.ability === "budget")); i++) SVT.hire("floor");
   SVT.openManagers("floor", null, 0);
   const rows = [...document.querySelectorAll("#sheet .mlist > li")].map((li) => li.classList.contains("mgroup") ? "#" + li.textContent : li.querySelector(".minfo b") ? li.dataset.kind || "card" : "?");
   const kinds = [...document.querySelectorAll("#sheet .mlist > li.mgroup")].map((li) => li.textContent);
@@ -426,6 +428,12 @@ await page.waitForTimeout(400);
 await page.screenshot({ path: out + "/12-raid-clear.png" });
 const cleared = await page.evaluate(() => SVT.state().raid.cleared);
 if (cleared !== 1 || !(await page.locator("h2", { hasText: "Stage 1 cleared!" }).isVisible())) errors.push("Raid stage did not clear");
+// v0.33: a first clear pays Viking tokens (batch 1 pays 1), tokens unlock boats, the raid def has 50 shaft names and 5 tiers
+const viking = await page.evaluate(() => { const R = SVT.RAID, L = SVT.lab(); return { tokens: SVT.vikingTokens(), boats: SVT.boatsUnlocked(), boat: SVT.boatIndex(), stages: R.STAGES, shafts50: R.shafts(50), shafts51: R.shafts(51), t1: R.time(1), t50: R.time(50), t51: R.time(51), t250: R.time(250), loot: R.def(50).products.length, tier: R.def(1).tierOf(50), cost2: R.boatCost(2), cost50: R.boatCost(50), svg: SVT.boatSvg(50).length, names: new Set(SVT.BOATS.map((b) => b.name)).size, omens: R.stage(1).omens.length }; });
+console.log("viking", JSON.stringify(viking));
+if (viking.tokens !== 1 || viking.boats !== 2 || viking.boat !== 2) errors.push("Viking tokens or boats wrong after a clear: " + JSON.stringify(viking));
+if (viking.stages !== 250 || viking.shafts50 !== 50 || viking.shafts51 !== 1 || viking.t1 !== 300 || Math.abs(viking.t50 - 1200) > 1e-6 || Math.abs(viking.t51 - 1200) > 1e-6 || Math.abs(viking.t250 - 307200) > 1e-6) errors.push("Raid batches or pacing wrong: " + JSON.stringify(viking));
+if (viking.loot !== 50 || viking.tier !== 4 || viking.cost2 < 1 || viking.cost50 !== 750 || viking.svg < 500 || viking.names !== 50) errors.push("Raid loot, tiers or boats wrong: " + JSON.stringify(viking));
 await page.click("text=Raid stage 2");
 await page.waitForTimeout(300);
 if ((await page.evaluate(() => SVT.lab().stage)) !== 2) errors.push("Stage 2 did not open after clearing");
@@ -471,14 +479,14 @@ await page.evaluate(() => SVT.rushGame().end()); await page.waitForTimeout(700);
 await page.screenshot({ path: out + "/17-rush-result.png" });
 if (!(await page.locator(".rush-big").isVisible())) errors.push("Rush results screen missing");
 const boost = await page.evaluate(() => {
-  const S = SVT.state(), L = S.labs.arcade, before = SVT.rates(L).income, raidBefore = S.labs.raid ? SVT.rates(S.labs.raid).income : 0;
+  const S = SVT.state(), L = S.labs.arcade, before = SVT.rates(L).income, raidBefore = S.labs.raid ? SVT.loadMult(S.labs.raid, "floor", 1) : 0;
   const wait = SVT.rushWait();
   S.rush.next = 0;
   const r = SVT.finishRush(65);
-  return { wait, applied: r.applied, mult: SVT.rushMult(), ratio: SVT.rates(L).income / before, raidSame: !S.labs.raid || SVT.rates(S.labs.raid).income === raidBefore, again: SVT.finishRush(20).applied };
+  return { wait, applied: r.applied, mult: SVT.rushMult(), ratio: SVT.rates(L).income / before, raidBoost: !S.labs.raid || Math.abs(SVT.loadMult(S.labs.raid, "floor", 1) / raidBefore - 5) < 1e-6, again: SVT.finishRush(20).applied };
 });
 console.log("rush boost", JSON.stringify(boost));
-if (!(boost.wait > 800) || !boost.applied || boost.mult !== 5 || Math.abs(boost.ratio - 5) > 1e-6 || !boost.raidSame || boost.again) errors.push("Rush boost or cooldown is wrong");
+if (!(boost.wait > 800) || !boost.applied || boost.mult !== 5 || Math.abs(boost.ratio - 5) > 1e-6 || !boost.raidBoost || boost.again) errors.push("Rush boost or cooldown is wrong (v0.33: the raid is boosted too)");
 await page.click("#rush .btn.fund-cta"); await page.waitForTimeout(200);
 if (await page.locator("#rush").count()) errors.push("Rush did not close");
 await page.screenshot({ path: out + "/18-home-boosted.png" });
@@ -567,7 +575,7 @@ const bonus = await page.evaluate(() => {
   out.ratio = SVT.rates(L).income / (SVT.B.floorOutput(1, L.floors[0].lvl) * SVT.prestigeMult(L) * 0 + 1); // placeholder
   const base = (() => { const m = SVT.vaultMult(); v.show = {}; SVT.vaultRecalc(); const r = SVT.rates(L).income; SVT.vaultWear("hand_l", strong[0].id); SVT.vaultWear("hand_r", strong[1].id); return r; })();
   out.ratio = SVT.rates(L).income / base;
-  out.raidSame = !S.labs.raid || (() => { const R = S.labs.raid, a = SVT.rates(R).income; v.show = {}; SVT.vaultRecalc(); const b = SVT.rates(R).income; SVT.vaultWear("hand_l", strong[0].id); SVT.vaultWear("hand_r", strong[1].id); return a === b; })();
+  out.raidSame = !S.labs.raid || (() => { const R = S.labs.raid, m = SVT.vaultMult(), a = SVT.loadMult(R, "floor", 1); v.show = {}; SVT.vaultRecalc(); const b = SVT.loadMult(R, "floor", 1); SVT.vaultWear("hand_l", strong[0].id); SVT.vaultWear("hand_r", strong[1].id); return Math.abs(a / b - m) < 1e-6; })(); // v0.33: worn bonuses count in the raid too
   // cap: six x1.5 items would be x4; the total stops at MAX_BONUS
   const big = v.items.filter((x) => x.rar >= 4).slice(0, 6); big.forEach((x) => { x.boost = 1.5; });
   v.show = {}; SVT.vaultSlots().forEach((sl, i) => { if (big[i]) { const fit = v.items.find((x) => x.boost === 1.5 && !SVT.vaultSlotOf(x.id) && SVT.vaultFits(x, sl.id)); if (fit) SVT.vaultWear(sl.id, fit.id); } });

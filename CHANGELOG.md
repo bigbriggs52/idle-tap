@@ -2,6 +2,14 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.33.0 (2026-10-26)
+
+- Viking Raid rebuilt from scratch (old raid progress starts over): 250 mines in 5 batches of 50. Stage 1 has one shaft and every stage adds one, up to 50. Each batch raises the max levels (shafts Lv 25/40/55/75/100, lift and warehouse Lv 100/160/220/300/400) and its first stage is a little harder than the last stage of the batch before. Prices grow per level like the labs.
+- Pacing: batch 1 runs from about 5 minutes (stage 1) to 20 minutes (stage 50); each batch starts where the last ended and climbs 4× again (batch 2: 20 to 80 min, batch 3: 80 min to 5.3 h, batch 4: 5.3 to 21 h, batch 5: 21 to 85 h). Every multiplier counts in the raid now: manager abilities, Rush boosts and Chip's item bonuses, on top of the omens.
+- Viking tokens, separate from Vault coins: a first clear pays the batch number (1 to 5), a replay pays 1. Tokens are never spent; they unlock 50 boats for Chip (boat 2 after the first clear, boat 10 at 50 tokens, boat 50 at 750).
+- 50 Viking boats drawn in code, from a driftwood raft to Chip's Flagship, each with its own hull, sail, emblem, shields and figurehead. The home screen now has the sea along the bottom and Chip stands on his boat; tap it (or Boats in the Viking Raid panel, or the Chip tab of the Vault) to see all 50 and pick any boat you have unlocked.
+- Viking Raid panel: a tab per batch, 50 stages each, with the stage's shafts, max levels, time and token reward.
+
 ## v0.32.0 (2026-10-25)
 
 - Funding panel fits on one phone screen: the Raise button is pinned under the round list, the explanation is shorter and the rounds are one line each. No more scrolling to raise Seed.

@@ -388,7 +388,8 @@ window.SVT = window.SVT || {};
         }));
     }
     shell(h("div", { class: "vault-body" },
-      h("div", { class: "vault-total" }, h("b", { text: "⚡ ×" + total + " lab income" }), h("small", { text: worn.length + " of " + SLOTS.length + " slots worn · bonuses add up, max ×" + V.MAX_BONUS + " · not in Viking Raid" })),
+      h("div", { class: "vault-total" }, h("b", { text: "⚡ ×" + total + " lab income" }), h("small", { text: worn.length + " of " + SLOTS.length + " slots worn · bonuses add up, max ×" + V.MAX_BONUS + " · counts in Viking Raid too" })),
+      h("button", { class: "btn boats-link", onclick: () => SVT.openBoats(), text: "⛵ Viking tokens 🛡 " + SVT.vikingTokens() + " · sailing " + SVT.BOATS[SVT.boatIndex() - 1].name + " ›" }),
       h("button", { class: "btn fund-cta vault-auto", disabled: !v.items.length, onclick: () => { const n = SVT.vaultAutoEquip(); SVT.ui.toast(n ? "🤖 Chip changed " + n + (n === 1 ? " slot" : " slots") + ": best bonus in every slot." : "🤖 Chip already wears the best of everything."); refresh(); }, text: "⚡ Auto-equip best" }),
       h("div", { class: "vault-slotgrid" }, SLOTS.map(slotCard)),
       list || h("p", { class: "muted small", text: "Tap a slot to see what fits it, rarest first. Items only go where they belong: hand-helds in a hand, watches on the wrist, headsets and AI on the head, neckwear round the neck, clothing on the body, shoes on the feet, and big things on the floor beside him." })));

@@ -11,7 +11,8 @@ const clear = (s) => {
   lab.stage = s;
   return play(SVT, lab, (l) => SVT.raidProgress(l).p >= 1, R.time(s) * 20).t;
 };
-for (let s = 1; s <= R.STAGES; s++) {
+const FROM = +(process.env.FROM || 1), TO = +(process.env.TO || R.STAGES);
+for (let s = FROM; s <= TO; s++) {
   const st = R.stage(s), T = R.time(s), omen = st.diff.scale / (R.SCALES[s - 1] || 1);
   let k = 0.05, t = 0;
   for (let pass = 0; pass < 10; pass++) {
@@ -23,4 +24,4 @@ for (let s = 1; s <= R.STAGES; s++) {
   scales.push(Number(k.toPrecision(2)));
   console.error("stage", s, st.name, st.floors + " shafts", "shafts Lv " + st.max.floor + " hubs Lv " + st.max.freight, (T / 60).toFixed(1) + " min target", (t / 60).toFixed(1) + " min sim");
 }
-console.log("    SCALES: [" + scales.join(", ") + "],");
+console.log(FROM + "-" + TO + ": " + scales.join(", "));

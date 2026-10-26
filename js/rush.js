@@ -64,7 +64,7 @@ window.SVT = window.SVT || {};
       h("p", { class: "rush-lede", text: "Parts ride down the belt. Swipe each one into its bin before it drops off the end. Wrong bin or a dropped part costs a ❤️. You have 3, and the belt keeps speeding up." }),
       h("div", { class: "rush-bins legend" }, PARTS.map((p) => h("div", { class: "rush-bin b-" + p.dir },
         h("span", { class: "bin-ic", text: p.icon }), h("small", { text: (p.dir === "left" ? "⬅ " : p.dir === "down" ? "⬇ " : "➡ ") + p.name })))),
-      h("p", { class: "muted small", text: "Sort enough parts in " + B.RUSH.SECONDS + " seconds to boost every lab's income (Viking Raid not included). One run every " + B.RUSH.COOLDOWN / 60 + " minutes." }),
+      h("p", { class: "muted small", text: "Sort enough parts in " + B.RUSH.SECONDS + " seconds to boost every lab's income, Viking Raid included. One run every " + B.RUSH.COOLDOWN / 60 + " minutes." }),
       rewardTable(),
       R.best ? h("p", { class: "muted small", text: "Your best: " + R.best + " parts" }) : null,
       status),

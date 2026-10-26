@@ -1249,3 +1249,36 @@ button:active:not(:disabled) { filter: brightness(.9); transition-duration: 0s; 
 .sheet-body.funding .ladder li span { font-size: .8rem; }
 .sheet-body.funding p { margin: 0; }
 @media (max-width: 420px) { .lab-view > .top .top-btns .home-btn, .lab-view > .top .top-gear { width: 40px; height: 40px; font-size: 1.15rem; border-radius: 12px; } }
+
+/* v0.33: the sea at the bottom of the home screen, Chip's boat behind him, the boats panel and the raid batch tabs. */
+.lawn { bottom: 30%; }
+.bush.b1 { bottom: 34%; } .bush.b2 { bottom: 30%; }
+.mine-hole { top: 58%; }
+.sea { left: 0; right: 0; top: 70%; bottom: 0; overflow: hidden; background: linear-gradient(#5fc8ff, #2a8fd6 60%, #1b6fb5); }
+.sea::before { content: ""; position: absolute; left: 0; right: 0; top: -6px; height: 12px; background: #9fe0ff; border-radius: 50% 50% 0 0 / 100% 100% 0 0; opacity: .9; }
+.wave { position: absolute; left: -20%; width: 140%; height: 18px; border-radius: 50%; border-top: 4px solid #ffffff80; animation: wave-slide 7s linear infinite; }
+.wave.w1 { top: 22%; } .wave.w2 { top: 48%; animation-duration: 9s; animation-delay: -3s; opacity: .7; } .wave.w3 { top: 74%; animation-duration: 11s; animation-delay: -6s; opacity: .5; }
+@keyframes wave-slide { from { translate: -6% 0; } to { translate: 6% 0; } }
+.hero-boat { position: absolute; left: 50%; bottom: -62px; width: 400px; translate: -50% 0; z-index: 0; padding: 0; border: 0; background: none; cursor: pointer; animation: boat-rock 4.5s ease-in-out infinite; transform-origin: 50% 80%; }
+.hero-boat .boat { width: 100%; height: auto; display: block; filter: drop-shadow(0 6px 0 #0d4a7a40); }
+.hero-boat .boat.glow { filter: drop-shadow(0 6px 0 #0d4a7a40) drop-shadow(0 0 10px #ffe36a); }
+@keyframes boat-rock { 0%, 100% { transform: rotate(-1.5deg) translateY(0); } 50% { transform: rotate(1.5deg) translateY(4px); } }
+.hero-bot { animation: bot-float 4.5s ease-in-out infinite; }
+@keyframes bot-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(4px); } }
+.token-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.token-pill { display: inline-block; padding: 4px 12px; border-radius: 14px; background: linear-gradient(#e8eef5, #c9d6e4); border: 2px solid #5f7383; color: #1f2f3f; font: .95rem var(--f-display); box-shadow: inset 0 2px 0 #ffffff80, 0 2px 0 #3a4c5c; }
+.batch-tabs { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
+.batch-tab { display: grid; gap: 1px; padding: 5px 2px; border-radius: 10px; border: 2px solid var(--line); background: var(--surface); cursor: pointer; font-family: var(--f-display); }
+.batch-tab b { font-size: .62rem; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.batch-tab span { font-size: .68rem; color: var(--muted); }
+.batch-tab.sel { border-color: var(--copper); box-shadow: 0 0 0 2px var(--copper); }
+.batch-tab.locked { opacity: .5; }
+.stages { grid-template-columns: repeat(auto-fill, minmax(40px, 1fr)); gap: 5px; }
+.boats-panel .boat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.boat-card { display: grid; gap: 2px; padding: 6px; border-radius: 12px; border: 2px solid var(--line); background: linear-gradient(#8fdcff, #3fb7f5); color: #0c2e4a; cursor: pointer; text-align: center; }
+.boat-card b { font-size: .8rem; } .boat-card small { font-size: .7rem; color: #0c2e4a; }
+.boat-card .boat { width: 100%; height: auto; display: block; }
+.boat-card.locked { filter: grayscale(.8); opacity: .75; }
+.boat-card.locked .boat-pic { filter: brightness(.6); }
+.boat-card.on { border-color: var(--copper); box-shadow: 0 0 0 3px var(--copper); }
+.btn.boats-link { background: linear-gradient(#e8eef5, #c9d6e4); border-color: #5f7383; color: #1f2f3f; }
