@@ -1,6 +1,6 @@
 // Offline cache for the installed app. Bump CACHE with every release so phones pick up the new version.
-const CACHE = "svt-v0.32.0";
-const FILES = ["./", "index.html", "css/style.css", "js/data.js", "js/balance.js", "js/raid.js", "js/art.js", "js/game.js", "js/ui.js", "js/rush.js", "js/vault.js", "js/icons.js",
+const CACHE = "svt-v0.33.0";
+const FILES = ["./", "index.html", "css/style.css", "js/data.js", "js/balance.js", "js/raid.js", "js/art.js", "js/boats.js", "js/game.js", "js/ui.js", "js/rush.js", "js/vault.js", "js/icons.js",
   "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png"];
 
 self.addEventListener("install", (e) => {

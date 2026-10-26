@@ -53,7 +53,7 @@ window.SVT = window.SVT || {};
   // wears on the home screen (slot -> item id).
   function newVault() { return { coins: {}, wild: B.VAULT.START_COINS, beats: {}, items: [], pity: 0, spent: 0, serial: 0, replay: null, show: {} }; }
   function newState() {
-    return { rounds6: true, mgr5: true, v: 3, activeLab: "garage", buy: "next", labs: { garage: newLab("garage") }, raid: { cleared: 0 }, rush: newRush(), vault: newVault(), lastSeen: Date.now(), seenIntro: false };
+    return { rounds6: true, mgr5: true, v: 3, activeLab: "garage", buy: "next", labs: { garage: newLab("garage") }, raid: newRaid(), rush: newRush(), vault: newVault(), lastSeen: Date.now(), seenIntro: false };
   }
 
   let S = newState();
@@ -172,7 +172,14 @@ window.SVT = window.SVT || {};
   };
 
   // ---------- Viking Raid ----------
+  // Island progress: stages cleared, Viking tokens (separate from Vault coins) and the boat Chip chose (null = best).
+  function newRaid() { return { cleared: 0, tokens: 0, boat: null, v2: true }; }
   SVT.isRaid = (lab) => !!lab && lab.id === "raid";
+  SVT.vikingTokens = () => (S.raid && S.raid.tokens) || 0;
+  // Boats unlocked by tokens: boat k (1-based) opens at RAID.boatCost(k). Chip sails the best one unless he picked another.
+  SVT.boatsUnlocked = () => { let n = 0; for (let k = 1; k <= SVT.RAID.BOATS; k++) if (SVT.vikingTokens() >= SVT.RAID.boatCost(k)) n = k; return n; };
+  SVT.boatIndex = () => { const best = SVT.boatsUnlocked(), pick = S.raid && S.raid.boat; return pick && pick <= best ? pick : best; };
+  SVT.pickBoat = (k) => { if (!(k >= 1 && k <= SVT.boatsUnlocked())) return false; S.raid.boat = k === SVT.boatsUnlocked() ? null : k; save(); emit("change"); return true; };
   SVT.raidStage = (lab) => SVT.RAID.stage(lab.stage);
   SVT.raidNext = () => Math.min(SVT.RAID.STAGES, S.raid.cleared + 1);
   // Raid shafts, lift and warehouse stop at the stage's max level; labs use the normal caps.
@@ -251,7 +258,8 @@ window.SVT = window.SVT || {};
     return SVT.isSuper(m) ? { ab: SVT.abilityOf(m), m, live: SVT.isActive(m, t) } : null;
   };
   // Lab-wide multipliers from outside the manager system: omens in Viking Raid, Rush and Vault bonuses in the labs.
-  const worldMult = (lab, kind, t) => (SVT.isRaid(lab) ? SVT.raidStage(lab).mult[kind] : SVT.rushMult(t) * vaultMult);
+  // v0.33: every multiplier counts in Viking Raid too (omens on top of Rush and Chip's items).
+  const worldMult = (lab, kind, t) => (SVT.isRaid(lab) ? SVT.raidStage(lab).mult[kind] : 1) * SVT.rushMult(t) * vaultMult;
   // Passives of the node's super manager (always on while assigned): speed, load and that node's price cut.
   SVT.passives = (lab, kind, n) => {
     const s = superOn(lab, kind, n), p = (s && s.ab.passive) || {};
@@ -447,8 +455,10 @@ window.SVT = window.SVT || {};
     lab.rate = lab.rate * (1 - a) + (earned / dt) * a;
     if (SVT.isRaid(lab) && !lab.won && SVT.raidProgress(lab).p >= 1) {
       lab.won = true;
+      const first = lab.stage > S.raid.cleared, pay = first ? SVT.raidStage(lab).tokens : SVT.RAID.TOKENS.replay;
       S.raid.cleared = Math.max(S.raid.cleared, lab.stage);
-      emit("raidClear", { stage: lab.stage });
+      S.raid.tokens = (S.raid.tokens || 0) + pay;
+      emit("raidClear", { stage: lab.stage, tokens: pay, first });
     }
     return earned;
   }
@@ -739,7 +749,13 @@ window.SVT = window.SVT || {};
       S.mgr5 = true;
     }
     if (S.buy === 100 || S.buy === 50) S.buy = "max"; // v0.20.1 drops the ×50 chip (and v0.6 dropped ×100): Max rounds to 50s
-    if (!S.raid) S.raid = { cleared: 0 }; // v0.12 adds the Viking Raid island
+    if (!S.raid) S.raid = newRaid(); // v0.12 adds the Viking Raid island
+    // v0.33: the island is rebuilt (250 stages in 5 batches, tokens, boats); old raid progress starts over.
+    if (!S.raid.v2) {
+      S.raid = newRaid();
+      delete S.labs.raid;
+      if (S.activeLab === "raid") S.activeLab = "garage";
+    }
     if (!S.rush) S.rush = newRush(); // v0.16 adds Assembly Line Rush
     if (!S.vault) S.vault = newVault(); // v0.17 adds the Tech Vault
     if (!S.vault.show || typeof S.vault.show !== "object") S.vault.show = {};
