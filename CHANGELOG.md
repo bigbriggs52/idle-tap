@@ -2,6 +2,10 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.33.1 (2026-10-27)
+
+- Phones with a status pill down the right edge (iPhone Duo): panels, the bottom bar, toasts, Rush and the Vault now stay out of the phone's side safe area, like the lab screen already did, so the close button is no longer under the pill. Settings gets a switch, "Keep the right edge clear", that forces a 60px right gutter on phones that do not report the inset. It is saved per device.
+
 ## v0.33.0 (2026-10-26)
 
 - Viking Raid rebuilt from scratch (old raid progress starts over): 250 mines in 5 batches of 50. Stage 1 has one shaft and every stage adds one, up to 50. Each batch raises the max levels (shafts Lv 25/40/55/75/100, lift and warehouse Lv 100/160/220/300/400) and its first stage is a little harder than the last stage of the batch before. Prices grow per level like the labs.
