@@ -1282,3 +1282,14 @@ button:active:not(:disabled) { filter: brightness(.9); transition-duration: 0s; 
 .boat-card.locked .boat-pic { filter: brightness(.6); }
 .boat-card.on { border-color: var(--copper); box-shadow: 0 0 0 3px var(--copper); }
 .btn.boats-link { background: linear-gradient(#e8eef5, #c9d6e4); border-color: #5f7383; color: #1f2f3f; }
+
+/* v0.33.1: phones with a side status gutter (iPhone Duo's status pill). #app already honors env(safe-area-inset-right);
+   the fixed layers (panels, bottom bar, toasts, Rush, Vault) now do too. Settings can force a 60px right gutter
+   (body.duo) for devices that do not report the inset. */
+:root { --duo: 0px; }
+body.duo { --duo: 60px; }
+#app { padding-right: max(12px, env(safe-area-inset-right, 0px), var(--duo)); }
+.sheet-wrap { padding-left: max(30px, calc(12px + env(safe-area-inset-left, 0px))); padding-right: max(30px, calc(12px + max(env(safe-area-inset-right, 0px), var(--duo)))); }
+.bottom-nav { left: env(safe-area-inset-left, 0px); right: max(env(safe-area-inset-right, 0px), var(--duo)); }
+#toasts { left: env(safe-area-inset-left, 0px); right: max(env(safe-area-inset-right, 0px), var(--duo)); }
+.rush, .vault { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px), var(--duo)); }

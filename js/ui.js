@@ -1123,6 +1123,18 @@ window.SVT = window.SVT || {};
     return i < SVT.LABS.length ? SVT.LABS[i] : null;
   }
 
+  // v0.33.1: some phones (iPhone Duo) draw a status pill down the right edge. The layout follows the phone's safe
+  // area when it reports one; this switch forces a 60px right gutter for phones that do not. Saved per device.
+  const duoOn = () => { try { return localStorage.getItem("svt-duo") === "1"; } catch (e) { return false; } };
+  function applyDuo() { document.body.classList.toggle("duo", duoOn()); }
+  function duoBtn() {
+    const b = h("button", { class: "btn" });
+    const label = () => { b.textContent = "📱 Keep the right edge clear (iPhone Duo status pill): " + (duoOn() ? "On" : "Off"); };
+    b.addEventListener("click", () => { try { localStorage.setItem("svt-duo", duoOn() ? "0" : "1"); } catch (e) {} applyDuo(); label(); toast(duoOn() ? "Right edge kept clear of the status pill" : "Full-width layout"); });
+    label();
+    return b;
+  }
+  SVT.duoOn = duoOn;
   function openSettings() {
     let armed = false;
     const reset = h("button", { class: "btn danger", text: "Reset all progress" });
@@ -1133,6 +1145,7 @@ window.SVT = window.SVT || {};
     sheet("Settings", h("div", { class: "sheet-body" },
       h("p", null, h("b", { text: "Silicon Valley Tycoon " + buildTag() })),
       h("button", { class: "btn", onclick: checkUpdate, text: "🔄 Check for update" }),
+      duoBtn(),
       h("p", { class: "muted", text: "Tap floors, the lift and the warehouse to work them. Tap a dashed seat to hire a manager to automate it and keep earning while you're away (up to 2 hours). Income is limited by the slowest of build, freight and commercial, marked Slowest. Tap a blue Level button for stats and upgrades, and hold Upgrade to keep buying." }),
       h("p", { class: "muted", text: "Every 5 levels unlocks new tech (+10% on floors, +2% on hubs). Levels 10, 25, 50, 100 and beyond are big milestones." }),
       h("p", null, h("a", { href: "https://github.com/bigbriggs52/idle-tap/blob/main/CHANGELOG.md", target: "_blank", rel: "noopener", text: "Changelog" })),
@@ -1253,6 +1266,7 @@ window.SVT = window.SVT || {};
     const off = SVT.load();
     // The game opens on the home screen; a brand-new player goes straight into the garage for the intro.
     if (SVT.state().seenIntro) view = "home";
+    applyDuo();
     render();
     SVT.start();
     // One loop: the game steps every animation frame so movement is smooth, moving parts redraw every frame,
