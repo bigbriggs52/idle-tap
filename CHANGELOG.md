@@ -2,6 +2,11 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.34.1 (2026-10-29)
+
+- Viking Raid: the home screen's Viking Raid button opens the stage list again. Chip's boat behind him is a 400px-wide button and had crept over the button's right half, so a tap on the icon opened the boat list instead; the side bubbles now sit above the boat.
+- Viking Raid: clearing a mine always brings up the clear popup now, in Viking speak ("SKÅL! Stage 12 plundered!", a line from the skald, the tokens won) with a big "⚔️ Raid stage 13" button straight into the next mine. Before, the popup only showed when you were on that mine's screen with no panel open, so it was easy to miss.
+
 ## v0.34.0 (2026-10-29)
 
 - Tech Vault: bulk rolls. A 🔁 Max switch under the stakes rolls the chosen stake over and over until the coins run out (up to 100 rolls per press), then shows the whole haul sorted best first with a tally per rarity. A 🎲 Random lab option at the top of the lab list picks a lab for every roll (labs with their own coins go first, then wild coins at the lab with the most coins left), so one Max press can spend every coin you own. Legendary and Mythic finds are toasted with their count.

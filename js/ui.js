@@ -992,14 +992,20 @@ window.SVT = window.SVT || {};
       h("div", { class: "boat-grid" }, cards)), { icon: "⛵" });
   }
   SVT.openBoats = openBoats;
+  // The clear popup (v0.34.1, user's ask): Viking speak, a big button straight into the next mine. Shown every time a
+  // mine is cleared, whatever screen or panel is open (before, an open panel or the home screen swallowed it).
+  const SKALD = ["Skål, jarl! The halls ring with your name.", "Odin's ravens saw it all: the hoard is ours!", "Thor's own thunder could not have dug faster.", "The skalds will sing of this raid for a hundred winters.", "Valhalla's gates creak open a little wider.", "By Fenrir's teeth, what a haul!", "Raise the mead horns! The mine is plundered.", "The jarl's hall grows richer. Onward, to the next fjord!"];
   function showRaidClear(s, d) {
-    const R = SVT.RAID, last = s >= R.STAGES, boat = SVT.boatIndex();
-    sheet("Stage " + s + " cleared!", h("div", { class: "sheet-body" },
-      h("p", { text: last ? "You raided all " + R.STAGES + " mines on the island. Skål!" : R.stage(s).name + " is yours. Stage " + (s + 1) + ", " + R.stage(s + 1).name + ", is open." }),
+    const R = SVT.RAID, last = s >= R.STAGES, boat = SVT.boatIndex(), next = last ? null : R.stage(s + 1);
+    sheet("SKÅL! Stage " + s + " plundered!", h("div", { class: "sheet-body raid-clear" },
+      h("div", { class: "raid-clear-horns", "aria-hidden": "true", text: "🍻⚔️🍻" }),
+      h("p", { class: "raid-clear-say", text: SKALD[s % SKALD.length] }),
+      h("p", { text: last ? "Every one of the " + R.STAGES + " mines on the island is yours. The saga is complete, jarl!" : R.stage(s).name + " is stripped to the bedrock. The longships are ready for " + next.name + "." }),
       h("p", { class: "muted", text: "🛡 +" + (d && d.tokens || 0) + (d && d.tokens === 1 ? " Viking token" : " Viking tokens") + " · " + SVT.vikingTokens() + " in all · ⛵ sailing " + SVT.BOATS[boat - 1].name + (boat < R.BOATS ? " · next boat at 🛡 " + R.boatCost(boat + 1) : "") }),
-      last ? null : h("button", { class: "btn fund-cta big", onclick: () => { closeSheet(); SVT.startRaid(s + 1); setView("lab"); }, text: "Raid stage " + (s + 1) }),
-      h("button", { class: "btn", onclick: closeSheet, text: "Keep playing here" })), { icon: "⚔️" });
+      last ? null : h("button", { class: "btn fund-cta big raid-next", onclick: () => { closeSheet(); SVT.startRaid(s + 1); setView("lab"); }, text: "⚔️ Raid stage " + (s + 1) + ": " + next.name }),
+      h("button", { class: "btn", onclick: closeSheet, text: "Stay in this mine" })), { icon: "⚔️" });
   }
+  SVT.showRaidClear = showRaidClear;
 
   // ---------- home screen ----------
   // The title screen the game opens on: jump back into your lab, or pick the map, Viking Raid or Settings.
@@ -1232,7 +1238,7 @@ window.SVT = window.SVT || {};
     if (type === "raidClear") {
       toast("⚔️ Viking Raid stage " + d.stage + " cleared!", "big");
       if (d.tokens) toast("🛡 +" + d.tokens + " Viking " + (d.tokens === 1 ? "token" : "tokens"));
-      if (inRaid() && !document.getElementById("sheet")) showRaidClear(d.stage, d);
+      setTimeout(() => showRaidClear(d.stage, d), 350); // after the toast lands; replaces whatever panel is open
     }
   });
 
