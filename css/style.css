@@ -1306,3 +1306,10 @@ body.duo { --duo: 60px; }
 .vault-tally-pill { padding: 4px 10px; border-radius: 999px; background: var(--rc); color: #fff; font: .85rem var(--f-display); }
 .vault-haul { display: grid; gap: 10px; width: 100%; }
 .vault-many .vault-card { font-size: .9rem; }
+
+/* v0.34.1: the side bubbles sit above Chip's boat (its 400px button used to catch taps on the Viking Raid bubble) */
+.side { position: relative; z-index: 2; }
+.raid-clear { text-align: center; }
+.raid-clear-horns { font-size: 2.4rem; line-height: 1; animation: pulse 1.2s ease-in-out infinite; }
+.raid-clear-say { margin: 0; font: 1.15rem var(--f-display); color: #5b2fb3; }
+.raid-next { width: 100%; }
