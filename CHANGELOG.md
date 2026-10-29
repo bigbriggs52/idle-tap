@@ -2,6 +2,10 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.34.3 (2026-10-29)
+
+- No more pinch zoom. A pinch-zoomed page pins the bottom bar to the zoomed-out page instead of the screen, so it floated mid-screen with the floors scrolling behind it (the user's screenshot). The page now pans only: pinch and double-tap zoom are off in the viewport settings, in CSS and in the touch handlers.
+
 ## v0.34.2 (2026-10-29)
 
 - Viking Raid: the clear popup can no longer be tapped away by accident. There is no ✕ and tapping outside it does nothing; the only ways out are "⚔️ Raid stage N+1" and "🏠 Home".

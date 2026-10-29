@@ -436,6 +436,9 @@ const popupOverPanel = await page.evaluate(() => new Promise((res) => { SVT.show
 if (!popupOverPanel) errors.push("Raid clear popup does not replace an open panel");
 // v0.34.2: the popup has no close button and a tap on the backdrop leaves it up; Home is the only other way out
 await page.click("#sheet", { position: { x: 5, y: 5 }, force: true }); await page.waitForTimeout(100);
+// v0.34.3: no pinch zoom (viewport meta, touch-action and gesture handlers)
+const noZoom = await page.evaluate(() => ({ meta: document.querySelector('meta[name="viewport"]').content, ta: getComputedStyle(document.body).touchAction, js: SVT.noZoom === true }));
+if (!noZoom.meta.includes("maximum-scale=1") || !noZoom.meta.includes("user-scalable=no") || noZoom.ta !== "pan-x pan-y" || !noZoom.js) errors.push("Pinch zoom not disabled: " + JSON.stringify(noZoom));
 const stickyClear = await page.evaluate(() => ({ up: !!document.querySelector(".raid-clear"), x: !!document.querySelector("#sheet .x-btn"), home: [...document.querySelectorAll(".raid-clear .btn")].some((b) => b.textContent.includes("Home")) }));
 if (!stickyClear.up || stickyClear.x || !stickyClear.home) errors.push("Raid clear popup should be sticky with a Home button: " + JSON.stringify(stickyClear));
 // v0.33: a first clear pays Viking tokens (batch 1 pays 1), tokens unlock boats, the raid def has 50 shaft names and 5 tiers

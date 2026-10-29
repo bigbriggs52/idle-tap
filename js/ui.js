@@ -1243,6 +1243,12 @@ window.SVT = window.SVT || {};
     }
   });
 
+  // No pinch zoom (v0.34.3). A pinch-zoomed page pins the bottom bar to the layout viewport, so on the user's phone it
+  // floated mid-screen with the floors scrolling behind it. Safari ignores user-scalable=no, so the gesture events
+  // are cancelled here as well as by touch-action in the CSS.
+  ["gesturestart", "gesturechange", "gestureend"].forEach((ev) => document.addEventListener(ev, (e) => e.preventDefault(), { passive: false }));
+  document.addEventListener("touchmove", (e) => { if (e.touches.length > 1 || (e.scale !== undefined && e.scale !== 1)) e.preventDefault(); }, { passive: false });
+  SVT.noZoom = true;
   // Reliable taps on phones. A press that lifts within 14px of where it started, within 700ms, counts as a tap on
   // that control even if the browser would have dropped the click (a tiny drag inside a scrolling panel, or the
   // contents changing under the finger). The browser's own click that may follow is swallowed so nothing fires twice.
