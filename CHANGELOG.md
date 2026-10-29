@@ -2,6 +2,10 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.33.2 (2026-10-29)
+
+- Viking Raid lift and warehouse prices made sense again. Their first level cost a fraction of a cent (shown as $0) because the price curve was anchored on the last level only with the labs' steep per-level growth. Now the lift's and the warehouse's first level cost the same as shaft 1's first level, their last level matches the deepest shaft's last level, and the growth per level follows from that. Late batch-1 stages (45 to 50) also had near-free shafts from a pacing-sim artifact; the sim no longer opens new shafts while the lift or warehouse caps income, and every stage's price scale was refitted, so stage 50 now lands on its 20-minute target instead of 24.
+
 ## v0.33.1 (2026-10-27)
 
 - Phones with a status pill down the right edge (iPhone Duo): panels, the bottom bar, toasts, Rush and the Vault now stay out of the phone's side safe area, like the lab screen already did, so the close button is no longer under the pill. Settings gets a switch, "Keep the right edge clear", that forces a 60px right gutter on phones that do not report the inset. It is saved per device.

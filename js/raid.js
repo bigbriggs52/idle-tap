@@ -61,8 +61,9 @@ window.SVT = window.SVT || {};
       { floor: 100, freight: 400, commercial: 400 },
     ],
     max: (s) => R.CAPS[R.batchOf(s) - 1],
-    // Price growth per level: the same as the labs (v0.33, "similar numbers to the main levels").
-    GROWTH: { floor: SVT.B.FLOOR_GROWTH, freight: SVT.B.HUB_GROWTH, commercial: SVT.B.HUB_GROWTH },
+    // Shaft price growth per level: the same as the labs (v0.33, "similar numbers to the main levels"). Hub growth is
+    // set per stage by hubPrices (stage.growth).
+    GROWTH: { floor: SVT.B.FLOOR_GROWTH },
     // Target clear time for an efficient player (v0.33, user's pacing): batch 1 runs from 5 minutes (stage 1) to
     // 20 minutes (stage 50); every batch starts where the one before ended and climbs 4x again, so batch 2 runs
     // 20 to 80 minutes, batch 3 80 minutes to 5.3 hours, batch 4 5.3 to 21 hours, batch 5 21 to 85 hours.
@@ -76,11 +77,11 @@ window.SVT = window.SVT || {};
     boatCost: (k) => (k <= 1 ? 0 : Math.round(750 * Math.pow((k - 1) / 49, 1.6))),
     // Price scale per stage, from tests/raid-goals.mjs (the pacing sim fitted to each stage's target time).
     SCALES: [
-      9.4, 19, 17, 8.2, 6.2, 4.3, 2.6, 1.4, 1.2, 0.61, 0.57, 0.41, 0.39, 0.29, 0.15, 0.11, 0.11, 0.048, 0.031, 0.024, 0.038, 0.011, 0.021, 0.0078, 0.012, 0.0064, 0.0029, 0.0043, 0.0026, 0.0018, 0.0014, 0.0021, 0.0017, 0.00086, 0.0015, 0.00058, 0.00045, 0.00035, 0.00032, 0.00029, 0.00031, 0.00013, 0.00011, 0.00012, 7.8e-05, 0.00016, 7e-05, 7.6e-05, 6.5e-05, 7e-05,
-      43, 71, 72, 48, 96, 69, 44, 40, 85, 71, 26, 46, 35, 21, 15, 8.9, 8.3, 4.1, 6.5, 3.9, 3.1, 2, 1.5, 1, 0.9, 0.84, 0.77, 0.57, 0.56, 0.67, 0.44, 0.53, 0.28, 0.42, 0.26, 0.34, 0.31, 0.2, 0.2, 0.26, 0.22, 0.17, 0.24, 0.12, 0.2, 0.18, 0.16, 0.15, 0.12, 0.19,
-      83, 420, 210, 620, 420, 320, 220, 440, 230, 220, 220, 510, 220, 340, 230, 250, 480, 340, 740, 260, 360, 790, 190, 400, 420, 640, 410, 590, 320, 330, 470, 730, 500, 690, 360, 370, 380, 1100, 590, 800, 1200, 1200, 650, 470, 690, 340, 730, 1100, 530, 810,
-      910, 1700, 1200, 1800, 880, 1300, 890, 920, 990, 1000, 1000, 1500, 2100, 2400, 3200, 2500, 2200, 2300, 2400, 1200, 2800, 2900, 2900, 950, 1500, 3200, 1500, 3400, 1600, 3600, 2500, 5100, 3900, 2500, 1800, 4200, 2900, 2000, 3100, 3200, 3300, 4500, 2300, 4700, 2600, 3500, 3900, 2800, 5500, 5600,
-      1700, 4500, 6300, 7400, 5000, 3600, 5300, 3700, 5300, 4000, 4000, 4100, 4200, 6000, 8800, 6800, 4800, 11000, 5200, 3600, 16000, 12000, 12000, 5700, 6100, 6000, 6500, 14000, 15000, 15000, 20000, 7100, 11000, 7900, 8100, 16000, 12000, 19000, 13000, 13000, 9100, 9800, 19000, 20000, 15000, 15000, 24000, 22000, 11000, 23000,
+      3.7, 5.5, 6, 5.1, 6.3, 6.3, 6.5, 5.2, 5.7, 5.4, 5.7, 5.8, 8.5, 7, 5.9, 6.1, 7.2, 5.7, 4.5, 4.1, 7, 3.9, 6.9, 5, 8.5, 5, 3.8, 5.9, 5.1, 4.8, 4.5, 8.4, 6.3, 4.8, 8.5, 4.3, 4.2, 4.3, 3.5, 3.6, 5.2, 2.1, 2.1, 2.2, 1.6, 3.3, 1.4, 1.5, 1.1, 1.3,
+      18, 17, 21, 12, 26, 16, 20, 17, 29, 27, 19, 30, 31, 31, 30, 27, 32, 20, 39, 42, 36, 28, 24, 24, 25, 22, 30, 26, 39, 41, 42, 50, 20, 40, 28, 52, 42, 29, 36, 46, 36, 31, 55, 23, 37, 27, 38, 23, 22, 30,
+      37, 81, 62, 130, 120, 68, 53, 110, 72, 57, 58, 120, 73, 76, 63, 84, 160, 130, 170, 110, 140, 180, 71, 130, 160, 170, 150, 200, 110, 130, 180, 180, 110, 230, 150, 150, 150, 250, 210, 250, 260, 260, 130, 150, 180, 110, 160, 190, 120, 200,
+      320, 370, 290, 330, 280, 270, 240, 250, 270, 280, 280, 370, 540, 420, 630, 530, 540, 610, 560, 290, 590, 610, 510, 280, 450, 550, 320, 580, 500, 610, 450, 930, 780, 700, 400, 840, 520, 500, 590, 710, 570, 1100, 560, 980, 740, 930, 700, 680, 1100, 1300,
+      700, 1100, 1700, 1600, 1400, 1100, 1300, 870, 1500, 1100, 890, 1000, 1100, 1700, 2200, 1600, 1400, 2200, 1300, 970, 2900, 2500, 2500, 1200, 1500, 1500, 1600, 2400, 2400, 3000, 3700, 1700, 2500, 2300, 2400, 3700, 2300, 3700, 2700, 3300, 2100, 2700, 4300, 4200, 3800, 3700, 4300, 4800, 2500, 4800,
     ],
   };
 
@@ -91,14 +92,17 @@ window.SVT = window.SVT || {};
     if (!NAMES.includes(nm)) NAMES.push(nm);
   }
 
-  // Hub price multipliers so that the lift's and the warehouse's last level and the deepest shaft's last level cost
-  // the same: a player who upgrades evenly finishes all three around the same time.
-  function hubScale(s) {
-    const B = SVT.B, G = R.GROWTH, M = R.max(s), F = R.shafts(s);
-    const last = B.floorBase(F) * Math.pow(R.BASE.grow, F - 1) * Math.pow(G.floor, M.floor - 2);
+  // Hub prices (v0.33.2): the lift's and the warehouse's first level cost the same as shaft 1's first level, and their
+  // last level costs the same as the deepest shaft's last level; the growth per level in between follows from that
+  // (about 1.01 on a one-shaft stage, about 1.15 on a 50-shaft one). Before, a fixed 1.14 growth was anchored on the
+  // last level only, which made the first lift level cost a fraction of a cent (the user's bug report).
+  function hubPrices(s) {
+    const B = SVT.B, M = R.max(s), F = R.shafts(s);
+    const start = B.floorBase(1);
+    const end = B.floorBase(F) * Math.pow(R.BASE.grow, F - 1) * Math.pow(R.GROWTH.floor, M.floor - 2);
     return {
-      freight: last / (B.freightBase * Math.pow(G.freight, M.freight - 2)),
-      commercial: last / (B.commercialBase * Math.pow(G.commercial, M.commercial - 2)),
+      hub: { freight: start / B.freightBase, commercial: start / B.commercialBase },
+      growth: { floor: R.GROWTH.floor, freight: Math.pow(end / start, 1 / (M.freight - 2)), commercial: Math.pow(end / start, 1 / (M.commercial - 2)) },
     };
   }
   const cache = {};
@@ -114,15 +118,16 @@ window.SVT = window.SVT || {};
       if (!omens.some((x) => x.stat === o.stat)) omens.push(o);
     }
     const mult = (stat) => omens.reduce((m, o) => (o.stat === stat ? m * o.mult : m), 1);
+    const hp = hubPrices(s);
     const st = {
-      n: s, name, omens,
+      n: s, name, omens, growth: hp.growth,
       batch: R.batchOf(s), level: R.levelOf(s), batchName: BATCHES[R.batchOf(s) - 1],
       floors: R.shafts(s),
       max: R.max(s),
       time: R.time(s),
       tokens: R.batchOf(s),
       mult: { floor: mult("floor"), freight: mult("freight"), commercial: mult("commercial") },
-      diff: { scale: (R.SCALES[s - 1] || 1) * mult("cost"), grow: R.BASE.grow, hub: hubScale(s) },
+      diff: { scale: (R.SCALES[s - 1] || 1) * mult("cost"), grow: R.BASE.grow, hub: hp.hub },
     };
     return (cache[s] = st);
   };
