@@ -108,6 +108,40 @@ window.SVT = window.SVT || {};
     return item;
   };
   SVT.vaultItem = (id) => S().items.find((x) => x.id === id) || null;
+  // Bulk rolls (v0.34, user's ask: "buy bulk Max in the vault"). ANY = a random lab per roll. Labs with their own coins
+  // go first (any of them, at random); once none can pay on its own, the lab with the most coins left rolls on wild
+  // coins, so the count the button promises is the count the player gets.
+  SVT.VAULT_ANY = "any";
+  SVT.VAULT_BULK_MAX = 100; // rolls per press
+  SVT.vaultRollable = (stake) => SVT.LABS.filter((l) => SVT.vaultSpendable(l.id) >= stake);
+  function pickLab(labId, stake, coins, wild, r) {
+    if (labId !== SVT.VAULT_ANY) return (coins[labId] || 0) + (SVT.state().labs[labId] ? wild : 0) >= stake ? labId : null;
+    const own = SVT.LABS.filter((l) => (coins[l.id] || 0) >= stake);
+    if (own.length) return own[Math.floor(r() * own.length)].id;
+    const open = SVT.LABS.filter((l) => SVT.state().labs[l.id] && (coins[l.id] || 0) + wild >= stake).sort((a, b) => (coins[b.id] || 0) - (coins[a.id] || 0));
+    return open.length ? open[0].id : null;
+  }
+  // How many rolls a Max press makes at this stake (a dry run of the same picking rule).
+  SVT.vaultMaxRolls = (labId, stake, limit) => {
+    const v = S(), coins = Object.assign({}, v.coins); let wild = v.wild || 0, n = 0;
+    limit = limit || SVT.VAULT_BULK_MAX;
+    while (n < limit) {
+      const id = pickLab(labId, stake, coins, wild, () => 0);
+      if (!id) break;
+      const own = Math.min(stake, coins[id] || 0); coins[id] = (coins[id] || 0) - own; wild -= stake - own; n++;
+    }
+    return n;
+  };
+  SVT.vaultRollMany = (labId, stake, limit) => {
+    const out = []; limit = limit || SVT.VAULT_BULK_MAX;
+    while (out.length < limit) {
+      const v = S(), id = pickLab(labId, stake, v.coins, v.wild || 0, rnd);
+      const it = id && SVT.vaultRoll(id, stake);
+      if (!it) break;
+      out.push(it);
+    }
+    return out;
+  };
   // ---------- Chip's slots ----------
   // Paper-doll style: each slot is an anchor point on Chip (x, y in his 200x270 SVG box, size in px, z in front of
   // or behind him). Held things go in a hand, wearables on the wrist, head, neck, body or feet, and anything he can't
@@ -248,7 +282,7 @@ window.SVT = window.SVT || {};
   };
 
   // ---------- UI ----------
-  let box = null, busy = false, labPick = null, stake = 1, tab = "roll", slotPick = null;
+  let box = null, busy = false, labPick = null, stake = 1, bulk = false, tab = "roll", slotPick = null;
   function close() { if (box) box.remove(); box = null; busy = false; document.removeEventListener("keydown", onKey); }
   function onKey(e) { if (e.key === "Escape") close(); }
   function shell(...kids) {
@@ -285,21 +319,30 @@ window.SVT = window.SVT || {};
     if (tab === "chip") return chipTab();
     // Labs you can roll at: ones with their own coins, plus any open lab while you have wild coins.
     const labs = SVT.LABS.filter((l) => SVT.vaultSpendable(l.id) > 0);
-    if (!labs.find((l) => l.id === labPick)) labPick = labs.length ? labs[0].id : null;
-    const have = labPick ? SVT.vaultSpendable(labPick) : 0;
+    const ANY = SVT.VAULT_ANY;
+    if (labPick !== ANY && !labs.find((l) => l.id === labPick)) labPick = labs.length ? labs[0].id : null;
+    if (labPick === ANY && !labs.length) labPick = null;
+    const have = !labPick ? 0 : labPick === ANY ? Math.max(0, ...labs.map((l) => SVT.vaultSpendable(l.id))) : SVT.vaultSpendable(labPick);
     if (!V.STAKES.includes(stake) || stake > have) stake = V.STAKES.filter((s) => s <= have).pop() || 1;
+    const many = labPick ? SVT.vaultMaxRolls(labPick, stake) : 0;
     const pityLeft = Math.max(0, V.PITY.HARD - v.pity);
     const body = h("div", { class: "vault-body" },
       h("p", { class: "vault-lede", text: "Pick a lab, pick a stake, roll. Every roll is a one-of-a-kind collectible from that lab. More coins in one roll means better odds." }),
       SVT.vaultWild() ? h("p", { class: "muted small", text: "🪙 " + SVT.vaultWild() + " wild " + (SVT.vaultWild() === 1 ? "coin rolls" : "coins roll") + " at any open lab (a lab's own coins go first)." }) : null,
       labs.length
-        ? h("div", { class: "vault-labs" }, labs.map((l) => h("button", { class: "vault-lab" + (l.id === labPick ? " on" : ""), onclick: () => { labPick = l.id; openVault(); } },
+        ? h("div", { class: "vault-labs" },
+          h("button", { class: "vault-lab any" + (labPick === ANY ? " on" : ""), onclick: () => { labPick = ANY; openVault(); } },
+            h("span", { text: "🎲 Random lab" }), h("b", { text: "🪙 " + SVT.vaultCoins() + " · every roll picks a lab" })),
+          labs.map((l) => h("button", { class: "vault-lab" + (l.id === labPick ? " on" : ""), onclick: () => { labPick = l.id; openVault(); } },
           h("span", { text: l.icon + " " + l.name }), h("b", { text: "🪙 " + (v.coins[l.id] || 0) + (SVT.vaultWild() ? " +" + SVT.vaultWild() + " wild" : "") }))))
         : h("p", { class: "vault-empty", text: "No coins yet. Raise a lab's IPO to earn " + V.COIN_PER_BEAT + " coins, then replay a beaten lab from the map for " + V.COIN_PER_BEAT + " more." }),
       labPick ? h("div", { class: "vault-stakes" }, V.STAKES.map((s) => h("button", { class: "vault-stake" + (s === stake ? " on" : ""), disabled: s > have, onclick: () => { stake = s; openVault(); } }, h("b", { text: "🪙 " + s }), h("small", { text: s === 1 ? "1 coin" : s + " coins" })))) : null,
+      labPick ? h("button", { class: "vault-bulk" + (bulk ? " on" : ""), "aria-pressed": bulk ? "true" : "false", onclick: () => { bulk = !bulk; openVault(); } },
+        h("b", { text: bulk ? "🔁 Max: on" : "🔁 Max" }), h("span", { text: bulk ? "Rolls " + many + "× " + stake + (stake === 1 ? " coin" : " coins") + " in one go" + (many >= SVT.VAULT_BULK_MAX ? " (" + SVT.VAULT_BULK_MAX + " per press)" : "") : "Roll until the coins run out" })) : null,
       labPick ? oddsTable(stake) : oddsTable(1),
       h("p", { class: "muted small", text: (v.pity >= V.PITY.SOFT ? "🔥 " : "") + "Legendary or better guaranteed within " + pityLeft + " more " + (pityLeft === 1 ? "coin" : "coins") + "." + (v.serial === 0 ? " Your first roll is at least Rare." : "") }));
-    const roll = h("button", { class: "btn fund-cta big vault-roll", disabled: !labPick || have < stake, onclick: () => doRoll(labPick, stake), text: labPick ? "Roll " + stake + (stake === 1 ? " coin" : " coins") : "No coins to roll" });
+    const roll = h("button", { class: "btn fund-cta big vault-roll", disabled: !labPick || have < stake, onclick: () => (bulk ? doRollMany(labPick, stake) : doRoll(labPick, stake)),
+      text: !labPick ? "No coins to roll" : bulk ? "Roll Max · " + many + " × " + stake + (stake === 1 ? " coin" : " coins") : "Roll " + stake + (stake === 1 ? " coin" : " coins") + (labPick === ANY ? " at a random lab" : "") });
     shell(body, h("div", { class: "vault-foot" }, roll));
   }
 
@@ -307,10 +350,10 @@ window.SVT = window.SVT || {};
   function doRoll(labId, coins) {
     const { h } = SVT.ui;
     if (busy) return;
-    const it = SVT.vaultRoll(labId, coins);
+    const it = labId === SVT.VAULT_ANY ? SVT.vaultRollMany(labId, coins, 1)[0] : SVT.vaultRoll(labId, coins);
     if (!it) return;
     busy = true;
-    const def = SVT.LABS.find((l) => l.id === labId);
+    const def = SVT.LABS.find((l) => l.id === it.lab);
     const finals = SVT.itemCode(it);
     const pools = [def.products, RAR.map((r) => r.name), COLORS.map((c) => c[0]), SIZES.map((s) => s[0]), MODS, ["#????", "DNA ???"]];
     const segs = finals.map((t, i) => h("div", { class: "vault-seg", "data-i": i }, h("span", { text: pools[i][0] })));
@@ -334,6 +377,35 @@ window.SVT = window.SVT || {};
     setTimeout(lock, 700);
   }
 
+  // Max: every roll at once, a short spin, then the haul sorted best first with a tally per rarity.
+  function doRollMany(labId, coins) {
+    const { h } = SVT.ui;
+    if (busy) return;
+    const items = SVT.vaultRollMany(labId, coins);
+    if (!items.length) return;
+    busy = true;
+    const pools = [RAR.map((r) => r.name), COLORS.map((c) => c[0]), MODS];
+    const segs = pools.map((p, i) => h("div", { class: "vault-seg", "data-i": i + 1 }, h("span", { text: p[0] })));
+    const stage = h("div", { class: "vault-spin" }, segs);
+    shell(h("div", { class: "vault-body vault-rolling" }, h("p", { class: "vault-lede", text: "Rolling " + items.length + " × " + coins + (coins === 1 ? " coin" : " coins") + (labId === SVT.VAULT_ANY ? " across your labs…" : " at " + SVT.LABS.find((l) => l.id === labId).name + "…") }), stage));
+    const spin = setInterval(() => segs.forEach((s, i) => { s.firstChild.textContent = pick(pools[i]); }), 70);
+    setTimeout(() => { clearInterval(spin); if (box && box.contains(stage)) revealMany(items); else busy = false; }, 1400);
+  }
+  function revealMany(items) {
+    const { h, toast } = SVT.ui;
+    busy = false;
+    const sorted = items.slice().sort((a, b) => b.rar - a.rar || b.id - a.id);
+    const tally = RAR.map((r, i) => items.filter((it) => it.rar === i).length);
+    const best = sorted[0];
+    shell(h("div", { class: "vault-body vault-reveal vault-many r-" + best.rarity },
+      h("p", { class: "vault-got", text: tally[5] ? "✨ " + tally[5] + " MYTHIC! ✨" : tally[4] ? "⭐ " + tally[4] + " Legendary! ⭐" : items.length + " new items" }),
+      h("div", { class: "vault-tally" }, RAR.map((r, i) => tally[i] ? h("span", { class: "vault-tally-pill r-" + r.id, text: tally[i] + " " + r.name }) : null)),
+      h("div", { class: "vault-haul" }, sorted.map((it) => itemCard(it, false))),
+      h("p", { class: "muted small", text: "Every one is one of a kind. Your best new items went straight onto Chip's free slots." })),
+      h("div", { class: "vault-foot" }, h("button", { class: "btn fund-cta big", onclick: () => { tab = "roll"; openVault(); }, text: SVT.vaultCoins() ? "Roll again" : "Back to the Vault" })));
+    if (tally[4] + tally[5]) toast((tally[5] ? "✨ " + tally[5] + " Mythic" : "") + (tally[5] && tally[4] ? ", " : "") + (tally[4] ? "⭐ " + tally[4] + " Legendary" : "") + "!", "big");
+    if (SVT.render) SVT.render();
+  }
   const refresh = () => { if (SVT.render) SVT.render(); openVault(); };
   // An item card: picture, name, rarity and bonus, where it goes on Chip, and one Equip / Take off button. The full
   // six-part code sits behind "Details".
