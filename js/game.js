@@ -100,6 +100,7 @@ window.SVT = window.SVT || {};
   SVT.labDiff = (lab) => (SVT.isRaid(lab) ? SVT.RAID.stage(lab.stage).diff : B.LAB_DIFF[lab && lab.id] || B.LAB_DIFF.garage);
   SVT.costScale = (lab, kind, n) => {
     const d = SVT.labDiff(lab);
+    if (SVT.isRaid(lab) && kind === "floor") return d.scale * SVT.RAID.shaftBase(n) / B.floorBase(n); // v0.33.3: 1.3x per shaft from shaft 1's price
     return kind === "floor" ? d.scale * Math.pow(d.grow, n - 1) : d.scale * (d.hub ? d.hub[kind] : 1);
   };
   // Price growth per level: labs use the shared rates; Viking Raid has its own (see RAID.GROWTH).
@@ -538,7 +539,13 @@ window.SVT = window.SVT || {};
     if (n > (SVT.isRaid(lab) ? SVT.raidStage(lab).floors : B.FLOORS)) return null;
     const wall = SVT.isRaid(lab) ? undefined : B.WALLS[n];
     const blocked = wall !== undefined && lab.round <= wall;
-    return { n, cost: B.unlockCost(n) * SVT.costScale(lab, "floor", n), blocked, round: blocked ? B.ROUNDS[wall] : null };
+    return { n, cost: SVT.isRaid(lab) ? SVT.raidUnlock(lab, n) : B.unlockCost(n) * SVT.costScale(lab, "floor", n), blocked, round: blocked ? B.ROUNDS[wall] : null };
+  };
+  // Viking Raid (v0.33.3, user's call: opening mines was far cheaper than upgrading them or hiring): a new shaft costs
+  // as much as taking the shaft above it from Lv 1 to the stage's max level.
+  SVT.raidUnlock = (lab, n) => {
+    const m = Math.max(1, n - 1), cap = SVT.maxLevel(lab, "floor");
+    return B.bulk("floor", m, 1, cap - 1, 0, 0, SVT.costScale(lab, "floor", m), cap, SVT.growthOf(lab, "floor")).cost;
   };
 
   SVT.unlockFloor = () => {
@@ -558,7 +565,16 @@ window.SVT = window.SVT || {};
     for (const r of B.RANKS) { if (roll < r.odds) return r.id; roll -= r.odds; }
     return "common";
   };
-  SVT.hireCost = (lab, role) => B.hireCost(role, lab.hires[role]) * SVT.costScale(lab, role, 1);
+  // Viking Raid hires (v0.33.3): the k-th Digger costs half of opening shaft k+1 (so a manager costs about half of
+  // maxing a shaft, and keeps pace with the mine instead of the labs' 2.5^k climb over 50 shafts); a Lift Thrall or
+  // Trader costs half of opening shaft 2, doubling with each rehire.
+  SVT.hireCost = (lab, role) => {
+    if (SVT.isRaid(lab)) {
+      const k = lab.hires[role] || 0, F = SVT.raidStage(lab).floors;
+      return role === "floor" ? 0.5 * SVT.raidUnlock(lab, Math.min(k + 2, Math.max(2, F))) : 0.5 * SVT.raidUnlock(lab, 2) * Math.pow(2, k);
+    }
+    return B.hireCost(role, lab.hires[role]) * SVT.costScale(lab, role, 1);
+  };
   // Hiring adds a manager to the Owned list; the player chooses where it works.
   SVT.hire = (role) => {
     const lab = SVT.lab();

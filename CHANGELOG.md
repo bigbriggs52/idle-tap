@@ -2,6 +2,10 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.33.3 (2026-10-29)
+
+- Viking Raid: opening a new shaft, upgrading and hiring now cost about the same kind of money. A new shaft costs as much as taking the shaft above it from Lv 1 to the stage's max level (before, it was about a tenth of that). The k-th Digger costs half of opening shaft k+1, so managers keep pace with the mine instead of climbing 2.5× per hire like the labs (the 20th hire used to cost billions); a Lift Thrall or Trader costs half of opening shaft 2, doubling with each rehire. Shaft prices now climb 1.3× per shaft from shaft 1's price (shaft 2 used to be 4× cheaper than shaft 1). Every stage's price scale was refitted to the same targets.
+
 ## v0.33.2 (2026-10-29)
 
 - Viking Raid lift and warehouse prices made sense again. Their first level cost a fraction of a cent (shown as $0) because the price curve was anchored on the last level only with the labs' steep per-level growth. Now the lift's and the warehouse's first level cost the same as shaft 1's first level, their last level matches the deepest shaft's last level, and the growth per level follows from that. Late batch-1 stages (45 to 50) also had near-free shafts from a pacing-sim artifact; the sim no longer opens new shafts while the lift or warehouse caps income, and every stage's price scale was refitted, so stage 50 now lands on its 20-minute target instead of 24.
