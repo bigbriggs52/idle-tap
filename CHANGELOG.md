@@ -2,6 +2,10 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.34.2 (2026-10-29)
+
+- Viking Raid: the clear popup can no longer be tapped away by accident. There is no ✕ and tapping outside it does nothing; the only ways out are "⚔️ Raid stage N+1" and "🏠 Home".
+
 ## v0.34.1 (2026-10-29)
 
 - Viking Raid: the home screen's Viking Raid button opens the stage list again. Chip's boat behind him is a 400px-wide button and had crept over the button's right half, so a tap on the icon opened the boat list instead; the side bubbles now sit above the boat.

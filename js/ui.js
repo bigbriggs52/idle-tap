@@ -993,7 +993,8 @@ window.SVT = window.SVT || {};
   }
   SVT.openBoats = openBoats;
   // The clear popup (v0.34.1, user's ask): Viking speak, a big button straight into the next mine. Shown every time a
-  // mine is cleared, whatever screen or panel is open (before, an open panel or the home screen swallowed it).
+  // mine is cleared, whatever screen or panel is open (before, an open panel or the home screen swallowed it). The only
+  // ways out are the next mine and Home (v0.34.2): it cannot be tapped away.
   const SKALD = ["Skål, jarl! The halls ring with your name.", "Odin's ravens saw it all: the hoard is ours!", "Thor's own thunder could not have dug faster.", "The skalds will sing of this raid for a hundred winters.", "Valhalla's gates creak open a little wider.", "By Fenrir's teeth, what a haul!", "Raise the mead horns! The mine is plundered.", "The jarl's hall grows richer. Onward, to the next fjord!"];
   function showRaidClear(s, d) {
     const R = SVT.RAID, last = s >= R.STAGES, boat = SVT.boatIndex(), next = last ? null : R.stage(s + 1);
@@ -1003,7 +1004,7 @@ window.SVT = window.SVT || {};
       h("p", { text: last ? "Every one of the " + R.STAGES + " mines on the island is yours. The saga is complete, jarl!" : R.stage(s).name + " is stripped to the bedrock. The longships are ready for " + next.name + "." }),
       h("p", { class: "muted", text: "🛡 +" + (d && d.tokens || 0) + (d && d.tokens === 1 ? " Viking token" : " Viking tokens") + " · " + SVT.vikingTokens() + " in all · ⛵ sailing " + SVT.BOATS[boat - 1].name + (boat < R.BOATS ? " · next boat at 🛡 " + R.boatCost(boat + 1) : "") }),
       last ? null : h("button", { class: "btn fund-cta big raid-next", onclick: () => { closeSheet(); SVT.startRaid(s + 1); setView("lab"); }, text: "⚔️ Raid stage " + (s + 1) + ": " + next.name }),
-      h("button", { class: "btn", onclick: closeSheet, text: "Stay in this mine" })), { icon: "⚔️" });
+      h("button", { class: "btn", onclick: () => { closeSheet(); setView("home"); }, text: "🏠 Home" })), { icon: "⚔️", sticky: true }); // v0.34.2: no ✕ and no tap-outside close (the user kept dismissing it by accident)
   }
   SVT.showRaidClear = showRaidClear;
 

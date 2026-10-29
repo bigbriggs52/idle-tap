@@ -434,6 +434,10 @@ if (!nextBtn.startsWith("⚔️ Raid stage 2: " + (await page.evaluate(() => SVT
 await page.evaluate(() => SVT.openRaid());
 const popupOverPanel = await page.evaluate(() => new Promise((res) => { SVT.showRaidClear(1, { tokens: 1 }); setTimeout(() => res(!!document.querySelector(".raid-clear")), 50); }));
 if (!popupOverPanel) errors.push("Raid clear popup does not replace an open panel");
+// v0.34.2: the popup has no close button and a tap on the backdrop leaves it up; Home is the only other way out
+await page.click("#sheet", { position: { x: 5, y: 5 }, force: true }); await page.waitForTimeout(100);
+const stickyClear = await page.evaluate(() => ({ up: !!document.querySelector(".raid-clear"), x: !!document.querySelector("#sheet .x-btn"), home: [...document.querySelectorAll(".raid-clear .btn")].some((b) => b.textContent.includes("Home")) }));
+if (!stickyClear.up || stickyClear.x || !stickyClear.home) errors.push("Raid clear popup should be sticky with a Home button: " + JSON.stringify(stickyClear));
 // v0.33: a first clear pays Viking tokens (batch 1 pays 1), tokens unlock boats, the raid def has 50 shaft names and 5 tiers
 const viking = await page.evaluate(() => { const R = SVT.RAID, L = SVT.lab(); return { tokens: SVT.vikingTokens(), boats: SVT.boatsUnlocked(), boat: SVT.boatIndex(), stages: R.STAGES, shafts50: R.shafts(50), shafts51: R.shafts(51), t1: R.time(1), t50: R.time(50), t51: R.time(51), t250: R.time(250), loot: R.def(50).products.length, tier: R.def(1).tierOf(50), cost2: R.boatCost(2), cost50: R.boatCost(50), svg: SVT.boatSvg(50).length, names: new Set(SVT.BOATS.map((b) => b.name)).size, omens: R.stage(1).omens.length }; });
 console.log("viking", JSON.stringify(viking));
