@@ -103,7 +103,7 @@ window.SVT = window.SVT || {};
     return kind === "floor" ? d.scale * Math.pow(d.grow, n - 1) : d.scale * (d.hub ? d.hub[kind] : 1);
   };
   // Price growth per level: labs use the shared rates; Viking Raid has its own (see RAID.GROWTH).
-  SVT.growthOf = (lab, kind) => (SVT.isRaid(lab) ? SVT.RAID.GROWTH[kind] : B.growth(kind));
+  SVT.growthOf = (lab, kind) => (SVT.isRaid(lab) ? SVT.raidStage(lab).growth[kind] : B.growth(kind));
   SVT.newLab = newLab;
 
   // ---------- Assembly Line Rush ----------

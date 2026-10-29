@@ -43,7 +43,10 @@ export function play(SVT, lab, stop, maxT = 1e7) {
     // New floors come first: players open the next floor as soon as they can pay for it.
     // New floors come first: players save up for the next floor once it is within a couple of minutes of income.
     const base = income(), sbase = soft();
-    if (nf && !nf.blocked && nf.cost <= base * SAVE_FOR) {
+    // ...but only while the floors are the bottleneck (v0.33.2): when the lift or the warehouse caps income, a new
+    // floor earns nothing yet and the scored pick below (which still considers the floor) decides.
+    const rr = SVT.rates(lab), floorsLimit = rr.build <= Math.min(rr.freight, rr.commercial) * 1.0001;
+    if (nf && !nf.blocked && floorsLimit && nf.cost <= base * SAVE_FOR) {
       if (lab.cash < nf.cost && !wait(nf.cost)) continue;
       lab.cash -= nf.cost; lab.floors.push({ lvl: 1, stock: 0, left: 0 }); continue;
     }
