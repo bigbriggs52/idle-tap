@@ -53,7 +53,7 @@ window.SVT = window.SVT || {};
   // wears on the home screen (slot -> item id).
   function newVault() { return { coins: {}, wild: B.VAULT.START_COINS, beats: {}, items: [], pity: 0, spent: 0, serial: 0, replay: null, show: {} }; }
   function newState() {
-    return { rounds6: true, mgr5: true, v: 3, activeLab: "garage", buy: "next", labs: { garage: newLab("garage") }, raid: newRaid(), rush: newRush(), vault: newVault(), lastSeen: Date.now(), seenIntro: false };
+    return { rounds6: true, mgr5: true, v: 3, activeLab: "garage", buy: "next", labs: { garage: newLab("garage") }, raid: newRaid(), hoard: newHoard(), rush: newRush(), vault: newVault(), lastSeen: Date.now(), seenIntro: false };
   }
 
   let S = newState();
@@ -175,6 +175,8 @@ window.SVT = window.SVT || {};
   // ---------- Viking Raid ----------
   // Island progress: stages cleared, Viking tokens (separate from Vault coins) and the boat Chip chose (null = best).
   function newRaid() { return { cleared: 0, tokens: 0, boat: null, v2: true }; }
+  // Viking Hoard (v0.35): relics owned by id, tokens spent on spins (boats go by tokens ever earned), pity, find count.
+  function newHoard() { return { owned: {}, spent: 0, pity: 0, serial: 0 }; }
   SVT.isRaid = (lab) => !!lab && lab.id === "raid";
   SVT.vikingTokens = () => (S.raid && S.raid.tokens) || 0;
   // Boats unlocked by tokens: boat k (1-based) opens at RAID.boatCost(k). Chip sails the best one unless he picked another.
@@ -774,6 +776,7 @@ window.SVT = window.SVT || {};
     }
     if (!S.rush) S.rush = newRush(); // v0.16 adds Assembly Line Rush
     if (!S.vault) S.vault = newVault(); // v0.17 adds the Tech Vault
+    if (!S.hoard) S.hoard = newHoard(); // v0.35 adds the Viking Hoard
     if (!S.vault.show || typeof S.vault.show !== "object") S.vault.show = {};
     // v0.19: items can carry an income boost; items from before get theirs rolled now.
     S.vault.items.forEach((it) => { if (it.boost === undefined) { const b = B.VAULT.BONUS[it.rar]; it.boost = Math.random() < b.chance ? b.mult : 1; } });

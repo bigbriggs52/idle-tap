@@ -1313,3 +1313,21 @@ body.duo { --duo: 60px; }
 .raid-clear-horns { font-size: 2.4rem; line-height: 1; animation: pulse 1.2s ease-in-out infinite; }
 .raid-clear-say { margin: 0; font: 1.15rem var(--f-display); color: #5b2fb3; }
 .raid-next { width: 100%; }
+
+/* v0.35: Viking Hoard (reuses the Vault overlay styles in steel and gold) */
+.vault.hoard { background: radial-gradient(circle at 50% -10%, #9fb6c9, #3d5468 45%, #1b2a36); }
+.vault.hoard .vault-head h2 { text-shadow: 0 2px 0 #0d1a24; }
+.vault.hoard .vault-tab.on { color: #2a4055; box-shadow: 0 3px 0 #0d1a24; }
+.vault.hoard .vault-body { background: #f6f3ec; color: #1f2f3f; border-color: #c9d6e4; box-shadow: 0 5px 0 #0d1a24; }
+.vault.hoard .vault-coins { background: #e8eef5; color: #1f2f3f; border-color: #5f7383; box-shadow: 0 2px 0 #0d1a24; }
+.vault.hoard .vault-star { color: #ffd84d; }
+.hoard-tally { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
+.hoard-filter { border: 3px solid transparent; cursor: pointer; }
+.hoard-filter.on { border-color: #1f2f3f; box-shadow: 0 0 0 2px #fff; }
+.hoard-art { background: radial-gradient(circle at 50% 30%, color-mix(in srgb, var(--mat) 55%, #fff), var(--mat)); }
+.hoard-emoji { font-size: 3rem; line-height: 1; filter: drop-shadow(0 3px 0 #0004); }
+.vault-card.big .hoard-emoji { font-size: 5rem; }
+.hoard-card.new .vault-card-name::after { content: " NEW"; font: .6rem var(--f-display); color: #fff; background: #e5303e; padding: 1px 5px; border-radius: 6px; vertical-align: middle; }
+.hoard-merge-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 12px; border-radius: 14px; background: #fff; border: 3px solid var(--rc); }
+.hoard-merge-btns { display: flex; gap: 6px; }
+.token-btns { display: flex; gap: 6px; }

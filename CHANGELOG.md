@@ -2,6 +2,10 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.35.0 (2026-10-29)
+
+- Viking Hoard: Viking tokens now spin for relics. 🎰 Hoard (from the Stages panel and Chip's boats) spends tokens on a rune spin for one of 10,000 relics (50 loot types × 10 materials × 20 epithets), each with a fixed rarity: 5,000 Common, 2,800 Uncommon, 1,500 Rare, 550 Epic, 130 Legendary, 20 Mythic. Stake 1, 3, 5 or 10 tokens in one spin for better odds, with pity (Legendary or better within 75 tokens) and a first spin that is at least Rare. A 🔁 Max switch spins until the tokens run out (100 per press) and shows the haul with a rarity tally. The Hoard tab shows the collection by rarity; the Merge tab forges any three relics of one rarity into one of the next (Forge 1 or Forge all). Boats go by tokens ever earned, so spending tokens never costs a boat.
+
 ## v0.34.3 (2026-10-29)
 
 - No more pinch zoom. A pinch-zoomed page pins the bottom bar to the zoomed-out page instead of the screen, so it floated mid-screen with the floors scrolling behind it (the user's screenshot). The page now pans only: pinch and double-tap zoom are off in the viewport settings, in CSS and in the touch handlers.

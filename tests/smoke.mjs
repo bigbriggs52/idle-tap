@@ -447,6 +447,45 @@ console.log("viking", JSON.stringify(viking));
 if (viking.tokens !== 1 || viking.boats !== 2 || viking.boat !== 2) errors.push("Viking tokens or boats wrong after a clear: " + JSON.stringify(viking));
 if (viking.stages !== 250 || viking.shafts50 !== 50 || viking.shafts51 !== 1 || viking.t1 !== 300 || Math.abs(viking.t50 - 1200) > 1e-6 || Math.abs(viking.t51 - 1200) > 1e-6 || Math.abs(viking.t250 - 307200) > 1e-6) errors.push("Raid batches or pacing wrong: " + JSON.stringify(viking));
 if (viking.loot !== 50 || viking.tier !== 4 || viking.cost2 < 1 || viking.cost50 !== 750 || viking.svg < 500 || viking.names !== 50) errors.push("Raid loot, tiers or boats wrong: " + JSON.stringify(viking));
+// v0.35: Viking Hoard. 10,000 relics with fixed rarities; spins spend tokens but boats go by tokens earned; Max and merge.
+const hoard = await page.evaluate(() => {
+  const S = SVT.state(), H = SVT.HOARD, out = {};
+  const names = new Set(); const counts = [0, 0, 0, 0, 0, 0];
+  for (let id = 0; id < H.N; id++) { names.add(SVT.relic(id).name); counts[SVT.relicRar(id)]++; }
+  out.names = names.size; out.counts = counts;
+  S.raid.tokens = 40; S.hoard = { owned: {}, spent: 0, pity: 0, serial: 0 };
+  out.spendable0 = SVT.hoardTokens(); out.boats0 = SVT.boatsUnlocked();
+  const first = SVT.hoardSpin(1); out.firstRar = first && first.rar; out.spendable1 = SVT.hoardTokens(); out.boats1 = SVT.boatsUnlocked();
+  out.max3 = SVT.hoardMaxSpins(3);
+  const many = SVT.hoardSpinMany(3); out.many = many.length; out.spendable2 = SVT.hoardTokens(); out.owned = SVT.hoardCount();
+  out.uniqueOwned = new Set(SVT.hoardOwned()).size;
+  // merge: hand over nine commons, forge one, then forge all
+  const commons = []; for (let id = 0; id < H.N && commons.length < 9; id++) if (SVT.relicRar(id) === 0 && !SVT.hoardHas(id)) commons.push(id);
+  commons.forEach((id) => { S.hoard.owned[id] = { n: ++S.hoard.serial, at: 0, stake: 0, from: "spin" }; });
+  const before = SVT.hoardCount(0);
+  const forged = SVT.hoardMerge(0); out.forgedRar = forged && forged.rar; out.commonsAfter = SVT.hoardCount(0); out.commonsBefore = before;
+  out.mergesLeft = SVT.hoardMerges().find((g) => g.rar === 0).ids.length;
+  out.noMythicMerge = SVT.hoardMerges().every((g) => g.rar < 5);
+  return out;
+});
+console.log("hoard", JSON.stringify(hoard));
+if (hoard.names !== 10000 || hoard.counts.join() !== "5000,2800,1500,550,130,20") errors.push("Hoard catalogue wrong " + JSON.stringify(hoard));
+if (hoard.spendable0 !== 40 || hoard.spendable1 !== 39 || hoard.boats1 !== hoard.boats0 || hoard.firstRar < 2) errors.push("Hoard spin or boats wrong " + JSON.stringify(hoard));
+if (hoard.max3 !== 13 || hoard.many !== 13 || hoard.spendable2 !== 0 || hoard.owned !== 14 || hoard.uniqueOwned !== 14) errors.push("Hoard Max spins wrong " + JSON.stringify(hoard));
+if (hoard.forgedRar !== 1 || hoard.commonsAfter !== hoard.commonsBefore - 3 || hoard.mergesLeft !== hoard.commonsAfter || !hoard.noMythicMerge) errors.push("Hoard merge wrong " + JSON.stringify(hoard));
+await page.evaluate(() => { SVT.state().raid.tokens = 60; SVT.openRaid(); }); await page.waitForTimeout(200);
+await page.click(".hoard-btn"); await page.waitForTimeout(300);
+if (!(await page.locator("#hoard .vault-odds").isVisible())) errors.push("Hoard panel did not open from the Stages panel");
+await page.screenshot({ path: out + "/12b-hoard.png" });
+await page.click("#hoard .vault-stake >> nth=3"); await page.click(".hoard-spin"); await page.waitForTimeout(4500);
+await page.screenshot({ path: out + "/12c-hoard-reveal.png" });
+if (!(await page.locator("#hoard .vault-reveal .hoard-card").isVisible())) errors.push("Hoard reveal card missing");
+await page.evaluate(() => SVT.openHoard("hoard")); await page.waitForTimeout(200);
+await page.screenshot({ path: out + "/12d-hoard-collection.png" });
+if ((await page.locator("#hoard .hoard-card").count()) < 10) errors.push("Hoard collection tab shows too few relics");
+await page.evaluate(() => SVT.openHoard("merge")); await page.waitForTimeout(200);
+await page.screenshot({ path: out + "/12e-hoard-merge.png" });
+await page.evaluate(() => { SVT.closeHoard(); SVT.showRaidClear(1, { tokens: 1 }); });
 await page.click("text=Raid stage 2");
 await page.waitForTimeout(300);
 if ((await page.evaluate(() => SVT.lab().stage)) !== 2) errors.push("Stage 2 did not open after clearing");
