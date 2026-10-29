@@ -557,6 +557,33 @@ await page.screenshot({ path: out + "/21-vault-roll.png" });
 await page.waitForTimeout(4500);
 await page.screenshot({ path: out + "/22-vault-reveal.png" });
 if (!(await page.locator(".vault-reveal .vault-card").isVisible())) errors.push("Vault: reveal card missing");
+// v0.34: bulk Max rolls and a random lab. Garage 7 coins + arcade 4 + 5 wild at stake 3: 2 garage rolls, 1 arcade roll,
+// then arcade 1 + 2 wild (most own coins first), then garage 1 + 2 wild = 5 rolls with one wild coin left; the count promised is the count made.
+const bulk = await page.evaluate(() => {
+  const S = SVT.state(), V = SVT.B.VAULT, out = {};
+  S.vault.coins.garage = 7; S.vault.coins.arcade = 4; S.vault.wild = 5;
+  out.max3 = SVT.vaultMaxRolls(SVT.VAULT_ANY, 3); out.maxGarage = SVT.vaultMaxRolls("garage", 3); out.maxCap = SVT.vaultMaxRolls(SVT.VAULT_ANY, 1);
+  const got = SVT.vaultRollMany(SVT.VAULT_ANY, 3);
+  out.rolled = got.length; out.labs = [...new Set(got.map((it) => it.lab))].sort(); out.left = SVT.vaultCoins(); out.wild = SVT.vaultWild();
+  S.vault.coins.garage = 150; S.vault.wild = 0;
+  out.capped = SVT.vaultRollMany("garage", 1).length; out.capMax = V && SVT.VAULT_BULK_MAX; out.afterCap = SVT.vaultCoins("garage");
+  S.vault.coins.garage = 12; S.vault.coins.arcade = 6; S.vault.wild = 0;
+  return out;
+});
+console.log("bulk", JSON.stringify(bulk));
+if (bulk.max3 !== 5 || bulk.maxGarage !== 4 || bulk.maxCap !== 16 || bulk.rolled !== 5 || bulk.labs.join() !== "arcade,garage" || bulk.left !== 1 || bulk.wild !== 1) errors.push("Vault: bulk Max count or lab picking wrong " + JSON.stringify(bulk));
+if (bulk.capped !== bulk.capMax || bulk.afterCap !== 150 - bulk.capMax) errors.push("Vault: bulk roll cap wrong " + JSON.stringify(bulk));
+await page.evaluate(() => SVT.openVault()); await page.waitForTimeout(200);
+if (!(await page.locator(".vault-lab.any").isVisible())) errors.push("Vault: random lab option missing");
+await page.click(".vault-lab.any"); await page.click(".vault-stake >> nth=1"); await page.click(".vault-bulk"); await page.waitForTimeout(200);
+const bulkBtn = await page.locator(".vault-roll").textContent();
+if (!bulkBtn.startsWith("Roll Max · 6 × 3 coins")) errors.push("Vault: Max button text wrong: " + bulkBtn);
+await page.screenshot({ path: out + "/22b-vault-max.png" });
+await page.click(".vault-roll"); await page.waitForTimeout(2200);
+const haul = await page.locator(".vault-haul .vault-card").count();
+if (haul !== 6 || !(await page.locator(".vault-tally-pill").count())) errors.push("Vault: Max reveal shows " + haul + " cards");
+if ((await page.evaluate(() => SVT.vaultCoins())) !== 0) errors.push("Vault: Max roll left coins behind");
+await page.screenshot({ path: out + "/22c-vault-haul.png" });
 await page.evaluate(() => SVT.openGallery()); await page.waitForTimeout(300);
 await page.screenshot({ path: out + "/23-vault-gallery.png" });
 await page.click(".vault-tab >> nth=3"); await page.waitForTimeout(300);

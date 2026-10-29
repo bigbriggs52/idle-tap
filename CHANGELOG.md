@@ -2,6 +2,10 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.34.0 (2026-10-29)
+
+- Tech Vault: bulk rolls. A 🔁 Max switch under the stakes rolls the chosen stake over and over until the coins run out (up to 100 rolls per press), then shows the whole haul sorted best first with a tally per rarity. A 🎲 Random lab option at the top of the lab list picks a lab for every roll (labs with their own coins go first, then wild coins at the lab with the most coins left), so one Max press can spend every coin you own. Legendary and Mythic finds are toasted with their count.
+
 ## v0.33.3 (2026-10-29)
 
 - Viking Raid: opening a new shaft, upgrading and hiring now cost about the same kind of money. A new shaft costs as much as taking the shaft above it from Lv 1 to the stage's max level (before, it was about a tenth of that). The k-th Digger costs half of opening shaft k+1, so managers keep pace with the mine instead of climbing 2.5× per hire like the labs (the 20th hire used to cost billions); a Lift Thrall or Trader costs half of opening shaft 2, doubling with each rehire. Shaft prices now climb 1.3× per shaft from shaft 1's price (shaft 2 used to be 4× cheaper than shaft 1). Every stage's price scale was refitted to the same targets.

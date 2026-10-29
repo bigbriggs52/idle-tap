@@ -1293,3 +1293,16 @@ body.duo { --duo: 60px; }
 .bottom-nav { left: env(safe-area-inset-left, 0px); right: max(env(safe-area-inset-right, 0px), var(--duo)); }
 #toasts { left: env(safe-area-inset-left, 0px); right: max(env(safe-area-inset-right, 0px), var(--duo)); }
 .rush, .vault { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px), var(--duo)); }
+
+/* v0.34: Vault bulk Max and random lab */
+.vault-lab.any { border-color: #ffb300; background: linear-gradient(#fffaf0, #fff0c2); }
+.vault-lab.any.on { border-color: #e0a21a; background: linear-gradient(#fff6d6, #ffe08a); box-shadow: 0 0 0 3px #e0a21a44; }
+.vault-bulk { display: grid; justify-items: start; gap: 2px; width: 100%; padding: 8px 12px; border-radius: 14px; border: 3px solid #dcc8ff; background: #fff; color: #4a2a8a; cursor: pointer; text-align: left; }
+.vault-bulk b { font: 1.05rem var(--f-display); }
+.vault-bulk span { font-size: .78rem; font-weight: 700; color: #6b5a8a; }
+.vault-bulk.on { border-color: #3dbb4a; background: linear-gradient(#eaffe0, #d4f7c6); color: #18562a; box-shadow: 0 0 0 3px #3dbb4a33; }
+.vault-bulk.on span { color: #2a6b3a; }
+.vault-tally { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
+.vault-tally-pill { padding: 4px 10px; border-radius: 999px; background: var(--rc); color: #fff; font: .85rem var(--f-display); }
+.vault-haul { display: grid; gap: 10px; width: 100%; }
+.vault-many .vault-card { font-size: .9rem; }
