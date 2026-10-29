@@ -970,7 +970,8 @@ window.SVT = window.SVT || {};
     });
     show();
     sheet("Viking Raid", h("div", { class: "sheet-body raid-panel" },
-      h("div", { class: "token-row" }, h("span", { class: "token-pill", text: "🛡 " + SVT.vikingTokens() + " Viking tokens" }), h("button", { class: "btn small", onclick: openBoats, text: "⛵ Boats " + SVT.boatsUnlocked() + "/" + R.BOATS })),
+      h("div", { class: "token-row" }, h("span", { class: "token-pill", text: "🛡 " + SVT.hoardTokens() + " Viking tokens" }),
+        h("div", { class: "token-btns" }, h("button", { class: "btn small hoard-btn", onclick: () => SVT.openHoard(), text: "🎰 Hoard" }), h("button", { class: "btn small", onclick: openBoats, text: "⛵ Boats " + SVT.boatsUnlocked() + "/" + R.BOATS }))),
       h("p", { class: "muted small", text: "Five batches of 50 Viking mines. Stage 1 has one shaft and every stage adds one; each batch digs deeper (higher max levels) and starts a little harder than the last stage before it. Managers, abilities, Rush boosts and Chip's items all count. Max out the mine to clear a stage: open every shaft, take every shaft and the lift and warehouse to the batch's max level. Clears pay Viking tokens, which unlock boats for Chip." }),
       tabs, info, stages), { icon: "⚔️", foot: h("div", { class: "panel-foot" }, go) });
   }
@@ -987,8 +988,9 @@ window.SVT = window.SVT || {};
         h("small", { text: open ? (on ? "⛵ Sailing now" : "Tap to sail") : "🔒 " + cost + " tokens" }));
     });
     sheet("Chip's boats", h("div", { class: "sheet-body boats-panel" },
-      h("div", { class: "token-row" }, h("span", { class: "token-pill", text: "🛡 " + have + " Viking tokens" }), h("span", { class: "muted small", text: top + " of " + R.BOATS + " boats unlocked" })),
-      h("p", { class: "muted small", text: "Clearing a Viking mine pays tokens (1 to 5 a stage, more in later batches; a replay pays 1). Tokens are kept separate from Vault coins and never spent: every boat you reach stays yours. Chip sails the boat you pick on the home screen." }),
+      h("div", { class: "token-row" }, h("span", { class: "token-pill", text: "🛡 " + have + " tokens earned" }), h("span", { class: "muted small", text: top + " of " + R.BOATS + " boats unlocked" })),
+      h("p", { class: "muted small", text: "Clearing a Viking mine pays tokens (1 to 5 a stage, more in later batches; a replay pays 1). Boats go by tokens ever earned, so spending tokens on Hoard spins never costs you a boat. Chip sails the boat you pick on the home screen." }),
+      h("button", { class: "btn small", onclick: () => SVT.openHoard(), text: "🎰 Viking Hoard: spin tokens for relics ›" }),
       h("div", { class: "boat-grid" }, cards)), { icon: "⛵" });
   }
   SVT.openBoats = openBoats;
