@@ -176,7 +176,7 @@ window.SVT = window.SVT || {};
   // Island progress: stages cleared, Viking tokens (separate from Vault coins) and the boat Chip chose (null = best).
   function newRaid() { return { cleared: 0, tokens: 0, boat: null, v2: true }; }
   // Viking Hoard (v0.35): relics owned by id, tokens spent on spins (boats go by tokens ever earned), pity, find count.
-  function newHoard() { return { owned: {}, spent: 0, pity: 0, serial: 0 }; }
+  function newHoard() { return { owned: {}, spent: 0, pity: 0, serial: 0, ship: [] }; }
   SVT.isRaid = (lab) => !!lab && lab.id === "raid";
   SVT.vikingTokens = () => (S.raid && S.raid.tokens) || 0;
   // Boats unlocked by tokens: boat k (1-based) opens at RAID.boatCost(k). Chip sails the best one unless he picked another.
@@ -262,7 +262,8 @@ window.SVT = window.SVT || {};
   };
   // Lab-wide multipliers from outside the manager system: omens in Viking Raid, Rush and Vault bonuses in the labs.
   // v0.33: every multiplier counts in Viking Raid too (omens on top of Rush and Chip's items).
-  const worldMult = (lab, kind, t) => (SVT.isRaid(lab) ? SVT.raidStage(lab).mult[kind] : 1) * SVT.rushMult(t) * vaultMult;
+  // Viking Raid income also carries the longship bonus from equipped Hoard relics (v0.36, js/hoard.js).
+  const worldMult = (lab, kind, t) => (SVT.isRaid(lab) ? SVT.raidStage(lab).mult[kind] * (SVT.hoardMult ? SVT.hoardMult() : 1) : 1) * SVT.rushMult(t) * vaultMult;
   // Passives of the node's super manager (always on while assigned): speed, load and that node's price cut.
   SVT.passives = (lab, kind, n) => {
     const s = superOn(lab, kind, n), p = (s && s.ab.passive) || {};
@@ -777,6 +778,7 @@ window.SVT = window.SVT || {};
     if (!S.rush) S.rush = newRush(); // v0.16 adds Assembly Line Rush
     if (!S.vault) S.vault = newVault(); // v0.17 adds the Tech Vault
     if (!S.hoard) S.hoard = newHoard(); // v0.35 adds the Viking Hoard
+    if (!S.hoard.ship) S.hoard.ship = []; // v0.36: relics equipped on the longship
     if (!S.vault.show || typeof S.vault.show !== "object") S.vault.show = {};
     // v0.19: items can carry an income boost; items from before get theirs rolled now.
     S.vault.items.forEach((it) => { if (it.boost === undefined) { const b = B.VAULT.BONUS[it.rar]; it.boost = Math.random() < b.chance ? b.mult : 1; } });

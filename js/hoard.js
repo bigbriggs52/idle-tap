@@ -15,7 +15,9 @@ window.SVT = window.SVT || {};
   const EMOJI = ["🪙", "📿", "🔩", "🪮", "🧥", "💍", "🧷", "🛢️", "🦷", "🔪", "🛡️", "🪓", "⛑️", "🧶", "🏹", "🗡️", "🪨", "💰", "📿", "⚔️",
     "🗡️", "🍺", "🐎", "🚢", "⛵", "👑", "🔨", "🪽", "🥚", "🐦‍⬛", "🔮", "🪨", "🫖", "🛢️", "🥾", "🎲", "🧵", "🍷", "🪙", "🐻",
     "🦅", "🦄", "🧵", "🚣", "💍", "🦷", "⛓️", "⚡", "🍃", "🗝️"];
-  const H = { N: 10000, PER_LOOT: 200, COUNTS: [5000, 2800, 1500, 550, 130, 20], STAKES: V.STAKES, ODDS: V.ODDS, PITY: V.PITY, FIRST_MIN: V.FIRST_ROLL_MIN, BULK_MAX: 100 };
+  // Relics equipped on the longship (v0.36) boost Viking mine income by their rarity; the boosts add up, capped.
+  const H = { N: 10000, PER_LOOT: 200, COUNTS: [5000, 2800, 1500, 550, 130, 20], STAKES: V.STAKES, ODDS: V.ODDS, PITY: V.PITY, FIRST_MIN: V.FIRST_ROLL_MIN, BULK_MAX: 100,
+    SLOTS: 5, BONUS: V.BONUS.map((b) => b.mult), MAX_BONUS: V.MAX_BONUS };
   const rnd = () => Math.random();
   function mulberry(seed) { return function () { seed = (seed + 0x6d2b79f5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
   // rarOf[id]: a seeded shuffle of the 10,000 ids, cut into the rarity counts, so every relic's rarity is fixed forever.
@@ -28,7 +30,18 @@ window.SVT = window.SVT || {};
   })();
   const byRar = RAR.map((_, rar) => { const a = []; for (let id = 0; id < H.N; id++) if (rarOf[id] === rar) a.push(id); return a; });
   const loot = () => SVT.RAID.def(1).products;
-  const S = () => { const st = SVT.state(); if (!st.hoard) st.hoard = { owned: {}, spent: 0, pity: 0, serial: 0 }; return st.hoard; };
+  const S = () => { const st = SVT.state(); if (!st.hoard) st.hoard = { owned: {}, spent: 0, pity: 0, serial: 0, ship: [] }; if (!st.hoard.ship) st.hoard.ship = []; return st.hoard; };
+  // ---------- longship: up to SLOTS equipped relics, each adding its rarity's bonus to Viking mine income ----------
+  let shipMult = null;
+  SVT.relicBonus = (id) => H.BONUS[rarOf[id]];
+  SVT.hoardShip = () => { const h = S(); h.ship = h.ship.filter((id) => h.owned[id]); return h.ship.slice(); };
+  SVT.hoardEquipped = (id) => S().ship.includes(id);
+  SVT.hoardRecalc = () => { let x = 1; SVT.hoardShip().forEach((id) => { x += SVT.relicBonus(id) - 1; }); shipMult = Math.min(H.MAX_BONUS, Math.round(x * 100) / 100); return shipMult; };
+  SVT.hoardMult = () => (shipMult === null ? SVT.hoardRecalc() : shipMult);
+  SVT.hoardEquip = (id) => { const h = S(); if (!h.owned[id] || h.ship.includes(id) || SVT.hoardShip().length >= H.SLOTS) return false; h.ship.push(id); SVT.hoardRecalc(); SVT.save(); return true; };
+  SVT.hoardUnequip = (id) => { const h = S(); h.ship = h.ship.filter((x) => x !== id); SVT.hoardRecalc(); SVT.save(); return true; };
+  // Best 5: the rarest relics owned (newest first on a tie). Returns how many slots changed.
+  SVT.hoardBest = () => { const h = S(), before = h.ship.join(); h.ship = SVT.hoardOwned().sort((a, b) => rarOf[b] - rarOf[a] || h.owned[b].n - h.owned[a].n).slice(0, H.SLOTS); SVT.hoardRecalc(); SVT.save(); return h.ship.join() !== before; };
 
   SVT.HOARD = H;
   SVT.relic = (id) => {
@@ -80,7 +93,7 @@ window.SVT = window.SVT || {};
   SVT.hoardMaxSpins = (stake, limit) => Math.min(limit || H.BULK_MAX, Math.floor(SVT.hoardTokens() / stake), H.N - SVT.hoardCount());
   SVT.hoardSpinMany = (stake, limit) => { const out = []; limit = limit || H.BULK_MAX; while (out.length < limit) { const it = SVT.hoardSpin(stake); if (!it) break; out.push(it); } return out; };
   // Merging: any three relics of one rarity become one unowned relic of the next (Mythic is the top).
-  SVT.hoardMerges = () => RAR.map((_, rar) => ({ rar, ids: byRar[rar].filter((id) => S().owned[id]).sort((a, b) => S().owned[a].n - S().owned[b].n) }))
+  SVT.hoardMerges = () => RAR.map((_, rar) => ({ rar, ids: byRar[rar].filter((id) => S().owned[id] && !S().ship.includes(id)).sort((a, b) => S().owned[a].n - S().owned[b].n) }))
     .filter((g) => g.rar < RAR.length - 1 && g.ids.length >= 3).sort((a, b) => b.rar - a.rar);
   SVT.hoardMerge = (rar, ids) => {
     const h = S(), g = SVT.hoardMerges().find((m) => m.rar === rar);
@@ -97,10 +110,13 @@ window.SVT = window.SVT || {};
   };
 
   // ---------- panel ----------
+  // Three tabs that read as three steps: Spin (tokens -> relics), Relics (what you own, equip or forge) and
+  // Longship (the five equipped relics and the Viking income bonus they add up to).
   let box = null, busy = false, tab = "spin", stake = 1, bulk = false, filter = null;
   function close() { if (box) box.remove(); box = null; busy = false; document.removeEventListener("keydown", onKey); }
   function onKey(e) { if (e.key === "Escape") close(); }
   const pct = (x) => (x * 100 < 1 && x > 0 ? (x * 100).toFixed(1) : Math.round(x * 100)) + "%";
+  const multText = (m) => "⚡ ×" + m + " Viking income";
   function shell(...kids) {
     const { h } = SVT.ui;
     if (box) box.remove();
@@ -111,33 +127,47 @@ window.SVT = window.SVT || {};
         h("span", { class: "vault-coins hoard-coins", text: "🛡 " + SVT.hoardTokens() }),
         h("button", { class: "x-btn", "aria-label": "Close", onclick: close, text: "✕" })),
       h("div", { class: "vault-tabs" },
-        h("button", { class: "vault-tab" + (tab === "spin" ? " on" : ""), onclick: () => { tab = "spin"; open(); }, text: "Spin" }),
-        h("button", { class: "vault-tab" + (tab === "hoard" ? " on" : ""), onclick: () => { tab = "hoard"; open(); }, text: "Hoard " + SVT.hoardCount() + "/" + H.N }),
-        h("button", { class: "vault-tab" + (tab === "merge" ? " on" : ""), onclick: () => { tab = "merge"; open(); }, text: "Merge" })),
+        h("button", { class: "vault-tab" + (tab === "spin" ? " on" : ""), onclick: () => { tab = "spin"; open(); }, text: "1. Spin" }),
+        h("button", { class: "vault-tab" + (tab === "hoard" ? " on" : ""), onclick: () => { tab = "hoard"; open(); }, text: "2. Relics (" + SVT.hoardCount() + ")" }),
+        h("button", { class: "vault-tab" + (tab === "ship" ? " on" : ""), onclick: () => { tab = "ship"; open(); }, text: "3. Longship ⚡×" + SVT.hoardMult() })),
       ...kids);
     document.body.append(box);
     document.addEventListener("keydown", onKey);
   }
+  const refresh = () => { if (SVT.render) SVT.render(); open(); };
   function card(it, big) {
-    const { h } = SVT.ui;
-    return h("div", { class: "vault-card hoard-card r-" + it.rarity + (big ? " big" : "") + (it.new ? " new" : "") },
-      h("div", { class: "vault-art hoard-art", style: "--mat:" + it.color }, h("span", { class: "hoard-emoji", "aria-hidden": "true", text: it.emoji })),
+    const { h, toast } = SVT.ui;
+    const on = SVT.hoardEquipped(it.id), full = !on && SVT.hoardShip().length >= H.SLOTS;
+    const equip = h("button", { class: "btn small hoard-equip" + (on ? " off" : " fund-cta"),
+      onclick: () => { if (on) { SVT.hoardUnequip(it.id); toast("⛵ " + it.name + " taken off the longship"); } else if (full) { toast("⛵ The longship is full (" + H.SLOTS + " relics). Take one off on the Longship tab."); return; } else { SVT.hoardEquip(it.id); toast("⛵ " + it.name + " is on the longship: " + multText(SVT.hoardMult())); } refresh(); },
+      text: on ? "Take off" : full ? "Ship full" : "Equip" });
+    return h("div", { class: "vault-card hoard-card r-" + it.rarity + (big ? " big" : "") + (it.new ? " new" : "") + (on ? " onship" : "") },
+      h("div", { class: "vault-art hoard-art", style: "--mat:" + it.color }, h("span", { class: "hoard-emoji", "aria-hidden": "true", text: it.emoji }), h("span", { class: "vault-art-rar", text: RAR[it.rar].name })),
       h("div", { class: "vault-card-body" },
         h("b", { class: "vault-card-name", text: it.name }),
-        h("span", { class: "vault-card-rar r-" + it.rarity, text: RAR[it.rar].name + (it.rar >= 4 ? " ★" : "") + " · relic #" + String(it.id + 1).padStart(5, "0") + " of " + H.N }),
-        it.n ? h("span", { class: "vault-card-where", text: "Hoard find #" + it.n + (it.merged ? " · forged from 3 " + RAR[it.rar - 1].name : "") }) : null));
+        h("span", { class: "vault-card-rar r-" + it.rarity, text: RAR[it.rar].name + (it.rar >= 4 ? " ★" : "") + " · " + multText(SVT.relicBonus(it.id)) }),
+        h("span", { class: "vault-card-where", text: on ? "⛵ On the longship" : "Equip it to add its bonus" + (it.merged ? " · forged from 3 " + RAR[it.rar - 1].name : "") }),
+        h("div", { class: "vault-equip-row" }, equip, h("span", { class: "muted small", text: "#" + String(it.id + 1).padStart(5, "0") + " of " + H.N }))));
+  }
+  function steps(on) {
+    const { h } = SVT.ui;
+    const step = (n, icon, title, text) => h("div", { class: "hoard-step" + (on === n ? " on" : "") }, h("span", { class: "hoard-step-n", text: n }), h("div", null, h("b", { text: icon + " " + title }), h("span", { text: text })));
+    return h("div", { class: "hoard-steps" },
+      step(1, "🛡", "Tokens → spin", "Clearing a Viking mine pays tokens. A spin turns tokens into a relic."),
+      step(2, "📿", "Relics", "10,000 relics, each with a fixed rarity. Three of one rarity forge into one better."),
+      step(3, "⛵", "Longship", "Equip up to " + H.SLOTS + " relics. Their bonuses add up and speed up every Viking mine."));
   }
   function spinTab() {
     const { h } = SVT.ui, hd = S(), have = SVT.hoardTokens();
     if (!H.STAKES.includes(stake) || stake > have) stake = H.STAKES.filter((s) => s <= have).pop() || 1;
     const many = SVT.hoardMaxSpins(stake), p = SVT.hoardOdds(stake), pityLeft = Math.max(0, H.PITY.HARD - hd.pity);
     const body = h("div", { class: "vault-body" },
-      h("p", { class: "vault-lede", text: "Spend Viking tokens on a spin for one of " + H.N.toLocaleString() + " relics, each with its own rarity. More tokens in one spin means better odds. Tokens still count for Chip's boats after you spend them." }),
-      h("div", { class: "hoard-tally" }, RAR.map((r, i) => h("span", { class: "vault-tally-pill r-" + r.id, text: SVT.hoardCount(i) + "/" + H.COUNTS[i] + " " + r.name }))),
-      have ? null : h("p", { class: "vault-empty", text: "No tokens to spin. Clear a Viking mine for 1 to 5 tokens (a replay pays 1)." }),
+      steps(1),
+      have ? h("p", { class: "vault-lede", text: "You have 🛡 " + have + (have === 1 ? " token" : " tokens") + ". More tokens in one spin means better odds." }) : h("p", { class: "vault-empty", text: "No tokens to spin. Clear a Viking mine for 1 to 5 tokens (a replay pays 1)." }),
       h("div", { class: "vault-stakes" }, H.STAKES.map((s) => h("button", { class: "vault-stake" + (s === stake ? " on" : ""), disabled: s > have, onclick: () => { stake = s; open(); } }, h("b", { text: "🛡 " + s }), h("small", { text: s === 1 ? "1 token" : s + " tokens" })))),
       h("button", { class: "vault-bulk" + (bulk ? " on" : ""), "aria-pressed": bulk ? "true" : "false", onclick: () => { bulk = !bulk; open(); } },
         h("b", { text: bulk ? "🔁 Max: on" : "🔁 Max" }), h("span", { text: bulk ? "Spins " + many + "× " + stake + (stake === 1 ? " token" : " tokens") + " in one go" + (many >= H.BULK_MAX ? " (" + H.BULK_MAX + " per press)" : "") : "Spin until the tokens run out" })),
+      h("p", { class: "muted small hoard-odds-title", text: "Odds for a " + stake + "-token spin:" }),
       h("div", { class: "vault-odds" }, RAR.map((r, i) => h("div", { class: "vault-odd r-" + r.id }, h("b", { text: r.name }), h("span", { text: pct(p[i]) })))),
       h("p", { class: "muted small", text: (hd.pity >= H.PITY.SOFT ? "🔥 " : "") + "Legendary or better guaranteed within " + pityLeft + " more " + (pityLeft === 1 ? "token" : "tokens") + "." + (hd.serial === 0 ? " Your first spin is at least Rare." : "") }));
     const go = h("button", { class: "btn fund-cta big vault-roll hoard-spin", disabled: have < stake || !many, onclick: () => (bulk ? spinMany(stake) : spinOne(stake)),
@@ -185,38 +215,56 @@ window.SVT = window.SVT || {};
     busy = false;
     const sorted = items.slice().sort((a, b) => b.rar - a.rar || b.n - a.n), best = sorted[0];
     const tally = RAR.map((r, i) => items.filter((it) => it.rar === i).length), one = items.length === 1;
+    const room = H.SLOTS - SVT.hoardShip().length;
     shell(h("div", { class: "vault-body vault-reveal r-" + best.rarity },
       h("p", { class: "vault-got", text: tally[5] ? "✨ " + (one ? "" : tally[5] + " ") + "MYTHIC! ✨" : tally[4] ? "⭐ " + (one ? "" : tally[4] + " ") + "Legendary! ⭐" : one ? (best.rar === 3 ? "Epic!" : "The runes say…") : items.length + " new relics" }),
       one ? null : h("div", { class: "vault-tally" }, RAR.map((r, i) => tally[i] ? h("span", { class: "vault-tally-pill r-" + r.id, text: tally[i] + " " + r.name }) : null)),
       one ? card(best, true) : h("div", { class: "vault-haul" }, sorted.map((it) => card(it, false))),
-      h("p", { class: "muted small", text: "Hoard: " + SVT.hoardCount() + " of " + H.N.toLocaleString() + " relics. Three of one rarity forge into one of the next on the Merge tab." })),
-      h("div", { class: "vault-foot" }, h("button", { class: "btn fund-cta big", onclick: () => { tab = "spin"; open(); }, text: SVT.hoardTokens() ? "Spin again" : "Back to the Hoard" })));
+      h("p", { class: "muted small", text: room > 0 ? "Tap Equip to put a relic on the longship (" + room + (room === 1 ? " free slot" : " free slots") + ") and speed up the Viking mines." : "The longship is full: swap relics on the Longship tab, or let Best 5 pick the rarest." })),
+      h("div", { class: "vault-foot" },
+        h("button", { class: "btn fund-cta big", onclick: () => { SVT.hoardBest(); toast("⛵ Best 5 on the longship: " + multText(SVT.hoardMult())); tab = "ship"; refresh(); }, text: "⛵ Equip best 5 → ×" + bestMult() }),
+        h("button", { class: "btn big", onclick: () => { tab = "spin"; open(); }, text: SVT.hoardTokens() ? "Spin again" : "Back" })));
     if (tally[4] + tally[5]) toast((tally[5] ? "✨ " + tally[5] + " Mythic" : "") + (tally[5] && tally[4] ? ", " : "") + (tally[4] ? "⭐ " + tally[4] + " Legendary" : "") + " relic" + (tally[4] + tally[5] > 1 ? "s" : "") + "!", "big");
     if (SVT.render) SVT.render();
   }
+  function bestMult() { const h = S(); let x = 1; SVT.hoardOwned().sort((a, b) => rarOf[b] - rarOf[a]).slice(0, H.SLOTS).forEach((id) => { x += H.BONUS[rarOf[id]] - 1; }); return Math.min(H.MAX_BONUS, Math.round(x * 100) / 100); }
   function hoardTab() {
-    const { h } = SVT.ui;
+    const { h, toast } = SVT.ui, groups = SVT.hoardMerges();
     const owned = SVT.hoardOwned().filter((id) => filter === null || rarOf[id] === filter).map((id) => Object.assign(SVT.relic(id), { n: S().owned[id].n, merged: S().owned[id].from === "merge" ? true : null }))
-      .sort((a, b) => b.rar - a.rar || b.n - a.n);
+      .sort((a, b) => (SVT.hoardEquipped(b.id) ? 1 : 0) - (SVT.hoardEquipped(a.id) ? 1 : 0) || b.rar - a.rar || b.n - a.n);
     const MAX = 150;
     shell(h("div", { class: "vault-body" },
-      h("p", { class: "vault-lede", text: SVT.hoardCount() + " of " + H.N.toLocaleString() + " relics in the hoard (" + (Math.floor(SVT.hoardCount() / H.N * 1000) / 10) + "%). Tap a rarity to filter." }),
+      steps(2),
+      h("div", { class: "hoard-shipbar" },
+        h("span", { text: "⛵ Longship: " + SVT.hoardShip().length + " of " + H.SLOTS + " relics · " + multText(SVT.hoardMult()) }),
+        SVT.hoardCount() ? h("button", { class: "btn small fund-cta", onclick: () => { SVT.hoardBest(); toast("⛵ Best 5 on the longship: " + multText(SVT.hoardMult())); refresh(); }, text: "Equip best 5" }) : null),
+      groups.length ? h("div", { class: "hoard-forge" },
+        h("b", { text: "⚒️ Forge: 3 of a kind → 1 of the next rarity" }),
+        groups.map((g) => h("div", { class: "hoard-merge-row r-" + RAR[g.rar].id },
+          h("div", null, h("b", { text: g.ids.length + " " + RAR[g.rar].name }), h("span", { class: "muted small", text: " → " + RAR[g.rar + 1].name + " (3 each)" })),
+          h("div", { class: "hoard-merge-btns" },
+            h("button", { class: "btn small fund-cta", onclick: () => { const it = SVT.hoardMerge(g.rar); if (it) reveal([it]); }, text: "Forge 1" }),
+            g.ids.length >= 6 ? h("button", { class: "btn small", onclick: () => { const out = []; for (let i = 0; i < Math.floor(g.ids.length / 3) && out.length < H.BULK_MAX; i++) { const it = SVT.hoardMerge(g.rar); if (!it) break; out.push(it); } if (out.length) reveal(out); }, text: "Forge all (" + Math.floor(g.ids.length / 3) + ")" }) : null)))) : null,
       h("div", { class: "hoard-tally" }, RAR.map((r, i) => h("button", { class: "vault-tally-pill hoard-filter r-" + r.id + (filter === i ? " on" : ""), onclick: () => { filter = filter === i ? null : i; open(); }, text: SVT.hoardCount(i) + "/" + H.COUNTS[i] + " " + r.name }))),
-      owned.length ? h("div", { class: "vault-haul" }, owned.slice(0, MAX).map((it) => card(it, false))) : h("p", { class: "vault-empty", text: "Nothing here yet. Spin for relics on the Spin tab." }),
-      owned.length > MAX ? h("p", { class: "muted small", text: "Showing the newest " + MAX + " of " + owned.length + "." }) : null));
+      owned.length ? h("div", { class: "vault-haul" }, owned.slice(0, MAX).map((it) => card(it, false))) : h("p", { class: "vault-empty", text: SVT.hoardCount() ? "No relics of that rarity yet." : "No relics yet. Spin for relics on the Spin tab." }),
+      owned.length > MAX ? h("p", { class: "muted small", text: "Showing " + MAX + " of " + owned.length + " (equipped and rarest first)." }) : null));
   }
-  function mergeTab() {
-    const { h } = SVT.ui, groups = SVT.hoardMerges();
+  function shipTab() {
+    const { h, toast } = SVT.ui, ship = SVT.hoardShip();
+    const slots = Array.from({ length: H.SLOTS }, (_, i) => {
+      const id = ship[i];
+      if (id === undefined) return h("div", { class: "hoard-slot empty" }, h("span", { class: "hoard-slot-n", text: "Slot " + (i + 1) }), h("span", { class: "muted small", text: "Empty. Tap Equip on a relic in the Relics tab." }));
+      return card(Object.assign(SVT.relic(id), { n: S().owned[id].n }), false);
+    });
     shell(h("div", { class: "vault-body" },
-      h("p", { class: "vault-lede", text: "Any three relics of one rarity forge into one relic of the next rarity (the three oldest go; Mythic is the top)." }),
-      groups.length ? groups.map((g) => h("div", { class: "hoard-merge-row r-" + RAR[g.rar].id },
-        h("div", null, h("b", { text: g.ids.length + " " + RAR[g.rar].name }), h("span", { class: "muted small", text: " → 1 " + RAR[g.rar + 1].name + " (3 relics each)" })),
-        h("div", { class: "hoard-merge-btns" },
-          h("button", { class: "btn small fund-cta", onclick: () => { const it = SVT.hoardMerge(g.rar); if (it) reveal([it]); }, text: "Forge 1" }),
-          g.ids.length >= 6 ? h("button", { class: "btn small", onclick: () => { const out = []; for (let i = 0; i < Math.floor(g.ids.length / 3) && out.length < H.BULK_MAX; i++) { const it = SVT.hoardMerge(g.rar); if (!it) break; out.push(it); } if (out.length) reveal(out); }, text: "Forge all (" + Math.floor(g.ids.length / 3) + ")" }) : null)))
-        : h("p", { class: "vault-empty", text: "Nothing to forge yet: you need three relics of one rarity." })));
+      steps(3),
+      h("div", { class: "hoard-shipbar big" }, h("b", { text: multText(SVT.hoardMult()) }), h("span", { class: "muted small", text: ship.length ? "Every Viking mine digs, lifts and sells ×" + SVT.hoardMult() + " faster. Bonuses add up (Common ×" + H.BONUS[0] + " … Mythic ×" + H.BONUS[5] + "), up to ×" + H.MAX_BONUS + "." : "Nothing equipped yet. Each relic adds its rarity's bonus: Common ×" + H.BONUS[0] + ", Uncommon ×" + H.BONUS[1] + ", Rare ×" + H.BONUS[2] + ", Epic ×" + H.BONUS[3] + ", Legendary ×" + H.BONUS[4] + ", Mythic ×" + H.BONUS[5] + "." })),
+      h("div", { class: "hoard-slotbtns" },
+        SVT.hoardCount() ? h("button", { class: "btn small fund-cta", onclick: () => { SVT.hoardBest(); toast("⛵ Best 5 on the longship: " + multText(SVT.hoardMult())); refresh(); }, text: "Equip best 5 → ×" + bestMult() }) : null,
+        ship.length ? h("button", { class: "btn small", onclick: () => { ship.forEach((id) => SVT.hoardUnequip(id)); refresh(); }, text: "Take all off" }) : null),
+      h("div", { class: "vault-haul" }, slots)));
   }
-  function open() { close(); if (tab === "hoard") hoardTab(); else if (tab === "merge") mergeTab(); else spinTab(); }
+  function open() { close(); if (tab === "hoard") hoardTab(); else if (tab === "ship" || tab === "merge") shipTab(); else spinTab(); }
   SVT.openHoard = (t) => { tab = t || "spin"; open(); };
   SVT.closeHoard = close;
 })();

@@ -971,7 +971,7 @@ window.SVT = window.SVT || {};
     show();
     sheet("Viking Raid", h("div", { class: "sheet-body raid-panel" },
       h("div", { class: "token-row" }, h("span", { class: "token-pill", text: "🛡 " + SVT.hoardTokens() + " Viking tokens" }),
-        h("div", { class: "token-btns" }, h("button", { class: "btn small hoard-btn", onclick: () => SVT.openHoard(), text: "🎰 Hoard" }), h("button", { class: "btn small", onclick: openBoats, text: "⛵ Boats " + SVT.boatsUnlocked() + "/" + R.BOATS }))),
+        h("div", { class: "token-btns" }, h("button", { class: "btn small hoard-btn", onclick: () => SVT.openHoard(), text: "🎰 Hoard" + (SVT.hoardMult() > 1 ? " ⚡×" + SVT.hoardMult() : "") }), h("button", { class: "btn small", onclick: openBoats, text: "⛵ Boats " + SVT.boatsUnlocked() + "/" + R.BOATS }))),
       h("p", { class: "muted small", text: "Five batches of 50 Viking mines. Stage 1 has one shaft and every stage adds one; each batch digs deeper (higher max levels) and starts a little harder than the last stage before it. Managers, abilities, Rush boosts and Chip's items all count. Max out the mine to clear a stage: open every shaft, take every shaft and the lift and warehouse to the batch's max level. Clears pay Viking tokens, which unlock boats for Chip." }),
       tabs, info, stages), { icon: "⚔️", foot: h("div", { class: "panel-foot" }, go) });
   }

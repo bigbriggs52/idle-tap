@@ -483,8 +483,32 @@ if (!(await page.locator("#hoard .vault-reveal .hoard-card").isVisible())) error
 await page.evaluate(() => SVT.openHoard("hoard")); await page.waitForTimeout(200);
 await page.screenshot({ path: out + "/12d-hoard-collection.png" });
 if ((await page.locator("#hoard .hoard-card").count()) < 10) errors.push("Hoard collection tab shows too few relics");
-await page.evaluate(() => SVT.openHoard("merge")); await page.waitForTimeout(200);
-await page.screenshot({ path: out + "/12e-hoard-merge.png" });
+if (!(await page.locator("#hoard .hoard-merge-row").count())) errors.push("Forge rows missing from the Relics tab");
+// v0.36: relics equip on the longship (5 slots) and add their rarity bonus to Viking mine income; equipped relics never forge
+const ship = await page.evaluate(() => {
+  const S = SVT.state(), H = SVT.HOARD, out = {}, L = S.labs.raid;
+  S.hoard.ship = []; SVT.hoardRecalc();
+  const base = SVT.loadMult(L, "floor", 1);
+  const ids = SVT.hoardOwned().sort((a, b) => SVT.relicRar(b) - SVT.relicRar(a));
+  out.eq = ids.slice(0, 5).map((id) => SVT.hoardEquip(id)); out.sixth = SVT.hoardEquip(ids[5]);
+  const expect = Math.min(H.MAX_BONUS, Math.round((1 + ids.slice(0, 5).reduce((a, id) => a + H.BONUS[SVT.relicRar(id)] - 1, 0)) * 100) / 100);
+  out.mult = SVT.hoardMult(); out.expect = expect; out.ratio = +(SVT.loadMult(L, "floor", 1) / base).toFixed(3);
+  out.labUnchanged = +(SVT.loadMult(S.labs.garage, "floor", 1) / SVT.loadMult(S.labs.garage, "floor", 1)).toFixed(3);
+  out.forgeSkipsEquipped = SVT.hoardMerges().every((g) => g.ids.every((id) => !SVT.hoardEquipped(id)));
+  SVT.hoardUnequip(ids[0]); out.afterOff = SVT.hoardMult();
+  S.hoard.ship = []; out.best = SVT.hoardBest(); out.bestMult = SVT.hoardMult(); out.bestN = SVT.hoardShip().length;
+  return out;
+});
+console.log("ship", JSON.stringify(ship));
+if (ship.eq.some((x) => !x) || ship.sixth || ship.mult !== ship.expect || Math.abs(ship.ratio - ship.mult) > 1e-6 || !ship.forgeSkipsEquipped) errors.push("Longship equip or bonus wrong " + JSON.stringify(ship));
+if (!(ship.afterOff < ship.mult) || !ship.best || ship.bestMult !== ship.expect || ship.bestN !== 5) errors.push("Longship take-off or Best 5 wrong " + JSON.stringify(ship));
+await page.evaluate(() => SVT.openHoard("hoard")); await page.waitForTimeout(200);
+const eqBtns = await page.locator("#hoard .hoard-equip").count(), offBtns = await page.locator("#hoard .hoard-equip.off").count();
+if (eqBtns < 10 || offBtns !== 5) errors.push("Relic cards missing Equip / Take off buttons: " + eqBtns + "/" + offBtns);
+await page.evaluate(() => SVT.openHoard("ship")); await page.waitForTimeout(200);
+await page.screenshot({ path: out + "/12e-hoard-ship.png" });
+if ((await page.locator("#hoard .hoard-card.onship").count()) !== 5) errors.push("Longship tab does not show the 5 equipped relics");
+if (!(await page.locator("#hoard .hoard-steps").isVisible())) errors.push("Hoard steps explainer missing");
 await page.evaluate(() => { SVT.closeHoard(); SVT.showRaidClear(1, { tokens: 1 }); });
 await page.click("text=Raid stage 2");
 await page.waitForTimeout(300);
