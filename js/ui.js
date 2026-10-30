@@ -112,6 +112,17 @@ window.SVT = window.SVT || {};
       });
     }
     const wrap = h("div", { class: "sheet-wrap", id: "sheet", onclick: (e) => { if (e.target.id === "sheet" && !opts.sticky) closeSheet(); } }, box);
+    // v0.36.1: iPhones sometimes drop the click on the dimmed backdrop (a plain div), so a press that starts and
+    // ends on the backdrop closes the panel from the pointer events as well; the click that may follow is swallowed.
+    let bd = null;
+    wrap.addEventListener("pointerdown", (e) => { bd = e.isPrimary && e.target === wrap ? { x: e.clientX, y: e.clientY, t: performance.now() } : null; });
+    wrap.addEventListener("pointercancel", () => { bd = null; });
+    wrap.addEventListener("pointerup", (e) => {
+      const b = bd; bd = null;
+      if (!b || opts.sticky || e.target !== wrap || Math.hypot(e.clientX - b.x, e.clientY - b.y) > 14 || performance.now() - b.t > 700) return;
+      swallowNextClick();
+      closeSheet();
+    });
     document.body.append(wrap);
     document.body.classList.add("sheet-open");
     curNav = nav || null;
@@ -654,6 +665,8 @@ window.SVT = window.SVT || {};
         [0, 1, 2].map((i) => h("div", { class: "wbox", style: "--d:" + (-i * 0.6) + "s", "aria-hidden": "true" })),
         h("div", { class: "truck t1", "aria-hidden": "true" }, h("span", { class: "cargo" }))),
       workTimer("commercial", 0, "Shipping"),
+      // v0.36.1: boosts pay out here, so the warehouse wears the current multiplier
+      bind(h("div", { class: "cap-tag wh-boost", title: "Boosts multiply every delivery" }), (e) => { const m = SVT.boostMult(lab(), SVT.now()); e.hidden = !(m > 1); if (m > 1) setText(e, "⚡ ×" + (Math.round(m * 100) / 100)); }),
       h("div", { class: "tower-foot" }, levelBtn("commercial", 0), h("div", { class: "door" }, seat("commercial", 0), boostBtn("commercial", 0))),
       bind(h("div", { class: "tap-hint", text: "Tap" }), (e) => { e.hidden = SVT.running(lab(), "commercial", 0); })), "commercial", 0);
     // The warehouse trip on the road: a worker pushes the empty cart from the warehouse to the lift, loads the money
@@ -1256,6 +1269,7 @@ window.SVT = window.SVT || {};
   // contents changing under the finger). The browser's own click that may follow is swallowed so nothing fires twice.
   const TAPPABLE = "button, .scene, .tower";
   let press = null, swallowUntil = 0;
+  function swallowNextClick() { swallowUntil = performance.now() + 500; }
   document.addEventListener("pointerdown", (e) => {
     const el = e.isPrimary && e.button <= 0 && e.target.closest ? e.target.closest(TAPPABLE) : null;
     press = el && !el.disabled && !el.dataset.hold ? { el, x: e.clientX, y: e.clientY, t: performance.now() } : null;

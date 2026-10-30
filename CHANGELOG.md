@@ -2,6 +2,13 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.36.1 (2026-10-30)
+
+- Tap away to close. Tapping the dimmed backdrop around an upgrade panel (or any panel) closes it reliably on iPhone, where Safari sometimes dropped the tap so only ✕ worked. The Viking Raid clear popup still cannot be tapped away.
+- Next jumps further. The Next buy chip now takes the lift, warehouse or a floor straight to its max level when the cash reaches it; otherwise to the next multiple of 100, then of 50; otherwise to the next unlock (every 5 levels) as before.
+- Boosts pay out at the warehouse. Rush boosts, Chip's item bonus and the longship bonus now multiply the cash each warehouse delivery brings home (×3 turns a $20 delivery into $60) instead of inflating what every floor, lift and cart carries. Income per second is the same; what you see on the floors is the real amount.
+- Assembly Line Rush registers every tap. Bins sort the moment a finger lands instead of waiting for the browser's click (which iPhones drop when a quick tap moves a little), and falling parts no longer catch touches meant for a bin.
+
 ## v0.36.0 (2026-10-30)
 
 - Viking Hoard, explained and useful. The panel now reads as three numbered steps (1. Spin tokens, 2. Relics, 3. Longship) with a short explainer on every tab. Relics do something: equip up to 5 on your longship and each adds its rarity's bonus to Viking mine income (Common ×1.05, Uncommon ×1.1, Rare ×1.15, Epic ×1.25, Legendary ×1.35, Mythic ×1.5; bonuses add up, capped at ×3). Every relic card has an Equip / Take off button, "Equip best 5" picks the rarest for you (also offered right after a spin), and the Longship tab shows the five slots and the total bonus. Forging (3 of a kind → 1 better) moved onto the Relics tab; equipped relics are never forged. The Stages panel's Hoard button shows the current bonus.

@@ -89,7 +89,12 @@ window.SVT = window.SVT || {};
     const timeFill = h("i", { class: "rush-time-fill" });
     const combo = h("span", { class: "rush-combo" });
     const bins = {};
-    const binRow = h("div", { class: "rush-bins" }, PARTS.map((p) => (bins[p.dir] = h("button", { class: "rush-bin b-" + p.dir, "aria-label": p.name + " bin", onclick: () => g.swipe(p.dir) },
+    // v0.36.1: a bin sorts the moment the finger lands (pointerdown), not on the click the browser fires after
+    // the finger lifts, which iPhones drop when a quick tap moves a little. data-hold keeps the tap helper off;
+    // keyboard and screen-reader clicks (detail 0) still work.
+    const binRow = h("div", { class: "rush-bins" }, PARTS.map((p) => (bins[p.dir] = h("button", { class: "rush-bin b-" + p.dir, "aria-label": p.name + " bin", "data-hold": "1",
+      onpointerdown: (e) => { if (e.isPrimary && e.button <= 0) { e.preventDefault(); g.swipe(p.dir); } },
+      onclick: (e) => { if (e.detail === 0) g.swipe(p.dir); } },
       h("span", { class: "bin-ic", text: p.icon }), h("small", { text: p.name })))));
     const stage = h("div", { class: "rush-stage" }, belt, binRow);
     shell(h("div", { class: "rush-hud" }, h("div", { class: "rush-time" }, timeFill), h("div", { class: "rush-stats" }, lives, combo, score)), stage);
@@ -170,7 +175,7 @@ window.SVT = window.SVT || {};
       g.raf = requestAnimationFrame(frame);
     }
     // Swipes anywhere on the play area. A short tap does nothing (the bins are buttons for tapping).
-    stage.addEventListener("pointerdown", (e) => { x0 = e.clientX; y0 = e.clientY; });
+    stage.addEventListener("pointerdown", (e) => { if (e.target.closest(".rush-bin")) { x0 = null; return; } x0 = e.clientX; y0 = e.clientY; });
     stage.addEventListener("pointerup", (e) => {
       if (x0 == null) return;
       const dx = e.clientX - x0, dy = e.clientY - y0;

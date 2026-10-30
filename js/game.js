@@ -263,7 +263,10 @@ window.SVT = window.SVT || {};
   // Lab-wide multipliers from outside the manager system: omens in Viking Raid, Rush and Vault bonuses in the labs.
   // v0.33: every multiplier counts in Viking Raid too (omens on top of Rush and Chip's items).
   // Viking Raid income also carries the longship bonus from equipped Hoard relics (v0.36, js/hoard.js).
-  const worldMult = (lab, kind, t) => (SVT.isRaid(lab) ? SVT.raidStage(lab).mult[kind] * (SVT.hoardMult ? SVT.hoardMult() : 1) : 1) * SVT.rushMult(t) * vaultMult;
+  // v0.36.1 (user ask): Rush, Vault and longship boosts no longer inflate what every node carries; they multiply the
+  // cash at the warehouse instead (a x3 boost turns a $20 delivery into $60). Omens still change node loads.
+  const worldMult = (lab, kind) => (SVT.isRaid(lab) ? SVT.raidStage(lab).mult[kind] : 1);
+  SVT.boostMult = (lab, t) => SVT.rushMult(t) * vaultMult * (SVT.isRaid(lab) && SVT.hoardMult ? SVT.hoardMult() : 1);
   // Passives of the node's super manager (always on while assigned): speed, load and that node's price cut.
   SVT.passives = (lab, kind, n) => {
     const s = superOn(lab, kind, n), p = (s && s.ab.passive) || {};
@@ -301,13 +304,13 @@ window.SVT = window.SVT || {};
   // How much more each cycle, trip or cart carries: passive load x active load x world multipliers.
   SVT.loadMult = (lab, kind, n, t) => {
     const a = SVT.activeAbility(lab, kind, n, t);
-    return SVT.passives(lab, kind, n).load * (a ? a.load : 1) * worldMult(lab, kind, t);
+    return SVT.passives(lab, kind, n).load * (a ? a.load : 1) * worldMult(lab, kind);
   };
   // Throughput multiplier of a node: speed x load.
   SVT.nodeMult = (lab, kind, n, t) => SVT.speedMult(lab, kind, n, t) * SVT.loadMult(lab, kind, n, t);
   // Cash multiplier on everything the lab earns: the Unicorn's +25%, and x3 on deliveries while the Overclocker runs.
   SVT.cashMult = (lab, t, delivered) => {
-    let x = SVT.revenueMult(lab);
+    let x = SVT.revenueMult(lab) * SVT.boostMult(lab, t);
     if (delivered) { const a = SVT.activeAbility(lab, "commercial", 0, t); if (a) x *= a.cash; }
     return x;
   };
@@ -514,9 +517,21 @@ window.SVT = window.SVT || {};
   SVT.stepTo = (lv, step) => step - (lv % step);
   // "next" buys up to the next unlock: unlocks come every 5 levels (and the big milestones 10, 25, 50... are on them).
   SVT.buyAmount = (lv) => (S.buy === "max" ? Infinity : S.buy === "next" ? SVT.stepTo(lv || 0, 5) : S.buy === 1 ? 1 : SVT.stepTo(lv || 0, S.buy));
+  // v0.36.1 (user ask): when the cash reaches a bigger milestone, Next jumps straight there instead of the next
+  // unlock: the level cap first, then the next multiple of 100, then of 50, otherwise the next unlock (every 5).
+  SVT.nextAmount = (lab, kind, n, L) => {
+    const max = SVT.maxLevel(lab, kind), room = max - L;
+    if (room <= 0) return 0;
+    const can = B.bulk(kind, n, L, Infinity, lab.cash, SVT.discount(lab, kind, n), SVT.costScale(lab, kind, n), max, SVT.growthOf(lab, kind));
+    const afford = lab.cash >= can.cost ? can.count : 0;
+    if (afford >= room) return room;
+    for (const step of [100, 50]) { const k = SVT.stepTo(L, step); if (k <= afford) return k; }
+    return SVT.stepTo(L, 5);
+  };
   SVT.quote = (lab, kind, n) => {
     const L = SVT.levelOf(lab, kind, n);
-    return B.bulk(kind, n, L, SVT.buyAmount(L), lab.cash, SVT.discount(lab, kind, n), SVT.costScale(lab, kind, n), SVT.maxLevel(lab, kind), SVT.growthOf(lab, kind));
+    const want = S.buy === "next" ? SVT.nextAmount(lab, kind, n, L) : SVT.buyAmount(L);
+    return B.bulk(kind, n, L, want, lab.cash, SVT.discount(lab, kind, n), SVT.costScale(lab, kind, n), SVT.maxLevel(lab, kind), SVT.growthOf(lab, kind));
   };
 
   SVT.upgrade = (kind, n) => {

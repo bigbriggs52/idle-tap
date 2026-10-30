@@ -344,14 +344,17 @@ const steps = await page.evaluate(() => {
   f.lvl = 56; L.cash = costTo(56, 140); out.push(56 + SVT.quote(L, "freight", 0).count);
   L.cash = costTo(56, 60); out.push(56 + SVT.quote(L, "freight", 0).count);
   L.cash = 1e300; out.push(56 + SVT.quote(L, "freight", 0).count);
-  L.cash = 1e30;
+  // v0.36.1: Next jumps to the cap when affordable, else the next multiple of 100, then 50, else the next unlock (5s)
   SVT.setBuy("next");
-  for (const lv of [56, 60, 9]) { f.lvl = lv; out.push(lv + SVT.quote(L, "freight", 0).count); }
-  f.lvl = 1; SVT.setBuy(1);
+  L.cash = 1e300; for (const lv of [56, 60, 9]) { f.lvl = lv; out.push(lv + SVT.quote(L, "freight", 0).count); }
+  f.lvl = 56; L.cash = costTo(56, 150); out.push(56 + SVT.quote(L, "freight", 0).count);
+  L.cash = costTo(56, 80); out.push(56 + SVT.quote(L, "freight", 0).count);
+  L.cash = costTo(56, 58); out.push(56 + SVT.quote(L, "freight", 0).count);
+  L.cash = 1e30; f.lvl = 1; SVT.setBuy(1);
   return out.join(",");
 });
 console.log("step buys", steps);
-if (steps !== "60,70,100,60,400,60,65,10") errors.push("x10 or Max rounding is wrong: " + steps);
+if (steps !== "60,70,100,60,400,400,400,400,100,60,60") errors.push("x10, Max or Next rounding is wrong: " + steps);
 // back-to-top arrow: hidden at the top, shows when scrolled down, glides back to the top
 await page.evaluate(() => { SVT.setView("lab"); const L = SVT.lab(); while (L.floors.length < 12) L.floors.push({ lvl: 1, stock: 0, left: 0 }); SVT.render(); });
 await page.waitForTimeout(200);
@@ -488,11 +491,11 @@ if (!(await page.locator("#hoard .hoard-merge-row").count())) errors.push("Forge
 const ship = await page.evaluate(() => {
   const S = SVT.state(), H = SVT.HOARD, out = {}, L = S.labs.raid;
   S.hoard.ship = []; SVT.hoardRecalc();
-  const base = SVT.loadMult(L, "floor", 1);
+  const base = SVT.cashMult(L, SVT.now(), true); // v0.36.1: boosts multiply the cash at the warehouse
   const ids = SVT.hoardOwned().sort((a, b) => SVT.relicRar(b) - SVT.relicRar(a));
   out.eq = ids.slice(0, 5).map((id) => SVT.hoardEquip(id)); out.sixth = SVT.hoardEquip(ids[5]);
   const expect = Math.min(H.MAX_BONUS, Math.round((1 + ids.slice(0, 5).reduce((a, id) => a + H.BONUS[SVT.relicRar(id)] - 1, 0)) * 100) / 100);
-  out.mult = SVT.hoardMult(); out.expect = expect; out.ratio = +(SVT.loadMult(L, "floor", 1) / base).toFixed(3);
+  out.mult = SVT.hoardMult(); out.expect = expect; out.ratio = +(SVT.cashMult(L, SVT.now(), true) / base).toFixed(3);
   out.labUnchanged = +(SVT.loadMult(S.labs.garage, "floor", 1) / SVT.loadMult(S.labs.garage, "floor", 1)).toFixed(3);
   out.forgeSkipsEquipped = SVT.hoardMerges().every((g) => g.ids.every((id) => !SVT.hoardEquipped(id)));
   SVT.hoardUnequip(ids[0]); out.afterOff = SVT.hoardMult();
@@ -524,7 +527,26 @@ const reopenBuy = await page.evaluate(async () => {
 console.log("reopen buy", reopenBuy);
 if (reopenBuy !== "next|Next") errors.push("Level panel did not reset to Next: " + reopenBuy);
 await page.screenshot({ path: out + "/13-next-chip.png" });
-await page.evaluate(() => document.querySelector("#sheet .x-btn").click());
+// v0.36.1: a press that starts and ends on the backdrop closes the panel even when no click follows (iPhone)
+const backdrop = await page.evaluate(() => {
+  const s = document.getElementById("sheet");
+  const ev = (t) => new PointerEvent(t, { isPrimary: true, button: 0, clientX: 4, clientY: 4, bubbles: true });
+  s.dispatchEvent(ev("pointerdown")); s.dispatchEvent(ev("pointerup"));
+  return !document.getElementById("sheet");
+});
+if (!backdrop) errors.push("Backdrop pointer tap did not close the Level panel");
+// the sticky raid popup must ignore it
+await page.evaluate(() => SVT.showRaidClear(1, { tokens: 1 }));
+await page.waitForTimeout(100);
+const stickyStays = await page.evaluate(() => {
+  const s = document.getElementById("sheet");
+  const ev = (t) => new PointerEvent(t, { isPrimary: true, button: 0, clientX: 4, clientY: 4, bubbles: true });
+  s.dispatchEvent(ev("pointerdown")); s.dispatchEvent(ev("pointerup"));
+  return !!document.getElementById("sheet");
+});
+if (!stickyStays) errors.push("Sticky raid popup closed on a backdrop pointer tap");
+await page.click("#sheet button:has-text('Home')"); await page.waitForTimeout(200);
+await page.evaluate(() => SVT.setView("lab"));
 // save + reload restores, and the game reopens on the home screen
 await page.evaluate(() => SVT.save());
 await page.reload(); await page.waitForTimeout(400);
@@ -551,18 +573,32 @@ for (let i = 0; i < 40; i++) {
 const run = await page.evaluate(() => ({ score: SVT.rushGame().score, lives: SVT.rushGame().lives }));
 console.log("rush run", JSON.stringify(run));
 if (!(run.score >= 3)) errors.push("Rush: sorting with the keys did not score");
+// v0.36.1: a bin sorts on pointerdown (no click needed), and a falling part never catches the pointer
+const binTap = await page.evaluate(() => {
+  const g = SVT.rushGame(), p = g.parts.filter((x) => !x.done).sort((a, b) => b.y - a.y)[0];
+  if (!p) return "no part";
+  const before = g.score, bin = document.querySelector(".rush-bin.b-" + p.p.dir);
+  bin.dispatchEvent(new PointerEvent("pointerdown", { isPrimary: true, button: 0, bubbles: true, cancelable: true }));
+  const partHit = getComputedStyle(document.querySelector(".rush-part") || bin).pointerEvents;
+  return (g.score - before) + "|" + (document.querySelector(".rush-part") ? partHit : "none");
+});
+console.log("rush bin tap", binTap);
+if (binTap !== "1|none") errors.push("Rush bin pointerdown did not sort or parts catch the pointer: " + binTap);
 await page.evaluate(() => SVT.rushGame().end()); await page.waitForTimeout(700);
 await page.screenshot({ path: out + "/17-rush-result.png" });
 if (!(await page.locator(".rush-big").isVisible())) errors.push("Rush results screen missing");
 const boost = await page.evaluate(() => {
-  const S = SVT.state(), L = S.labs.arcade, before = SVT.rates(L).income, raidBefore = S.labs.raid ? SVT.loadMult(S.labs.raid, "floor", 1) : 0;
+  const S = SVT.state(), L = S.labs.arcade, before = SVT.rates(L).income, raidBefore = S.labs.raid ? SVT.cashMult(S.labs.raid, SVT.now(), true) : 0;
   const wait = SVT.rushWait();
   S.rush.next = 0;
   const r = SVT.finishRush(65);
-  return { wait, applied: r.applied, mult: SVT.rushMult(), ratio: SVT.rates(L).income / before, raidBoost: !S.labs.raid || Math.abs(SVT.loadMult(S.labs.raid, "floor", 1) / raidBefore - 5) < 1e-6, again: SVT.finishRush(20).applied };
+  return { wait, applied: r.applied, mult: SVT.rushMult(), ratio: SVT.rates(L).income / before, raidBoost: !S.labs.raid || Math.abs(SVT.cashMult(S.labs.raid, SVT.now(), true) / raidBefore - 5) < 1e-6, loadsStay: SVT.loadMult(L, "floor", 1) === 1, again: SVT.finishRush(20).applied };
 });
 console.log("rush boost", JSON.stringify(boost));
-if (!(boost.wait > 800) || !boost.applied || boost.mult !== 5 || Math.abs(boost.ratio - 5) > 1e-6 || !boost.raidBoost || boost.again) errors.push("Rush boost or cooldown is wrong (v0.33: the raid is boosted too)");
+await page.evaluate(() => SVT.setView("lab")); await page.waitForTimeout(300);
+const whBoost = await page.evaluate(() => { const e = document.querySelector(".wh-boost"), m = Math.round(SVT.boostMult(SVT.lab(), SVT.now()) * 100) / 100; return (e && !e.hidden ? e.textContent : "hidden") + "|" + m; });
+if (whBoost.split("|")[0] !== "⚡ ×" + whBoost.split("|")[1] || !(+whBoost.split("|")[1] >= 5)) errors.push("Warehouse boost tag wrong: " + whBoost);
+if (!(boost.wait > 800) || !boost.applied || boost.mult !== 5 || Math.abs(boost.ratio - 5) > 1e-6 || !boost.raidBoost || !boost.loadsStay || boost.again) errors.push("Rush boost or cooldown is wrong (v0.36.1: cash at the warehouse, loads unchanged)");
 await page.click("#rush .btn.fund-cta"); await page.waitForTimeout(200);
 if (await page.locator("#rush").count()) errors.push("Rush did not close");
 await page.screenshot({ path: out + "/18-home-boosted.png" });
@@ -681,7 +717,7 @@ const bonus = await page.evaluate(() => {
   out.ratio = SVT.rates(L).income / (SVT.B.floorOutput(1, L.floors[0].lvl) * SVT.prestigeMult(L) * 0 + 1); // placeholder
   const base = (() => { const m = SVT.vaultMult(); v.show = {}; SVT.vaultRecalc(); const r = SVT.rates(L).income; SVT.vaultWear("hand_l", strong[0].id); SVT.vaultWear("hand_r", strong[1].id); return r; })();
   out.ratio = SVT.rates(L).income / base;
-  out.raidSame = !S.labs.raid || (() => { const R = S.labs.raid, m = SVT.vaultMult(), a = SVT.loadMult(R, "floor", 1); v.show = {}; SVT.vaultRecalc(); const b = SVT.loadMult(R, "floor", 1); SVT.vaultWear("hand_l", strong[0].id); SVT.vaultWear("hand_r", strong[1].id); return Math.abs(a / b - m) < 1e-6; })(); // v0.33: worn bonuses count in the raid too
+  out.raidSame = !S.labs.raid || (() => { const R = S.labs.raid, m = SVT.vaultMult(), a = SVT.cashMult(R, SVT.now(), true); v.show = {}; SVT.vaultRecalc(); const b = SVT.cashMult(R, SVT.now(), true); SVT.vaultWear("hand_l", strong[0].id); SVT.vaultWear("hand_r", strong[1].id); return Math.abs(a / b - m) < 1e-6; })(); // v0.33: worn bonuses count in the raid too
   // cap: six x1.5 items would be x4; the total stops at MAX_BONUS
   const big = v.items.filter((x) => x.rar >= 4).slice(0, 6); big.forEach((x) => { x.boost = 1.5; });
   v.show = {}; SVT.vaultSlots().forEach((sl, i) => { if (big[i]) { const fit = v.items.find((x) => x.boost === 1.5 && !SVT.vaultSlotOf(x.id) && SVT.vaultFits(x, sl.id)); if (fit) SVT.vaultWear(sl.id, fit.id); } });

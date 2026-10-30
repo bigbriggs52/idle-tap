@@ -1353,3 +1353,11 @@ body.duo { --duo: 60px; }
 .vault-foot .btn + .btn { margin-top: 8px; }
 .vault.hoard .vault-foot { display: grid; gap: 8px; }
 .vault.hoard .vault-foot .btn + .btn { margin-top: 0; }
+
+/* v0.36.1: backdrop taps close panels on iPhone (cursor: pointer makes Safari send the click), Rush bins answer on touch-down and falling parts never catch a finger */
+.sheet-wrap { cursor: pointer; }
+.sheet-wrap .sheet { cursor: auto; }
+.rush-bin { touch-action: none; }
+.rush-part { pointer-events: none; }
+.wh-boost { left: auto; right: 10px; background: linear-gradient(#ffe36a, #f2b100); color: #5a3b00; }
+.wh-boost[hidden] { display: none; }
