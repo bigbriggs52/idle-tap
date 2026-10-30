@@ -2,6 +2,11 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.37.0 (2026-10-30)
+
+- Bug Hunt, a second mini game. Bugs pop out of a 3×3 rack of servers; tap each one before it crawls back in, and leave the 💎 data gems alone (tapping a gem or letting a bug get away costs one of 3 ❤️). 30 seconds, the bugs get quicker, number keys 1–9 work on a keyboard. Squashing 12 / 20 / 28 / 36 bugs earns ×1.5 / ×2 / ×2.5 / ×3 income for 10 / 15 / 20 / 30 minutes. The boost is its own multiplier that stacks with the Rush boost (both pay out at the warehouse, so ×5 Rush and ×3 Bug Hunt make ×15). One hunt every 15 minutes. Tiles react the moment a finger lands.
+- Home screen cleanup: three bubbles per side. Map, Viking Raid and Hoard on the left; Rush, Bug Hunt and Vault on the right. The Hoard bubble shows "!" while you have tokens to spin, and both mini game bubbles show their boost countdown.
+
 ## v0.36.1 (2026-10-30)
 
 - Tap away to close. Tapping the dimmed backdrop around an upgrade panel (or any panel) closes it reliably on iPhone, where Safari sometimes dropped the tap so only ✕ worked. The Viking Raid clear popup still cannot be tapped away.

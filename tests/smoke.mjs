@@ -551,9 +551,10 @@ await page.evaluate(() => SVT.setView("lab"));
 await page.evaluate(() => SVT.save());
 await page.reload(); await page.waitForTimeout(400);
 await page.screenshot({ path: out + "/14-home.png" });
+// v0.37: six bubbles (Map, Viking Raid, Hoard, Rush, Bug Hunt, Vault) plus Play and Settings
 const tiles = await page.locator(".bubble, .play-btn, .gear-btn").count();
 console.log("home tiles", tiles);
-if (tiles !== 6) errors.push("Home screen missing or wrong tile count: " + tiles);
+if (tiles !== 8) errors.push("Home screen missing or wrong tile count: " + tiles);
 await page.click(".play-btn", { force: true }); await page.waitForTimeout(200);
 if (!(await page.locator(".lab-view").isVisible())) errors.push("Play did not open the lab");
 await page.click(".home-btn"); await page.waitForTimeout(200);
@@ -602,6 +603,45 @@ if (!(boost.wait > 800) || !boost.applied || boost.mult !== 5 || Math.abs(boost.
 await page.click("#rush .btn.fund-cta"); await page.waitForTimeout(200);
 if (await page.locator("#rush").count()) errors.push("Rush did not close");
 await page.screenshot({ path: out + "/18-home-boosted.png" });
+// v0.37: Bug Hunt, the second mini game: home bubble, a run tapped on pointerdown, results, a boost that stacks with Rush
+await page.evaluate(() => SVT.setView("home")); await page.waitForTimeout(200);
+const homeBubbles = await page.evaluate(() => [...document.querySelectorAll(".bubble")].map((b) => b.getAttribute("aria-label")).join(","));
+if (homeBubbles !== "Map,Viking Raid,Hoard,Rush,Bug Hunt,Vault") errors.push("Home bubbles wrong: " + homeBubbles);
+await page.click(".bubble.b-bugs", { force: true }); await page.waitForTimeout(300);
+await page.screenshot({ path: out + "/21-bugs-start.png" });
+await page.click(".bugs-play");
+let bugTaps = 0, gemLeft = true;
+for (let i = 0; i < 40; i++) {
+  await page.waitForTimeout(120);
+  if (i === 20) await page.screenshot({ path: out + "/22-bugs-run.png" });
+  bugTaps += await page.evaluate(() => {
+    const t = document.querySelector(".bug-tile.has-bug");
+    if (!t) return 0;
+    t.dispatchEvent(new PointerEvent("pointerdown", { isPrimary: true, button: 0, bubbles: true, cancelable: true }));
+    return 1;
+  });
+}
+const bugRun = await page.evaluate(() => ({ score: SVT.bugsGame().score, lives: SVT.bugsGame().lives }));
+console.log("bug run", JSON.stringify(bugRun), "taps", bugTaps);
+if (!(bugRun.score >= 3) || bugRun.score !== bugTaps || bugRun.lives !== 3) errors.push("Bug Hunt: tapping bugs on pointerdown did not score cleanly: " + JSON.stringify(bugRun) + " taps " + bugTaps);
+await page.evaluate(() => SVT.bugsGame().end()); await page.waitForTimeout(700);
+await page.screenshot({ path: out + "/23-bugs-result.png" });
+if (!(await page.locator("#bugs .rush-big").isVisible())) errors.push("Bug Hunt results screen missing");
+const bugBoost = await page.evaluate(() => {
+  const S = SVT.state(), L = S.labs.arcade, before = SVT.boostMult(L, SVT.now()), rush = SVT.rushMult();
+  S.bugs.next = 0;
+  const r = SVT.finishBugs(36);
+  const after = SVT.boostMult(L, SVT.now());
+  return { applied: r.applied, mult: SVT.bugsMult(), ratio: after / before, stacks: Math.abs(after - rush * 3 * SVT.vaultMult()) < 1e-9, rush, again: SVT.finishBugs(12).applied, wait: SVT.bugsWait() > 800 };
+});
+console.log("bug boost", JSON.stringify(bugBoost));
+if (!bugBoost.applied || bugBoost.mult !== 3 || Math.abs(bugBoost.ratio - 3) > 1e-6 || !bugBoost.stacks || bugBoost.rush !== 5 || bugBoost.again || !bugBoost.wait) errors.push("Bug Hunt boost does not stack with Rush: " + JSON.stringify(bugBoost));
+await page.evaluate(() => SVT.closeBugs());
+await page.evaluate(() => SVT.setView("home")); await page.waitForTimeout(300);
+const bugLabel = await page.evaluate(() => document.querySelector(".b-bugs .bubble-label").textContent);
+if (!bugLabel.startsWith("×3 ")) errors.push("Bug Hunt bubble does not show the boost: " + bugLabel);
+await page.screenshot({ path: out + "/24-home-six-bubbles.png" });
+await page.evaluate(() => SVT.setView("lab"));
 // Tech Vault: beating the garage earlier paid a coin; replay runs in a bonus slot; rolls follow the odds; every
 // item is unique in the save; items only go in slots they fit; Chip wears them on the home screen.
 const vault = await page.evaluate(() => {

@@ -19,9 +19,9 @@ window.SVT = window.SVT || {};
   }
 
   const B = {
-    VERSION: "0.36.1",
+    VERSION: "0.37.0",
     // Release time in UTC, set with each release. Shown after the version in the player's local time.
-    BUILT: "2026-10-30T05:10Z",
+    BUILT: "2026-10-30T06:00Z",
     FLOORS: 30,
     // v0.26: lower caps, because the IPO needs every floor, the lift and the warehouse at max level. The hubs cap at
     // Lv 400: that is the income every lab ends with, so the deep floors must stay affordable against it, and
@@ -88,6 +88,19 @@ window.SVT = window.SVT || {};
         { score: 35, mult: 3, minutes: 15 },
         { score: 50, mult: 4, minutes: 20 },
         { score: 65, mult: 5, minutes: 30 },
+      ],
+    },
+    // Bug Hunt (second mini game, v0.37): a 30-second whack-a-mole run on a 3x3 server rack with 3 lives. Its boost
+    // is a separate timed multiplier that stacks with the Rush boost (both multiply the cash at the warehouse).
+    BUGS: {
+      SECONDS: 30,
+      LIVES: 3,
+      COOLDOWN: 15 * 60,
+      TIERS: [
+        { score: 12, mult: 1.5, minutes: 10 },
+        { score: 20, mult: 2, minutes: 15 },
+        { score: 28, mult: 2.5, minutes: 20 },
+        { score: 36, mult: 3, minutes: 30 },
       ],
     },
     // Tech Vault (collectible roll): a new player starts with START_COINS wild coins (good at any open lab), and
