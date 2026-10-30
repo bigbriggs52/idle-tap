@@ -2,6 +2,10 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.36.0 (2026-10-30)
+
+- Viking Hoard, explained and useful. The panel now reads as three numbered steps (1. Spin tokens, 2. Relics, 3. Longship) with a short explainer on every tab. Relics do something: equip up to 5 on your longship and each adds its rarity's bonus to Viking mine income (Common ×1.05, Uncommon ×1.1, Rare ×1.15, Epic ×1.25, Legendary ×1.35, Mythic ×1.5; bonuses add up, capped at ×3). Every relic card has an Equip / Take off button, "Equip best 5" picks the rarest for you (also offered right after a spin), and the Longship tab shows the five slots and the total bonus. Forging (3 of a kind → 1 better) moved onto the Relics tab; equipped relics are never forged. The Stages panel's Hoard button shows the current bonus.
+
 ## v0.35.0 (2026-10-29)
 
 - Viking Hoard: Viking tokens now spin for relics. 🎰 Hoard (from the Stages panel and Chip's boats) spends tokens on a rune spin for one of 10,000 relics (50 loot types × 10 materials × 20 epithets), each with a fixed rarity: 5,000 Common, 2,800 Uncommon, 1,500 Rare, 550 Epic, 130 Legendary, 20 Mythic. Stake 1, 3, 5 or 10 tokens in one spin for better odds, with pity (Legendary or better within 75 tokens) and a first spin that is at least Rare. A 🔁 Max switch spins until the tokens run out (100 per press) and shows the haul with a rarity tally. The Hoard tab shows the collection by rarity; the Merge tab forges any three relics of one rarity into one of the next (Forge 1 or Forge all). Boats go by tokens ever earned, so spending tokens never costs a boat.

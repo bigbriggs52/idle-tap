@@ -1331,3 +1331,25 @@ body.duo { --duo: 60px; }
 .hoard-merge-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 12px; border-radius: 14px; background: #fff; border: 3px solid var(--rc); }
 .hoard-merge-btns { display: flex; gap: 6px; }
 .token-btns { display: flex; gap: 6px; }
+
+/* v0.36: Hoard explained in three steps, relics equip onto the longship */
+.hoard-steps { display: grid; gap: 6px; }
+.hoard-step { display: flex; gap: 10px; align-items: flex-start; padding: 8px 10px; border-radius: 12px; background: #fff; border: 2px solid #dfe6ee; opacity: .75; }
+.hoard-step.on { opacity: 1; border-color: #3fb7f5; box-shadow: 0 0 0 3px #3fb7f533; }
+.hoard-step-n { flex: none; width: 26px; height: 26px; border-radius: 50%; background: #2a4055; color: #fff; display: grid; place-items: center; font: .9rem var(--f-display); }
+.hoard-step div { display: grid; gap: 1px; }
+.hoard-step b { font-size: .92rem; }
+.hoard-step span:not(.hoard-step-n) { font-size: .78rem; color: #4a5a6a; font-weight: 600; }
+.hoard-shipbar { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 12px; border-radius: 12px; background: linear-gradient(#e8f6ff, #cfeaff); border: 2px solid #3fb7f5; font-weight: 700; font-size: .9rem; }
+.hoard-shipbar.big { display: grid; gap: 4px; text-align: center; }
+.hoard-shipbar.big b { font: 1.4rem var(--f-display); color: #1f5f8a; }
+.hoard-slotbtns { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; }
+.hoard-slot.empty { display: grid; gap: 2px; padding: 14px 12px; border-radius: 16px; border: 3px dashed #b8c6d4; background: #fff; text-align: center; }
+.hoard-slot-n { font: 1rem var(--f-display); color: #5f7383; }
+.hoard-forge { display: grid; gap: 6px; }
+.hoard-forge > b { font-size: .9rem; }
+.hoard-card.onship { box-shadow: 0 0 0 4px #3fb7f5, 0 4px 0 color-mix(in srgb, var(--rc) 60%, #000); }
+.hoard-equip.off { background: #fff; }
+.vault-foot .btn + .btn { margin-top: 8px; }
+.vault.hoard .vault-foot { display: grid; gap: 8px; }
+.vault.hoard .vault-foot .btn + .btn { margin-top: 0; }
