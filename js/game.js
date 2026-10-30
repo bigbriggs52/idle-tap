@@ -53,7 +53,7 @@ window.SVT = window.SVT || {};
   // wears on the home screen (slot -> item id).
   function newVault() { return { coins: {}, wild: B.VAULT.START_COINS, beats: {}, items: [], pity: 0, spent: 0, serial: 0, replay: null, show: {} }; }
   function newState() {
-    return { rounds6: true, mgr5: true, v: 3, activeLab: "garage", buy: "next", labs: { garage: newLab("garage") }, raid: newRaid(), hoard: newHoard(), rush: newRush(), vault: newVault(), lastSeen: Date.now(), seenIntro: false };
+    return { rounds6: true, mgr5: true, v: 3, activeLab: "garage", buy: "next", labs: { garage: newLab("garage") }, raid: newRaid(), hoard: newHoard(), rush: newRush(), bugs: newRush(), vault: newVault(), lastSeen: Date.now(), seenIntro: false };
   }
 
   let S = newState();
@@ -124,6 +124,26 @@ window.SVT = window.SVT || {};
       R.mult = tier.mult; R.until = t + tier.minutes * 60; applied = true;
     }
     emit("rush", { score, tier, applied });
+    save();
+    return { tier, applied };
+  };
+
+  // ---------- Bug Hunt (v0.37) ----------
+  // The second mini game. Same shape as Rush (S.bugs), a separate timed multiplier that stacks with it in SVT.boostMult.
+  SVT.bugsMult = (t) => (S.bugs && S.bugs.until > (t || now()) ? S.bugs.mult : 1);
+  SVT.bugsLeft = () => Math.max(0, (S.bugs.until || 0) - now());
+  SVT.bugsWait = () => Math.max(0, (S.bugs.next || 0) - now());
+  SVT.bugsTier = (score) => B.BUGS.TIERS.filter((x) => score >= x.score).pop() || null;
+  SVT.finishBugs = (score) => {
+    const R = S.bugs, t = now(), tier = SVT.bugsTier(score);
+    R.next = t + B.BUGS.COOLDOWN;
+    R.best = Math.max(R.best || 0, score);
+    R.runs = (R.runs || 0) + 1;
+    let applied = false;
+    if (tier && (SVT.bugsMult(t) < tier.mult || (SVT.bugsMult(t) === tier.mult && R.until < t + tier.minutes * 60))) {
+      R.mult = tier.mult; R.until = t + tier.minutes * 60; applied = true;
+    }
+    emit("bugs", { score, tier, applied });
     save();
     return { tier, applied };
   };
@@ -266,7 +286,7 @@ window.SVT = window.SVT || {};
   // v0.36.1 (user ask): Rush, Vault and longship boosts no longer inflate what every node carries; they multiply the
   // cash at the warehouse instead (a x3 boost turns a $20 delivery into $60). Omens still change node loads.
   const worldMult = (lab, kind) => (SVT.isRaid(lab) ? SVT.raidStage(lab).mult[kind] : 1);
-  SVT.boostMult = (lab, t) => SVT.rushMult(t) * vaultMult * (SVT.isRaid(lab) && SVT.hoardMult ? SVT.hoardMult() : 1);
+  SVT.boostMult = (lab, t) => SVT.rushMult(t) * SVT.bugsMult(t) * vaultMult * (SVT.isRaid(lab) && SVT.hoardMult ? SVT.hoardMult() : 1);
   // Passives of the node's super manager (always on while assigned): speed, load and that node's price cut.
   SVT.passives = (lab, kind, n) => {
     const s = superOn(lab, kind, n), p = (s && s.ab.passive) || {};
@@ -791,6 +811,7 @@ window.SVT = window.SVT || {};
       if (S.activeLab === "raid") S.activeLab = "garage";
     }
     if (!S.rush) S.rush = newRush(); // v0.16 adds Assembly Line Rush
+    if (!S.bugs) S.bugs = newRush(); // v0.37 adds Bug Hunt
     if (!S.vault) S.vault = newVault(); // v0.17 adds the Tech Vault
     if (!S.hoard) S.hoard = newHoard(); // v0.35 adds the Viking Hoard
     if (!S.hoard.ship) S.hoard.ship = []; // v0.36: relics equipped on the longship

@@ -1361,3 +1361,32 @@ body.duo { --duo: 60px; }
 .rush-part { pointer-events: none; }
 .wh-boost { left: auto; right: 10px; background: linear-gradient(#ffe36a, #f2b100); color: #5a3b00; }
 .wh-boost[hidden] { display: none; }
+
+/* v0.37: Bug Hunt (second mini game) and the home screen's three bubbles per side */
+.side { gap: 26px; }
+.bubble.b-bugs { background: radial-gradient(circle at 35% 30%, #c8f5a6, #4fae3a 70%); animation-delay: -1.5s; }
+.bubble.b-hoard { background: radial-gradient(circle at 35% 30%, #d9c7ff, #7a4fd6 70%); animation-delay: -2.5s; }
+.rush.bugs { background: radial-gradient(circle at 50% -10%, #8fe39a, #2f9c5a 45%, #16563a); }
+.rush.bugs .rush-head h2, .rush.bugs .rush-logo { text-shadow: 0 2px 0 #0f3d28; }
+.rush.bugs .rush-body { background: #f3fff4; border-color: #b9ecc2; box-shadow: 0 5px 0 #0f3d28; color: #1b3a2a; }
+.rush.bugs .rush-time { background: #0f3d28; }
+.rush.bugs .rush-score { -webkit-text-stroke-color: #0f3d28; }
+.rush.bugs .rush-combo { text-shadow: 0 2px 0 #0f3d28; }
+.bugs-stage { justify-content: center; }
+.bug-rack { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; width: 100%; max-width: 400px; margin: 0 auto; }
+.bug-tile { position: relative; aspect-ratio: 1; display: grid; place-items: center; padding: 0; border-radius: 18px; border: 4px solid #0f3d28; background: linear-gradient(#3a4a5c, #1f2a36); box-shadow: inset 0 3px 0 #ffffff22, 0 4px 0 #0f3d28; cursor: pointer; overflow: hidden; touch-action: none; }
+.bug-leds { position: absolute; left: 10px; top: 8px; width: 8px; height: 8px; border-radius: 50%; background: #5fd38a; box-shadow: 14px 0 0 #ffe066, 28px 0 0 #ff5e8a; animation: pulse 1.6s ease-in-out infinite; }
+.bug-tile::after { content: ""; position: absolute; left: 10px; right: 10px; bottom: 10px; height: 6px; border-radius: 3px; background: repeating-linear-gradient(90deg, #ffffff30 0 6px, transparent 6px 10px); }
+.bug-face { font-size: 2.6rem; line-height: 1; transform: scale(0); opacity: 0; filter: drop-shadow(0 3px 0 #0006); pointer-events: none; }
+.bug-tile.has-bug .bug-face, .bug-tile.has-gem .bug-face { transform: scale(1); opacity: 1; animation: bug-pop .18s cubic-bezier(.3,1.6,.5,1); }
+.bug-tile.has-bug { background: linear-gradient(#5a6c80, #2b3a4a); border-color: #ffe36a; }
+.bug-tile.has-gem { background: linear-gradient(#4a5f8a, #243556); border-color: #9fd2ff; }
+.bug-tile.ok { animation: bin-ok .3s cubic-bezier(.3,1.6,.5,1); border-color: #5fd38a; }
+.bug-tile.bad { animation: hurt .35s ease; border-color: #ff5e8a; filter: saturate(.5); }
+.bug-tile:active { transform: translateY(3px); box-shadow: inset 0 3px 0 #ffffff22, 0 1px 0 #0f3d28; }
+@keyframes bug-pop { 0% { transform: scale(0) rotate(-20deg); } 100% { transform: scale(1) rotate(0); } }
+.bug-legend { display: flex; justify-content: center; gap: 14px; }
+.bug-tile.demo { width: 96px; cursor: default; grid-template-rows: 1fr auto; padding-bottom: 6px; }
+.bug-tile.demo::after { display: none; }
+.bug-tile.demo small { color: #fff; font: .78rem var(--f-display); }
+@media (prefers-reduced-motion: reduce) { .bug-leds, .bug-tile.has-bug .bug-face, .bug-tile.has-gem .bug-face { animation: none; } }

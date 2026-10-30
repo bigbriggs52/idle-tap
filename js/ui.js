@@ -1061,13 +1061,15 @@ window.SVT = window.SVT || {};
       h("div", { class: "home-stage" },
         h("div", { class: "side left" },
           bubble("b-map", "🗺", "Map", () => setView("map")),
-          bubble("b-raid", "⚔️", "Viking Raid", openRaid, raidReady)),
+          bubble("b-raid", "⚔️", "Viking Raid", openRaid, raidReady),
+          bubble("b-hoard", "🎰", "Hoard", () => SVT.openHoard(), SVT.hoardTokens() > 0)),
         h("div", { class: "hero" }, sign,
           h("button", { class: "hero-boat", "aria-label": "Chip's boat: " + SVT.BOATS[SVT.boatIndex() - 1].name, html: SVT.boatSvg(SVT.boatIndex()), onclick: openBoats }),
           h("div", { class: "hero-bot", html: SVT.mascot("hold") }), wornItems(),
           SVT.vaultMult() > 1 ? h("button", { class: "worn-total", "aria-label": "Item bonus", onclick: () => SVT.openChip(), text: "⚡ ×" + SVT.vaultMult() }) : null),
         h("div", { class: "side right" },
-          rushBubble(bubble("b-rush", "🏭", "Rush", SVT.openRush, true)),
+          boostBubble(bubble("b-rush", "🏭", "Rush", SVT.openRush, true), "Rush", SVT.rushLeft, SVT.rushWait, () => SVT.state().rush.mult),
+          boostBubble(bubble("b-bugs", "🐛", "Bug Hunt", SVT.openBugs, true), "Bug Hunt", SVT.bugsLeft, SVT.bugsWait, () => SVT.state().bugs.mult),
           bubble("b-vault", "🎁", "Vault", SVT.openVault, SVT.vaultCoins() > 0))),
       h("button", { class: "play-btn", onclick: () => setView("lab") },
         h("span", { class: "play-tab", text: raid ? "Viking Raid" : d.name }), h("span", { class: "play-word", text: "Play" })),
@@ -1083,13 +1085,13 @@ window.SVT = window.SVT || {};
         onclick: () => { toast(SVT.itemName(item) + " · " + item.rarity + (item.boost > 1 ? " · ⚡ ×" + item.boost : ""), "big"); SVT.openChip(slot.id); } }, SVT.itemArt(item, "mini"))));
   }
 
-  // The Rush bubble shows the boost countdown, and its "!" badge only while a run is ready.
-  function rushBubble(b) {
+  // A mini game bubble (Rush, Bug Hunt) shows its boost countdown, and its "!" badge only while a run is ready.
+  function boostBubble(b, name, leftFn, waitFn, multFn) {
     const label = b.querySelector(".bubble-label"), badge = b.querySelector(".bubble-badge");
     return bind(b, () => {
-      const left = SVT.rushLeft();
-      setText(label, left > 0 ? "×" + SVT.state().rush.mult + " " + SVT.rushClock(left) : "Rush");
-      badge.hidden = SVT.rushWait() > 0 || left > 0;
+      const left = leftFn();
+      setText(label, left > 0 ? "×" + multFn() + " " + SVT.rushClock(left) : name);
+      badge.hidden = waitFn() > 0 || left > 0;
     });
   }
 
