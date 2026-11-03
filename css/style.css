@@ -1413,3 +1413,4 @@ body.duo { --duo: 60px; }
 .hire-max:disabled { opacity: .5; }
 .jump-btn.max-all { width: auto; min-width: 48px; padding: 0 10px; border-radius: 24px; background: linear-gradient(#8ef07a, #3dbb4a); color: #fff; font-size: 1.1rem; -webkit-text-stroke: 0; }
 .jump-btn.max-all::after { content: " Max all"; font: 700 .72rem var(--f-display); }
+.hire-max b { font-size: .8rem; padding: 4px 8px; }

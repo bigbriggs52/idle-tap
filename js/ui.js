@@ -335,7 +335,7 @@ window.SVT = window.SVT || {};
       toast("Hired " + got.length + " " + B.ROLE_NAMES[role] + (got.length === 1 ? "" : "s") + " · best: " + SVT.rank(best.rank).name + " " + best.name + (role === "floor" ? " · rarest at the bottom" : ""), "r-" + best.rank);
       reopen();
     } }, h("span", { text: "Hire max" }), hireMaxN),
-      (e) => { const n = SVT.hireManyQuote(lab(), role); setText(hireMaxN, n ? "×" + n : SVT.seatsOpen(lab(), role) ? "no cash" : "all seats filled"); setDisabled(e, n < 1); });
+      (e) => { const n = SVT.hireManyQuote(lab(), role); setText(hireMaxN, n ? "×" + n : SVT.seatsOpen(lab(), role) ? "no cash" : "full"); setDisabled(e, n < 1); });
     let nav = null;
     if (here) {
       const slots = nodeList(), i = Math.max(0, slots.findIndex(([k, m]) => k === kind && m === n));
