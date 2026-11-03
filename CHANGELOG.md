@@ -2,6 +2,11 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.40.1 (2026-11-03)
+
+- Max all spends in your order: the deepest mine first, then the lift, then the warehouse, then the mines from the bottom up, and round again while anything is affordable.
+- Hire max really hires max. It no longer stops at empty seats: it keeps hiring while the cash lasts (up to 25 a press), then the best hires take the seats. Floors get the rarest managers at the bottom and the rest wait on the bench; the lift or warehouse seat goes to a rarer hire unless the manager there is mid-ability.
+
 ## v0.40.0 (2026-11-03)
 
 - Bottom bar reworked: 🏠 Home is the big green button in the middle, with Rush on its left and Bug Hunt on its right (each shows its boost countdown and glows when a run is ready). Funding / Stages and Managers stay on the left, Map and Chip on the right. The second 🏠 button at the top right is gone.

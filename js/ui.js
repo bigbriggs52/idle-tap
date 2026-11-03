@@ -335,10 +335,10 @@ window.SVT = window.SVT || {};
       const got = SVT.hireMany(role);
       if (!got.length) return;
       const best = got.slice().sort((a, b) => SVT.RANK_ORDER[a.rank] - SVT.RANK_ORDER[b.rank])[0];
-      toast("Hired " + got.length + " " + B.ROLE_NAMES[role] + (got.length === 1 ? "" : "s") + " · best: " + SVT.rank(best.rank).name + " " + best.name + (role === "floor" ? " · rarest at the bottom" : ""), "r-" + best.rank);
+      toast("Hired " + got.length + " " + B.ROLE_NAMES[role] + (got.length === 1 ? "" : "s") + " · best: " + SVT.rank(best.rank).name + " " + best.name + (role === "floor" ? " · rarest at the bottom, the rest wait below" : SVT.mgrOf(lab(), role, 0) === best ? " · now runs " + SVT.slotName(SVT.slotKey(role, 0)) : " · waits below"), "r-" + best.rank);
       reopen();
     } }, h("span", { text: "Hire max" }), hireMaxN),
-      (e) => { const n = SVT.hireManyQuote(lab(), role); setText(hireMaxN, n ? "×" + n : SVT.seatsOpen(lab(), role) ? "no cash" : "full"); setDisabled(e, n < 1); });
+      (e) => { const n = SVT.hireManyQuote(lab(), role); setText(hireMaxN, n ? "×" + n : "no cash"); setDisabled(e, n < 1); });
     let nav = null;
     if (here) {
       const slots = nodeList(), i = Math.max(0, slots.findIndex(([k, m]) => k === kind && m === n));

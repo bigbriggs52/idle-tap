@@ -638,10 +638,13 @@ window.SVT = window.SVT || {};
     if (role === "floor") return lab.floors.filter((f, i) => !lab.assign[SVT.slotKey("floor", i + 1)]).length;
     return lab.assign[SVT.slotKey(role, 0)] ? 0 : 1;
   };
+  // v0.40.1 (user: "make hire max hire max; it says full but I want it to hire"): seats or no seats, Hire max keeps
+  // hiring while the cash lasts, up to HIRE_MAX_PRESS a press. The best hires then take the seats: floors through
+  // Auto-assign (rarest deepest), the lift or warehouse seat goes to a rarer hire unless the sitter is mid-ability.
+  SVT.HIRE_MAX_PRESS = 25;
   SVT.hireMany = (role, limit) => {
-    const lab = SVT.lab();
-    let open = SVT.seatsOpen(lab, role);
-    if (limit !== undefined) open = Math.min(open, limit);
+    const lab = SVT.lab(), t = now();
+    let open = limit === undefined ? SVT.HIRE_MAX_PRESS : Math.min(limit, SVT.HIRE_MAX_PRESS);
     const hired = [];
     while (open > 0 && lab.cash >= SVT.hireCost(lab, role)) {
       const m = SVT.hire(role);
@@ -650,41 +653,53 @@ window.SVT = window.SVT || {};
     }
     if (hired.length) {
       if (role === "floor") SVT.autoAssign();
-      else SVT.assign(hired[0].id, role, 0);
+      else {
+        const best = SVT.owned(lab, role)[0], cur = SVT.mgrOf(lab, role, 0);
+        const busy = cur && (cur.activeUntil > t || cur.cdUntil > t);
+        if (best && (!cur || (!busy && RANK_ORDER[best.rank] < RANK_ORDER[cur.rank]))) SVT.assign(best.id, role, 0);
+      }
     }
     return hired;
   };
   // How many hires "Hire max" would make right now (same rule, no side effects).
   SVT.hireManyQuote = (lab, role) => {
-    let open = SVT.seatsOpen(lab, role), cash = lab.cash, k = lab.hires[role] || 0, n = 0;
+    let open = SVT.HIRE_MAX_PRESS, cash = lab.cash, k = lab.hires[role] || 0, n = 0;
     const costAt = (kk) => { const saved = lab.hires[role]; lab.hires[role] = kk; const c = SVT.hireCost(lab, role); lab.hires[role] = saved; return c; };
     while (open > 0 && cash >= costAt(k)) { cash -= costAt(k); k++; open--; n++; }
     return n;
   };
-  // v0.39 (user ask): Max all. Buys the most levels the cash affords on every node, cheapest-per-level nodes first,
-  // until nothing is affordable. Returns { levels, spent, nodes }.
+  // v0.39 (user ask): Max all. Buys the most levels the cash affords on every node until nothing is affordable.
+  // v0.40.1 (user): the spend order is the deepest mine first, then the lift, then the warehouse, then the mines
+  // from the bottom up. Returns { levels, spent, nodes, order }.
+  SVT.upgradeOrder = (lab) => {
+    const F = lab.floors.length, list = [];
+    if (F) list.push(["floor", F]);
+    list.push(["freight", 0], ["commercial", 0]);
+    for (let n = F - 1; n >= 1; n--) list.push(["floor", n]);
+    return list;
+  };
   SVT.upgradeAll = () => {
     const lab = SVT.lab(), saved = S.buy;
     S.buy = "max";
     let levels = 0, spent = 0, nodes = 0;
+    const order = [];
     for (let round = 0; round < 50; round++) {
       let bought = false;
-      const list = [["freight", 0], ["commercial", 0]].concat(lab.floors.map((f, i) => ["floor", i + 1]));
+      const list = SVT.upgradeOrder(lab);
       for (const [kind, n] of list) {
         const before = SVT.levelOf(lab, kind, n), cash = lab.cash;
-        if (SVT.upgrade(kind, n)) { levels += SVT.levelOf(lab, kind, n) - before; spent += cash - lab.cash; nodes++; bought = true; }
+        if (SVT.upgrade(kind, n)) { levels += SVT.levelOf(lab, kind, n) - before; spent += cash - lab.cash; nodes++; bought = true; order.push(kind + (kind === "floor" ? n : "")); }
       }
       if (!bought) break;
     }
     S.buy = saved;
     if (levels) emit("change");
-    return { levels, spent, nodes };
+    return { levels, spent, nodes, order };
   };
   SVT.upgradeAllQuote = (lab) => {
     const saved = S.buy; S.buy = "max";
     let can = 0;
-    const list = [["freight", 0], ["commercial", 0]].concat(lab.floors.map((f, i) => ["floor", i + 1]));
-    for (const [kind, n] of list) { const q = SVT.quote(lab, kind, n); if (q.count > 0 && lab.cash >= q.cost) can += q.count; }
+    for (const [kind, n] of SVT.upgradeOrder(lab)) { const q = SVT.quote(lab, kind, n); if (q.count > 0 && lab.cash >= q.cost) can += q.count; }
     S.buy = saved;
     return can;
   };
