@@ -2,6 +2,13 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.39.0 (2026-11-03)
+
+- Managers come back sooner. Common, Uncommon and Rare abilities are ready again 1, 3 and 5 minutes after they end (they were 5, 10 and 15). Epic and Legendary keep their own timers.
+- Legendary toned down, because they made mines too easy: The Unicorn sells at 10× (was 15×) and its passive is +15% (was +25%); The Quantum Courier warps every 8 s (was 5) with +10% lift capacity (was +20%); The Venture Capitalist cuts prices by 75% (was 90%).
+- Hire max. The manager panel has a second button that hires for every empty seat of that role while the cash lasts: floors get one manager each, rarest at the bottom; the lift or warehouse gets its one seat filled.
+- Max all. A green ⬆ Max all button at the bottom left of every mine buys every affordable level on every shaft, the lift and the warehouse in one tap, and only shows when something is affordable.
+
 ## v0.38.0 (2026-11-03)
 
 - Tech Vault: Max merge. One button on the Items tab runs every possible merge, weakest three first, and keeps going as the results stack up (so three Commons become an Uncommon that may merge again). Items on Chip are never merged.

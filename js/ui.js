@@ -326,6 +326,16 @@ window.SVT = window.SVT || {};
     } },
       h("span", { text: "Hire manager" }), hireCost),
       (e) => { const c = SVT.hireCost(lab(), role); setText(hireCost, "$" + fmt(c)); setDisabled(e, lab().cash < c); });
+    // v0.39 (user ask): Hire max fills every empty seat of this role while the cash lasts.
+    const hireMaxN = h("b");
+    const hireMax = bind(h("button", { class: "btn fund-cta big hire hire-max", onclick: () => {
+      const got = SVT.hireMany(role);
+      if (!got.length) return;
+      const best = got.slice().sort((a, b) => SVT.RANK_ORDER[a.rank] - SVT.RANK_ORDER[b.rank])[0];
+      toast("Hired " + got.length + " " + B.ROLE_NAMES[role] + (got.length === 1 ? "" : "s") + " · best: " + SVT.rank(best.rank).name + " " + best.name + (role === "floor" ? " · rarest at the bottom" : ""), "r-" + best.rank);
+      reopen();
+    } }, h("span", { text: "Hire max" }), hireMaxN),
+      (e) => { const n = SVT.hireManyQuote(lab(), role); setText(hireMaxN, n ? "×" + n : SVT.seatsOpen(lab(), role) ? "no cash" : "all seats filled"); setDisabled(e, n < 1); });
     let nav = null;
     if (here) {
       const slots = nodeList(), i = Math.max(0, slots.findIndex(([k, m]) => k === kind && m === n));
@@ -333,7 +343,7 @@ window.SVT = window.SVT || {};
       nav = { prev: () => go(-1), next: () => go(1), pos: (i + 1) + " of " + slots.length, dir };
     }
     sheet(here ? SVT.slotName(here) + " Manager" : "Managers", h("div", { class: "sheet-body mgr-panel" }, parts),
-      { icon: "👔", nav, foot: h("div", { class: "panel-foot" }, hire) });
+      { icon: "👔", nav, foot: h("div", { class: "panel-foot hire-row" }, hire, hireMax) });
     update();
   }
   SVT.openManagers = openManagers;
@@ -858,7 +868,12 @@ window.SVT = window.SVT || {};
       (e) => toggle(e, "show", window.scrollY > 240));
     const down = bind(h("button", { class: "jump-btn down", "aria-label": "Down to the bottom of the mine", onclick: () => glideTo(maxScroll()), text: "⬇" }),
       (e) => toggle(e, "show", maxScroll() - window.scrollY > 240));
-    return h("div", { class: "jump-btns" }, up, down);
+    // v0.39 (user ask): Max all buys every affordable level on every shaft, the lift and the warehouse.
+    const maxAll = bind(h("button", { class: "jump-btn max-all", "aria-label": "Max all upgrades", onclick: () => {
+      const r = SVT.upgradeAll();
+      toast(r.levels ? "⬆ Max all: +" + r.levels + " levels across " + r.nodes + (r.nodes === 1 ? " upgrade" : " upgrades") + " for $" + fmt(r.spent) : "Nothing affordable to upgrade right now");
+    }, text: "⬆" }), (e) => { const can = SVT.upgradeAllQuote(lab()); toggle(e, "show", can > 0); e.title = can ? "Max all: +" + can + " levels" : ""; });
+    return h("div", { class: "jump-btns" }, maxAll, up, down);
   }
 
   // ---------- views ----------
