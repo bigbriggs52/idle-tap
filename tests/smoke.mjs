@@ -304,6 +304,13 @@ const after = await page.evaluate(() => ({ round: SVT.lab().round, mult: SVT.pre
 if (after.managers !== 0) errors.push("Managers survived the funding round");
 console.log("after raise", JSON.stringify(after));
 await page.waitForTimeout(300);
+// v0.40: Home sits in the middle of the bottom bar, both mini games beside it, no second Home button up top
+const navLabels = await page.evaluate(() => ({ labels: [...document.querySelectorAll(".bottom-nav .nav-btn")].map((b) => b.getAttribute("aria-label") || b.innerText.trim()).join("|"), center: document.querySelector(".bottom-nav .nav-btn.center").innerText.replace(/\s+/g, " ").trim(), topHome: document.querySelectorAll(".home-btn").length }));
+console.log("nav", JSON.stringify(navLabels));
+if (navLabels.labels.split("|").length !== 7 || navLabels.labels.split("|")[3] !== "Home screen" || !/Home$/.test(navLabels.center) || navLabels.topHome !== 0 || !/Bug Hunt/.test(navLabels.labels)) errors.push("Bottom bar layout wrong: " + JSON.stringify(navLabels));
+await page.click(".bottom-nav .nav-btn.center"); await page.waitForTimeout(300);
+if (!(await page.locator(".home-view").count())) errors.push("Bottom bar Home button did not open the home screen");
+await page.evaluate(() => SVT.setView("lab")); await page.waitForTimeout(300);
 await page.click(".bottom-nav >> text=Map");
 await page.waitForTimeout(300);
 const pins = await page.evaluate(() => ({ total: document.querySelectorAll(".pin").length, locked: document.querySelectorAll(".pin.locked").length, open: document.querySelectorAll(".pin.open").length }));
@@ -512,6 +519,16 @@ await page.evaluate(() => SVT.openHoard("hoard")); await page.waitForTimeout(200
 await page.screenshot({ path: out + "/12d-hoard-collection.png" });
 if ((await page.locator("#hoard .hoard-card").count()) < 10) errors.push("Hoard collection tab shows too few relics");
 if (!(await page.locator("#hoard .hoard-merge-row").count())) errors.push("Forge rows missing from the Relics tab");
+// v0.40: token pills explain themselves; the help sheet sums to spend + spent = earned
+await page.evaluate(() => { SVT.closeHoard(); SVT.tokenHelp(); }); await page.waitForTimeout(250);
+const tokenHelp = await page.evaluate(() => { const c = [...document.querySelectorAll(".token-sum-cell b")].map((b) => parseInt(b.textContent.replace(/\D/g, ""), 10)); return { cells: c, sums: c[0] + c[1] === c[2], steps: document.querySelectorAll(".token-help .hoard-step").length, title: document.querySelector("#sheet h2").textContent }; });
+if (!tokenHelp.sums || tokenHelp.steps !== 3 || tokenHelp.title !== "Viking tokens") errors.push("Token help sheet wrong: " + JSON.stringify(tokenHelp));
+await page.screenshot({ path: out + "/12f-token-help.png" });
+await page.evaluate(() => document.querySelector("#sheet .x-btn").click());
+await page.evaluate(() => SVT.openRaid()); await page.waitForTimeout(250);
+const pill = await page.evaluate(() => { const p = document.querySelector("#sheet .token-pill"); return p ? p.tagName + "|" + p.textContent : "none"; });
+if (!/^BUTTON\|🛡 \d+ to spend · \d+ earned/.test(pill)) errors.push("Raid token pill wrong: " + pill);
+await page.evaluate(() => document.querySelector("#sheet .x-btn").click());
 // v0.36: relics equip on the longship (5 slots) and add their rarity bonus to Viking mine income; equipped relics never forge
 const ship = await page.evaluate(() => {
   const S = SVT.state(), H = SVT.HOARD, out = {}, L = S.labs.raid;
@@ -582,7 +599,7 @@ console.log("home tiles", tiles);
 if (tiles !== 8) errors.push("Home screen missing or wrong tile count: " + tiles);
 await page.click(".play-btn", { force: true }); await page.waitForTimeout(200);
 if (!(await page.locator(".lab-view").isVisible())) errors.push("Play did not open the lab");
-await page.click(".home-btn"); await page.waitForTimeout(200);
+await page.click(".bottom-nav .nav-btn.center"); await page.waitForTimeout(200);
 if (!(await page.locator(".home-view").isVisible())) errors.push("Home button did not return home");
 console.log("reload labs", await page.evaluate(() => Object.keys(SVT.state().labs).join(",") + " garage round=" + SVT.state().labs.garage.round));
 // Assembly Line Rush: start screen from the home bubble, a run sorted with the arrow keys, results, and the boost.

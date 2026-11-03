@@ -19,9 +19,9 @@ window.SVT = window.SVT || {};
   }
 
   const B = {
-    VERSION: "0.39.0",
+    VERSION: "0.40.0",
     // Release time in UTC, set with each release. Shown after the version in the player's local time.
-    BUILT: "2026-11-03T03:05Z",
+    BUILT: "2026-11-03T03:40Z",
     FLOORS: 30,
     // v0.26: lower caps, because the IPO needs every floor, the lift and the warehouse at max level. The hubs cap at
     // Lv 400: that is the income every lab ends with, so the deep floors must stay affordable against it, and

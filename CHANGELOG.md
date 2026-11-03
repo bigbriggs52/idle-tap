@@ -2,6 +2,12 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.40.0 (2026-11-03)
+
+- Bottom bar reworked: 🏠 Home is the big green button in the middle, with Rush on its left and Bug Hunt on its right (each shows its boost countdown and glows when a run is ready). Funding / Stages and Managers stay on the left, Map and Chip on the right. The second 🏠 button at the top right is gone.
+- Viking tokens explained. Every token pill (Stages panel, Boats, the Hoard header) now reads "🛡 N to spend · M earned" and opens a one-screen explainer: how tokens are earned, that spins spend them, and that boats go by tokens earned so spending never costs a boat, with the next boat's price. It also says how tokens differ from Vault coins.
+- Vault coins explained. The Vault header says "🪙 N coins" and the Roll tab lists where coins come from (IPO +10, each funding round +5, each new lab +50 wild) and that wild coins roll at any open lab.
+
 ## v0.39.0 (2026-11-03)
 
 - Managers come back sooner. Common, Uncommon and Rare abilities are ready again 1, 3 and 5 minutes after they end (they were 5, 10 and 15). Epic and Legendary keep their own timers.
