@@ -123,7 +123,7 @@ const tiers = await page.evaluate(() => {
   return out;
 });
 console.log("tiers", JSON.stringify(tiers));
-if (tiers.stats.common.speed.mult !== 2.5 || tiers.stats.common.speed.active !== 60 || tiers.stats.common.speed.cooldown !== 300 || tiers.stats.uncommon.storage.mult !== 3.5 || tiers.stats.rare.discount.off !== 0.7 || tiers.stats.rare.discount.active !== 30 || tiers.stats.rare.discount.cooldown !== 480) errors.push("Regular tier table is off: " + JSON.stringify(tiers.stats));
+if (tiers.stats.common.speed.mult !== 2.5 || tiers.stats.common.speed.active !== 60 || tiers.stats.common.speed.cooldown !== 60 || tiers.stats.uncommon.storage.mult !== 3.5 || tiers.stats.rare.discount.off !== 0.7 || tiers.stats.rare.discount.active !== 30 || tiers.stats.rare.discount.cooldown !== 300 || tiers.stats.uncommon.speed.cooldown !== 180) errors.push("Regular tier table is off: " + JSON.stringify(tiers.stats));
 if (Object.values(tiers.supers).some((x) => !x) || tiers.supers["floor:legendary"].id !== "midas" || tiers.supers["commercial:legendary"].active !== 20 || tiers.supers["freight:epic"].cooldown !== 900) errors.push("Super managers missing or wrong: " + JSON.stringify(tiers.supers));
 if (tiers.hires.wrong || !tiers.hires.super || !tiers.hires.regular) errors.push("Hiring does not hand out super managers by tier: " + JSON.stringify(tiers.hires));
 // Super manager actives and passives in the tick: Dropshipper sells from the floor at x5, Unicorn adds +25% lab-wide,
@@ -170,12 +170,12 @@ const supers = await page.evaluate(() => {
   return out;
 });
 console.log("supers", JSON.stringify(supers));
-if (Math.abs(supers.passiveSpeed - 1.15) > 1e-9 || Math.abs(supers.revenue - 1.25) > 1e-9 || Math.abs(supers.whSpeed - 1.1) > 1e-9 || Math.abs(supers.liftOff - 0.1) > 1e-9) errors.push("Super passives wrong: " + JSON.stringify(supers));
-if (Math.abs(supers.siphon.cashGain - 5 * 1.25) > 0.05 || !supers.siphon.stockSame || Math.abs(supers.siphon.active - 45) > 1) errors.push("Dropshipper does not sell from the floor at x5: " + JSON.stringify(supers.siphon));
+if (Math.abs(supers.passiveSpeed - 1.15) > 1e-9 || Math.abs(supers.revenue - 1.15) > 1e-9 || Math.abs(supers.whSpeed - 1.1) > 1e-9 || Math.abs(supers.liftOff - 0.1) > 1e-9) errors.push("Super passives wrong: " + JSON.stringify(supers));
+if (Math.abs(supers.siphon.cashGain - 5 * 1.15) > 0.05 || !supers.siphon.stockSame || Math.abs(supers.siphon.active - 45) > 1) errors.push("Dropshipper does not sell from the floor at x5: " + JSON.stringify(supers.siphon));
 if (supers.hyper.crate !== 0 || Math.abs(supers.hyper.speed - 8) > 1e-9 || !supers.hyper.lobbyUp) errors.push("Hyperloop did not empty the crate at 8x: " + JSON.stringify(supers.hyper));
-if (supers.courier.warped1 !== 777 || supers.courier.nextIn !== 5 || supers.courier.floor3 !== 0 || Math.abs(supers.courier.liftCap - 1.2) > 1e-9 || supers.courier.liftOff !== 0.25) errors.push("Quantum Courier warp wrong: " + JSON.stringify(supers.courier));
-if (supers.over.cash !== 3 * 1.25 || Math.abs(supers.over.speed - 8 * 1.1) > 1e-9) errors.push("Overclocker wrong: " + JSON.stringify(supers.over));
-if (Math.abs(supers.cdMult - 0.85) > 1e-9 || supers.vc.floorOff !== 0.9 || supers.vc.liftOff !== 0.93 || /* 1 − 0.75 × 0.1: the Courier's passive cut stacks under the VC */ Math.abs(supers.vc.price - 0.1) > 0.01 || supers.vc.active !== 20 || supers.vc.cd !== Math.round(1200 * 0.85)) errors.push("Venture Capitalist wrong: " + JSON.stringify(supers.vc));
+if (supers.courier.warped1 !== 777 || supers.courier.nextIn !== 8 || supers.courier.floor3 !== 0 || Math.abs(supers.courier.liftCap - 1.1) > 1e-9 || supers.courier.liftOff !== 0.25) errors.push("Quantum Courier warp wrong: " + JSON.stringify(supers.courier));
+if (supers.over.cash !== 3 * 1.15 || Math.abs(supers.over.speed - 8 * 1.1) > 1e-9) errors.push("Overclocker wrong: " + JSON.stringify(supers.over));
+if (Math.abs(supers.cdMult - 0.85) > 1e-9 || supers.vc.floorOff !== 0.75 || supers.vc.liftOff !== 0.81 || /* v0.39: −75%; 1 − 0.25 × 0.75 with the Courier's passive cut under it */ Math.abs(supers.vc.price - 0.25) > 0.01 || supers.vc.active !== 20 || supers.vc.cd !== Math.round(1200 * 0.85)) errors.push("Venture Capitalist wrong: " + JSON.stringify(supers.vc));
 if (!supers.persist) errors.push("Ability timers are not saved as absolute times");
 if (!supers.noSwap || !supers.noSell) errors.push("Hire replaced a mid-ability manager, or selling still exists (v0.31.2): " + JSON.stringify({ noSwap: supers.noSwap, noSell: supers.noSell }));
 if (!/Legendary · The Unicorn/.test(supers.card)) errors.push("Super manager card does not name the special: " + supers.card);
@@ -262,6 +262,31 @@ await page.mouse.move(ub.x + 20, ub.y + 10); await page.mouse.down(); await page
 const h1 = await page.evaluate(() => SVT.lab().floors[1].lvl);
 console.log("hold-buy levels", h0, "->", h1);
 if (h1 - h0 < 5) errors.push("Holding Upgrade did not keep buying");
+// v0.39: Hire max fills every empty seat of a role while the cash lasts; Max all buys every affordable level everywhere
+const maxes = await page.evaluate(() => {
+  const L = SVT.lab(), out = {};
+  L.cash = 1e12;
+  const seats = SVT.seatsOpen(L, "floor"), q = SVT.hireManyQuote(L, "floor");
+  const got = SVT.hireMany("floor");
+  out.floor = { seats, q, got: got.length, filled: SVT.seatsOpen(L, "floor"), again: SVT.hireMany("floor").length };
+  const liftSeat = SVT.seatsOpen(L, "freight");
+  const lift = SVT.hireMany("freight");
+  out.lift = { seat: liftSeat, got: lift.length, assigned: !!L.assign[SVT.slotKey("freight", 0)], again: SVT.hireMany("freight").length };
+  L.cash = 0; out.noCash = SVT.hireManyQuote(L, "commercial") === 0 && SVT.hireMany("commercial").length === 0;
+  L.cash = 1e12; SVT.setBuy(1);
+  const before = L.floors.map((f) => f.lvl).concat(L.freight.lvl, L.commercial.lvl);
+  const canQ = SVT.upgradeAllQuote(L), r = SVT.upgradeAll();
+  const after = L.floors.map((f) => f.lvl).concat(L.freight.lvl, L.commercial.lvl);
+  out.all = { canQ, levels: r.levels, nodes: r.nodes, sum: after.reduce((a, b) => a + b, 0) - before.reduce((a, b) => a + b, 0), buyKept: SVT.state().buy === 1, maxed: L.floors.every((f) => f.lvl === SVT.maxLevel(L, "floor")) && L.freight.lvl === SVT.maxLevel(L, "freight"), again: SVT.upgradeAll().levels };
+  return out;
+});
+console.log("maxes", JSON.stringify(maxes));
+if (!(maxes.floor.seats >= 1) || maxes.floor.q !== maxes.floor.seats || maxes.floor.got !== maxes.floor.seats || maxes.floor.filled !== 0 || maxes.floor.again !== 0) errors.push("Hire max (floors) wrong: " + JSON.stringify(maxes.floor));
+if (maxes.lift.seat !== 1 || maxes.lift.got !== 1 || !maxes.lift.assigned || maxes.lift.again !== 0 || !maxes.noCash) errors.push("Hire max (lift) wrong: " + JSON.stringify(maxes.lift));
+if (!(maxes.all.levels > 0) || maxes.all.sum !== maxes.all.levels || !maxes.all.buyKept || maxes.all.again !== 0 || maxes.all.canQ < 1) errors.push("Max all wrong: " + JSON.stringify(maxes.all));
+await page.evaluate(() => SVT.setView("lab")); await page.waitForTimeout(300);
+if (!(await page.locator(".jump-btn.max-all").count())) errors.push("Max all button missing");
+await page.evaluate(() => { SVT.lab().cash = 0; });
 await page.click('#sheet [aria-label="Close"]');
 const s = await page.evaluate(() => ({ floors: SVT.lab().floors.length, wall: !!document.querySelector(".floor.wall"), rates: SVT.rates(SVT.lab()) }));
 console.log("state", JSON.stringify(s));

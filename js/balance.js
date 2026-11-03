@@ -19,9 +19,9 @@ window.SVT = window.SVT || {};
   }
 
   const B = {
-    VERSION: "0.38.0",
+    VERSION: "0.39.0",
     // Release time in UTC, set with each release. Shown after the version in the player's local time.
-    BUILT: "2026-11-03T02:30Z",
+    BUILT: "2026-11-03T03:05Z",
     FLOORS: 30,
     // v0.26: lower caps, because the IPO needs every floor, the lift and the warehouse at max level. The hubs cap at
     // Lv 400: that is the income every lab ends with, so the deep floors must stay affordable against it, and
@@ -73,9 +73,11 @@ window.SVT = window.SVT || {};
     ],
     // Regular abilities by tier: mult (speed or load), off (price cut), active seconds, cooldown seconds after the run.
     ABILITY_STATS: {
-      common: { speed: { mult: 2.5, active: 60, cooldown: 300 }, storage: { mult: 2, active: 60, cooldown: 300 }, discount: { off: 0.30, active: 15, cooldown: 180 } },
-      uncommon: { speed: { mult: 4, active: 120, cooldown: 600 }, storage: { mult: 3.5, active: 120, cooldown: 600 }, discount: { off: 0.50, active: 20, cooldown: 300 } },
-      rare: { speed: { mult: 6, active: 180, cooldown: 900 }, storage: { mult: 5, active: 180, cooldown: 900 }, discount: { off: 0.70, active: 30, cooldown: 480 } },
+      // v0.39 (user: "managers available early: 1 min, 3 min, 5 min"): Common, Uncommon and Rare abilities are back
+      // after 1, 3 and 5 minutes. Epic and Legendary keep their own timers.
+      common: { speed: { mult: 2.5, active: 60, cooldown: 60 }, storage: { mult: 2, active: 60, cooldown: 60 }, discount: { off: 0.30, active: 15, cooldown: 60 } },
+      uncommon: { speed: { mult: 4, active: 120, cooldown: 180 }, storage: { mult: 3.5, active: 120, cooldown: 180 }, discount: { off: 0.50, active: 20, cooldown: 180 } },
+      rare: { speed: { mult: 6, active: 180, cooldown: 300 }, storage: { mult: 5, active: 180, cooldown: 300 }, discount: { off: 0.70, active: 30, cooldown: 300 } },
     },
     // Assembly Line Rush (mini game): a 45-second sorting run with 3 lives. The score picks a timed income boost
     // for every lab (not Viking Raid). One run per cooldown; a new boost replaces the old one only if it is bigger.
@@ -146,8 +148,8 @@ window.SVT = window.SVT || {};
         { id: "budget", name: "Budget Cut", kind: "discount" },
         { id: "siphon", name: "The Dropshipper", kind: "special", rank: "epic", icon: "📦", active: 45, cooldown: 15 * 60, direct: 5,
           passive: { speed: 0.15 }, text: "Products skip the lift and the warehouse and sell straight from the floor at 5× value.", passiveText: "+15% build speed on its floor, always" },
-        { id: "midas", name: "The Unicorn", kind: "special", rank: "legendary", icon: "🦄", active: 30, cooldown: 30 * 60, direct: 15,
-          passive: { revenue: 0.25 }, text: "Every build cycle sells straight from the floor at 15× value.", passiveText: "+25% to everything this lab earns while assigned anywhere" },
+        { id: "midas", name: "The Unicorn", kind: "special", rank: "legendary", icon: "🦄", active: 30, cooldown: 30 * 60, direct: 10,
+          passive: { revenue: 0.15 }, text: "Every build cycle sells straight from the floor at 10× value.", passiveText: "+15% to everything this lab earns while assigned anywhere" }, // v0.39: 15× / +25% made mines too easy (user)
       ],
       freight: [
         { id: "express", name: "Express Lift", kind: "speed" },
@@ -155,8 +157,8 @@ window.SVT = window.SVT || {};
         { id: "vendor", name: "Vendor Deal", kind: "discount" },
         { id: "turbine", name: "The Hyperloop", kind: "special", rank: "epic", icon: "🌀", active: 45, cooldown: 15 * 60, speed: 8, vacuum: true,
           passive: { discount: 0.10 }, text: "Lift at 8× speed, and it empties every crate it stops at in one go.", passiveText: "−10% on lift upgrades, always" },
-        { id: "wormhole", name: "The Quantum Courier", kind: "special", rank: "legendary", icon: "🕳️", active: 30, cooldown: 30 * 60, warp: 5,
-          passive: { discount: 0.25, load: 0.20 }, text: "Every 5 s, everything on every floor jumps to the top of the shaft.", passiveText: "−25% on lift upgrades and +20% lift capacity, always" },
+        { id: "wormhole", name: "The Quantum Courier", kind: "special", rank: "legendary", icon: "🕳️", active: 30, cooldown: 30 * 60, warp: 8,
+          passive: { discount: 0.25, load: 0.10 }, text: "Every 8 s, everything on every floor jumps to the top of the shaft.", passiveText: "−25% on lift upgrades and +10% lift capacity, always" }, // v0.39: was every 5 s, +20%
       ],
       commercial: [
         { id: "blitz", name: "Launch Blitz", kind: "speed" },
@@ -164,8 +166,8 @@ window.SVT = window.SVT || {};
         { id: "contract", name: "Bulk Contract", kind: "discount" },
         { id: "overclock", name: "The Overclocker", kind: "special", rank: "epic", icon: "🔥", active: 45, cooldown: 15 * 60, speed: 8, cash: 3,
           passive: { speed: 0.10 }, text: "Carts at 8× speed and 3× cash on every delivery.", passiveText: "+10% cart speed, always" },
-        { id: "baron", name: "The Venture Capitalist", kind: "special", rank: "legendary", icon: "💼", active: 20, cooldown: 20 * 60, allDiscount: 0.90,
-          passive: { cooldowns: 0.15 }, text: "−90% on every upgrade in the lab: floors, lift and warehouse.", passiveText: "Every manager's cooldown in this lab is 15% shorter, always" },
+        { id: "baron", name: "The Venture Capitalist", kind: "special", rank: "legendary", icon: "💼", active: 20, cooldown: 20 * 60, allDiscount: 0.75,
+          passive: { cooldowns: 0.15 }, text: "−75% on every upgrade in the lab: floors, lift and warehouse.", passiveText: "Every manager's cooldown in this lab is 15% shorter, always" },
       ],
     },
     ABILITY_KINDS: { special: { icon: "🌟", name: "Super" }, speed: { icon: "⚡", name: "Speed" }, storage: { icon: "📦", name: "Storage" }, discount: { icon: "💸", name: "Price" } },

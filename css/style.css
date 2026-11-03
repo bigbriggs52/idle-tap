@@ -1406,3 +1406,11 @@ body.duo { --duo: 60px; }
 .vault-cat-ic { font-style: normal; font-size: .8rem; opacity: .45; }
 .vault-cat-ic.need { opacity: 1; background: #ffe36a; border-radius: 6px; padding: 0 3px; box-shadow: 0 0 0 2px #f2b100; }
 .vault-merge-all { width: 100%; }
+
+/* v0.39: Hire max beside Hire, Max all upgrades button in the jump column */
+.panel-foot.hire-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.hire-max { background: linear-gradient(#ffe36a, #f2b100); color: #5a3b00; border-color: #c98c00; }
+.hire-max:disabled { opacity: .5; }
+.jump-btn.max-all { width: auto; min-width: 48px; padding: 0 10px; border-radius: 24px; background: linear-gradient(#8ef07a, #3dbb4a); color: #fff; font-size: 1.1rem; -webkit-text-stroke: 0; }
+.jump-btn.max-all::after { content: " Max all"; font: 700 .72rem var(--f-display); }
+.hire-max b { font-size: .8rem; padding: 4px 8px; }
