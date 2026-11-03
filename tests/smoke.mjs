@@ -262,7 +262,7 @@ await page.mouse.move(ub.x + 20, ub.y + 10); await page.mouse.down(); await page
 const h1 = await page.evaluate(() => SVT.lab().floors[1].lvl);
 console.log("hold-buy levels", h0, "->", h1);
 if (h1 - h0 < 5) errors.push("Holding Upgrade did not keep buying");
-// v0.40.1: Hire max hires while the cash lasts (25 a press), seats or not; the best hires take the seats. Max all buys every affordable level everywhere
+// v0.40.1: Hire max hires while the cash lasts (25 a press), seats or not; the best hires take the seats. v0.40.2: Max all buys the best upgrade for the backlog, repeatedly
 const maxes = await page.evaluate(() => {
   const L = SVT.lab(), out = {};
   L.cash = 1e12;
@@ -275,20 +275,29 @@ const maxes = await page.evaluate(() => {
   out.lift = { got: lift.length, assigned: !!liftNow, bestSeated: SVT.owned(L, "freight")[0].rank === liftNow.rank, again: SVT.hireMany("freight").length };
   L.cash = 0; out.noCash = SVT.hireManyQuote(L, "commercial") === 0 && SVT.hireMany("commercial").length === 0;
   L.cash = 1e12; SVT.setBuy(1);
-  const before = L.floors.map((f) => f.lvl).concat(L.freight.lvl, L.commercial.lvl);
+  const before = L.floors.map((f) => f.lvl).concat(L.freight.lvl, L.commercial.lvl), rates0 = SVT.rates(L);
+  // v0.40.2: the first buy goes to the backlog (the node SVT.rates reports as the limit), and every buy had to pay off
+  const first = SVT.bestUpgrade(L);
   const canQ = SVT.upgradeAllQuote(L), r = SVT.upgradeAll();
-  const after = L.floors.map((f) => f.lvl).concat(L.freight.lvl, L.commercial.lvl);
-  const F = L.floors.length, want = ["floor" + F, "freight", "commercial"].concat(Array.from({ length: F - 1 }, (_, i) => "floor" + (F - 1 - i)));
-  out.all = { canQ, levels: r.levels, nodes: r.nodes, sum: after.reduce((a, b) => a + b, 0) - before.reduce((a, b) => a + b, 0), buyKept: SVT.state().buy === 1, again: SVT.upgradeAll().levels, order: r.order.join(","), want: want.join(","),
-    // the first round's buys (up to the first repeat) must follow the wanted order; nodes already maxed are skipped
-    orderOk: (() => { const seen = new Set(); let i = 0; for (const o of r.order) { if (seen.has(o)) break; seen.add(o); const j = want.indexOf(o, i); if (j < 0) return false; i = j + 1; } return r.order[0] === want[0] && r.order[1] === "freight" && r.order[2] === "commercial"; })() };
+  const after = L.floors.map((f) => f.lvl).concat(L.freight.lvl, L.commercial.lvl), rates1 = SVT.rates(L);
+  const limitKind = rates0.limit === "build" ? "floor" : rates0.limit;
+  out.all = { canQ, levels: r.levels, nodes: r.nodes, sum: after.reduce((a, b) => a + b, 0) - before.reduce((a, b) => a + b, 0), buyKept: SVT.state().buy === 1, again: SVT.upgradeAll().levels,
+    limit: rates0.limit, first: first && first.kind, firstGain: first && first.gain, firstIsLimit: !!first && first.kind === limitKind && r.order[0] === first.kind + (first.kind === "floor" ? first.n : ""),
+    income0: rates0.income, income1: rates1.income, kinds: r.order.reduce((m, o) => { const k = o.replace(/\d+$/, ""); m[k] = (m[k] || 0) + 1; return m; }, {}) };
+  // a lab backed up at the lift: the best buy must be the lift, not a floor
+  const L2 = { floors: L.floors.map((f) => ({ ...f, lvl: 200 })), freight: { ...L.freight, lvl: 1 }, commercial: { ...L.commercial, lvl: 1 } };
+  const backup = (() => { const keep = { f: L.floors, fr: L.freight, c: L.commercial, cash: L.cash }; L.floors = L2.floors; L.freight = L2.freight; L.commercial = L2.commercial; L.cash = 1e9;
+    const lim = SVT.rates(L).limit, b = SVT.bestUpgrade(L); const o = { limit: lim, pick: b && b.kind, gain: b && b.gain };
+    L.floors = keep.f; L.freight = keep.fr; L.commercial = keep.c; L.cash = keep.cash; return o; })();
+  out.backup = backup;
   return out;
 });
 console.log("maxes", JSON.stringify(maxes));
 // hires are cash-limited (cost climbs 2.5x a hire), so the count is the quote, and it goes past the open seats
 if (!(maxes.floor.seats >= 1) || maxes.floor.q !== maxes.floor.got || !(maxes.floor.got > maxes.floor.seats) || maxes.floor.owned !== maxes.floor.got || maxes.floor.filled !== 0 || maxes.floor.again !== 0) errors.push("Hire max (floors) wrong: " + JSON.stringify(maxes.floor));
 if (!(maxes.lift.got > 1) || !maxes.lift.assigned || !maxes.lift.bestSeated || maxes.lift.again !== 0 || !maxes.noCash) errors.push("Hire max (lift) wrong: " + JSON.stringify(maxes.lift));
-if (!(maxes.all.levels > 0) || maxes.all.sum !== maxes.all.levels || !maxes.all.buyKept || maxes.all.again !== 0 || maxes.all.canQ < 1 || !maxes.all.orderOk) errors.push("Max all wrong (v0.40.1: deepest mine, lift, warehouse, then up): " + JSON.stringify(maxes.all));
+if (!(maxes.all.levels > 0) || maxes.all.sum !== maxes.all.levels || !maxes.all.buyKept || maxes.all.again !== 0 || maxes.all.canQ < 1 || !maxes.all.firstIsLimit || !(maxes.all.firstGain > 0) || !(maxes.all.income1 > maxes.all.income0)) errors.push("Max all wrong (v0.40.2: best upgrade for the backlog): " + JSON.stringify(maxes.all));
+if (maxes.backup.limit !== "freight" || maxes.backup.pick !== "freight" || !(maxes.backup.gain > 0)) errors.push("Max all should pick the lift when the floors back up: " + JSON.stringify(maxes.backup));
 await page.evaluate(() => SVT.setView("lab")); await page.waitForTimeout(300);
 if (!(await page.locator(".jump-btn.max-all").count())) errors.push("Max all button missing");
 await page.evaluate(() => { SVT.lab().cash = 0; });

@@ -871,10 +871,14 @@ window.SVT = window.SVT || {};
       (e) => toggle(e, "show", window.scrollY > 240));
     const down = bind(h("button", { class: "jump-btn down", "aria-label": "Down to the bottom of the mine", onclick: () => glideTo(maxScroll()), text: "⬇" }),
       (e) => toggle(e, "show", maxScroll() - window.scrollY > 240));
-    // v0.39 (user ask): Max all buys every affordable level on every shaft, the lift and the warehouse.
+    // v0.39 (user ask): Max all. v0.40.2: each buy goes to whatever is backing up (see SVT.upgradeAll); the toast
+    // says where most of the money went.
     const maxAll = bind(h("button", { class: "jump-btn max-all", "aria-label": "Max all upgrades", onclick: () => {
       const r = SVT.upgradeAll();
-      toast(r.levels ? "⬆ Max all: +" + r.levels + " levels across " + r.nodes + (r.nodes === 1 ? " upgrade" : " upgrades") + " for $" + fmt(r.spent) : "Nothing affordable to upgrade right now");
+      const by = {}; r.order.forEach((o) => { const k = o.replace(/\d+$/, ""); by[k] = (by[k] || 0) + 1; });
+      const top = Object.keys(by).sort((a, b) => by[b] - by[a])[0];
+      const where = top === "freight" ? ", mostly the lift" : top === "commercial" ? ", mostly the warehouse" : top ? ", mostly the mines" : "";
+      toast(r.levels ? "⬆ Max all: +" + r.levels + " levels across " + r.nodes + (r.nodes === 1 ? " upgrade" : " upgrades") + " for $" + fmt(r.spent) + where : "Nothing affordable to upgrade right now");
     }, text: "⬆" }), (e) => { const can = SVT.upgradeAllQuote(lab()); toggle(e, "show", can > 0); e.title = can ? "Max all: +" + can + " levels" : ""; });
     return h("div", { class: "jump-btns" }, maxAll, up, down);
   }

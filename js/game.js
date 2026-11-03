@@ -556,8 +556,11 @@ window.SVT = window.SVT || {};
 
   SVT.upgrade = (kind, n) => {
     const lab = SVT.lab();
-    const q = SVT.quote(lab, kind, n);
-    if (q.count <= 0 || lab.cash < q.cost) return false;
+    return SVT.upgradeBy(lab, kind, n, SVT.quote(lab, kind, n));
+  };
+  // Buy a quoted bundle { count, cost } on a node (the quote comes from SVT.quote or B.bulk).
+  SVT.upgradeBy = (lab, kind, n, q) => {
+    if (!q || q.count <= 0 || lab.cash < q.cost) return false;
     const node = SVT.nodeOf(lab, kind, n);
     const before = node.lvl;
     lab.cash -= q.cost;
@@ -668,9 +671,14 @@ window.SVT = window.SVT || {};
     while (open > 0 && cash >= costAt(k)) { cash -= costAt(k); k++; open--; n++; }
     return n;
   };
-  // v0.39 (user ask): Max all. Buys the most levels the cash affords on every node until nothing is affordable.
-  // v0.40.1 (user): the spend order is the deepest mine first, then the lift, then the warehouse, then the mines
-  // from the bottom up. Returns { levels, spent, nodes, order }.
+  // v0.39 (user ask): Max all. Buys levels until nothing is affordable.
+  // v0.40.2 (user: "make the max upgrade apply the best possible upgrade for backlogging"): no fixed order any more.
+  // Every buy goes to the upgrade that raises the lab's income the most per dollar, which is whatever is backing up:
+  // floors piling up behind a slow lift get a lift level, a lift waiting on the warehouse gets a warehouse level,
+  // hubs idling over weak floors get floor levels. Levels are bought up to the next unlock (every 5) so milestone
+  // multipliers count, the lab is re-measured after each buy, and it repeats while anything is affordable.
+  // Returns { levels, spent, nodes, order }. SVT.upgradeOrder (deepest floor, lift, warehouse, then up) only breaks ties.
+  SVT.UPGRADE_MAX_STEPS = 2000;
   SVT.upgradeOrder = (lab) => {
     const F = lab.floors.length, list = [];
     if (F) list.push(["floor", F]);
@@ -678,29 +686,55 @@ window.SVT = window.SVT || {};
     for (let n = F - 1; n >= 1; n--) list.push(["floor", n]);
     return list;
   };
+  // The next bundle to buy on a node: up to the next unlock, or whatever the cash affords; null when nothing is.
+  SVT.upgradeChunk = (lab, kind, n) => {
+    const L = SVT.levelOf(lab, kind, n), max = SVT.maxLevel(lab, kind);
+    if (L >= max) return null;
+    const args = [kind, n, L, 0, lab.cash, SVT.discount(lab, kind, n), SVT.costScale(lab, kind, n), max, SVT.growthOf(lab, kind)];
+    args[3] = Math.min(SVT.stepTo(L, 5), max - L);
+    let q = B.bulk(...args);
+    if (lab.cash < q.cost) { args[3] = Infinity; q = B.bulk(...args); }
+    return q.count > 0 && lab.cash >= q.cost ? q : null;
+  };
+  // The best next buy right now: the node whose next bundle adds the most $/s per dollar spent.
+  SVT.bestUpgrade = (lab, t) => {
+    t = t || now();
+    const base = SVT.rates(lab, t).income;
+    let best = null;
+    for (const [kind, n] of SVT.upgradeOrder(lab)) {
+      const q = SVT.upgradeChunk(lab, kind, n);
+      if (!q) continue;
+      const node = SVT.nodeOf(lab, kind, n);
+      node.lvl += q.count;
+      const gain = SVT.rates(lab, t).income - base;
+      node.lvl -= q.count;
+      const score = gain / q.cost;
+      if (!best || score > best.score) best = { kind, n, q, gain, score };
+    }
+    return best;
+  };
   SVT.upgradeAll = () => {
-    const lab = SVT.lab(), saved = S.buy;
-    S.buy = "max";
+    const lab = SVT.lab(), t = now();
     let levels = 0, spent = 0, nodes = 0;
     const order = [];
-    for (let round = 0; round < 50; round++) {
-      let bought = false;
-      const list = SVT.upgradeOrder(lab);
-      for (const [kind, n] of list) {
-        const before = SVT.levelOf(lab, kind, n), cash = lab.cash;
-        if (SVT.upgrade(kind, n)) { levels += SVT.levelOf(lab, kind, n) - before; spent += cash - lab.cash; nodes++; bought = true; order.push(kind + (kind === "floor" ? n : "")); }
-      }
-      if (!bought) break;
+    for (let step = 0; step < SVT.UPGRADE_MAX_STEPS; step++) {
+      const b = SVT.bestUpgrade(lab, t);
+      if (!b || !SVT.upgradeBy(lab, b.kind, b.n, b.q)) break;
+      levels += b.q.count; spent += b.q.cost; nodes++;
+      order.push(b.kind + (b.kind === "floor" ? b.n : ""));
     }
-    S.buy = saved;
     if (levels) emit("change");
     return { levels, spent, nodes, order };
   };
+  // Roughly how many levels Max all could buy right now (each node quoted against the full cash; no side effects).
   SVT.upgradeAllQuote = (lab) => {
-    const saved = S.buy; S.buy = "max";
     let can = 0;
-    for (const [kind, n] of SVT.upgradeOrder(lab)) { const q = SVT.quote(lab, kind, n); if (q.count > 0 && lab.cash >= q.cost) can += q.count; }
-    S.buy = saved;
+    for (const [kind, n] of SVT.upgradeOrder(lab)) {
+      const L = SVT.levelOf(lab, kind, n), max = SVT.maxLevel(lab, kind);
+      if (L >= max) continue;
+      const q = B.bulk(kind, n, L, Infinity, lab.cash, SVT.discount(lab, kind, n), SVT.costScale(lab, kind, n), max, SVT.growthOf(lab, kind));
+      if (q.count > 0 && lab.cash >= q.cost) can += q.count;
+    }
     return can;
   };
 
