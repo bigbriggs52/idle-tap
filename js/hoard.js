@@ -120,7 +120,8 @@ window.SVT = window.SVT || {};
   function shell(...kids) {
     const { h } = SVT.ui;
     if (box) box.remove();
-    box = h("div", { class: "vault hoard", id: "hoard", role: "dialog", "aria-label": "Viking Hoard" },
+    const was = box, scrollTop = was && was.querySelector(".vault-body") ? was.querySelector(".vault-body").scrollTop : 0; // v0.38: swap in place
+    box = h("div", { class: "vault hoard" + (was ? " still" : ""), id: "hoard", role: "dialog", "aria-label": "Viking Hoard" },
       h("div", { class: "vault-head" },
         h("span", { class: "vault-logo", "aria-hidden": "true", text: "🛡" }),
         h("h2", { text: "Viking Hoard" }),
@@ -132,6 +133,7 @@ window.SVT = window.SVT || {};
         h("button", { class: "vault-tab" + (tab === "ship" ? " on" : ""), onclick: () => { tab = "ship"; open(); }, text: "3. Longship ⚡×" + SVT.hoardMult() })),
       ...kids);
     document.body.append(box);
+    if (was && scrollTop) { const b = box.querySelector(".vault-body"); if (b) b.scrollTop = scrollTop; }
     document.addEventListener("keydown", onKey);
   }
   const refresh = () => { if (SVT.render) SVT.render(); open(); };
