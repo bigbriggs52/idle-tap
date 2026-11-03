@@ -2,6 +2,10 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.40.2 (2026-11-03)
+
+- Max all now buys the best upgrade for the backlog instead of a fixed order. Each buy goes to whatever is holding income back: a lift that the mines are piling up behind, a warehouse the lift is waiting on, or mines that leave the lift and warehouse idle. It re-checks after every buy and keeps going while anything is affordable, buying up to the next unlock each time so milestone bonuses count. The toast says where most of the money went.
+
 ## v0.40.1 (2026-11-03)
 
 - Max all spends in your order: the deepest mine first, then the lift, then the warehouse, then the mines from the bottom up, and round again while anything is affordable.
