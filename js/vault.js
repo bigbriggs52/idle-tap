@@ -325,7 +325,7 @@ window.SVT = window.SVT || {};
       h("div", { class: "vault-head" },
         h("span", { class: "vault-logo", "aria-hidden": "true", text: "🎁" }),
         h("h2", { text: "Tech Vault" }),
-        h("span", { class: "vault-coins", text: "🪙 " + SVT.vaultCoins() }),
+        h("span", { class: "vault-coins", title: "Vault coins: IPO +" + V.COIN_PER_BEAT + ", each funding round +" + V.ROUND_COINS + ", a new lab +" + V.OPEN_COINS + " wild", text: "🪙 " + SVT.vaultCoins() + (SVT.vaultCoins() === 1 ? " coin" : " coins") }),
         h("button", { class: "x-btn", "aria-label": "Close", onclick: close, text: "✕" })),
       h("div", { class: "vault-tabs" },
         h("button", { class: "vault-tab" + (tab === "roll" ? " on" : ""), onclick: () => { tab = "roll"; openVault(); }, text: "Roll" }),
@@ -378,6 +378,7 @@ window.SVT = window.SVT || {};
     const pityLeft = Math.max(0, V.PITY.HARD - v.pity);
     const body = h("div", { class: "vault-body" },
       h("p", { class: "vault-lede", text: "Pick a lab, pick a stake, roll. Every roll is a one-of-a-kind collectible from that lab. More coins in one roll means better odds." }),
+      h("p", { class: "muted small vault-earn", text: "🪙 Earn coins: raise a lab's IPO (+" + V.COIN_PER_BEAT + ", stamped with that lab), every funding round (+" + V.ROUND_COINS + " wild), each new lab on the map (+" + V.OPEN_COINS + " wild). Wild coins roll at any open lab. Viking tokens 🛡 are separate: they spin in the Hoard." }),
       SVT.vaultWild() ? h("p", { class: "muted small", text: "🪙 " + SVT.vaultWild() + " wild " + (SVT.vaultWild() === 1 ? "coin rolls" : "coins roll") + " at any open lab (a lab's own coins go first)." }) : null,
       needsBlock(),
       labs.length

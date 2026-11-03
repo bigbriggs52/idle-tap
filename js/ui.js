@@ -158,8 +158,7 @@ window.SVT = window.SVT || {};
       h("div", { class: "lab-title" }, h("span", { class: "lab-icon", text: d.icon }), h("div", null, h("b", { text: d.name }), roundBadge)),
       h("div", { class: "cash-pill" }, h("span", { class: "coin big", "aria-hidden": "true", text: "$" }), h("div", null, h("span", { class: "cash-label", text: "Cash" }), cash, rate)),
       h("div", { class: "top-btns" },
-        h("button", { class: "top-gear", "aria-label": "Settings", onclick: openSettings, text: "⚙" }),
-        h("button", { class: "home-btn", "aria-label": "Home screen", onclick: () => setView("home"), text: "🏠" })),
+        h("button", { class: "top-gear", "aria-label": "Settings", onclick: openSettings, text: "⚙" })), // v0.40: 🏠 moved to the middle of the bottom bar
       inRaid() ? goalBar() : null);
   }
   // Viking Raid: upgrades bought this stage against everything needed to max the mine.
@@ -189,29 +188,33 @@ window.SVT = window.SVT || {};
 
   // Bottom bar, like Idle Miner Tycoon's: the screens you jump to most.
   // Assembly Line Rush button: shows the boost countdown while one is running, and glows when a run is ready.
-  function rushNav(item) {
-    const b = item("🏭", "Rush", SVT.openRush, { class: "nav-btn rush-nav", "aria-label": "Assembly Line Rush mini game" });
+  // v0.40: one helper for both mini games (Rush and Bug Hunt).
+  function gameNav(item, icon, name, open, leftFn, waitFn, multFn, aria) {
+    const b = item(icon, name, open, { class: "nav-btn rush-nav", "aria-label": aria });
     const label = b.lastChild;
     return bind(b, (e) => {
-      const left = SVT.rushLeft();
-      setText(label, left > 0 ? "×" + SVT.state().rush.mult + " " + SVT.rushClock(left) : "Rush");
-      toggle(e, "ready", !SVT.rushWait() && !left);
+      const left = leftFn();
+      setText(label, left > 0 ? "×" + multFn() + " " + SVT.rushClock(left) : name);
+      toggle(e, "ready", !waitFn() && !left);
       toggle(e, "boosted", left > 0);
     });
   }
+  const rushNav = (item) => gameNav(item, "🏭", "Rush", SVT.openRush, SVT.rushLeft, SVT.rushWait, () => SVT.state().rush.mult, "Assembly Line Rush mini game");
+  const bugsNav = (item) => gameNav(item, "🐛", "Bugs", SVT.openBugs, SVT.bugsLeft, SVT.bugsWait, () => SVT.state().bugs.mult, "Bug Hunt mini game");
   function bottomNav() {
     const item = (icon, label, on, attrs) => h("button", Object.assign({ class: "nav-btn", onclick: on }, attrs), h("span", { class: "nav-ic", "aria-hidden": "true", text: icon }), h("span", { text: label }));
     // In Viking Raid there is no funding: the first button opens the stage list instead.
     const fund = inRaid()
       ? bind(item("🛡", "Stages", openRaid, { class: "nav-btn fund" }), (e) => toggle(e, "ready", !!lab().won))
       : bind(item("💰", "Funding", openFunding, { class: "nav-btn fund" }), (e) => toggle(e, "ready", SVT.canRaise(lab())));
-    // Map sits in the middle as the big green button.
-    return h("nav", { class: "bottom-nav", "aria-label": "Main" },
+    // v0.40 (user ask): Home sits in the middle as the big green button, with both mini games beside it.
+    return h("nav", { class: "bottom-nav seven", "aria-label": "Main" },
       fund,
       item("👔", "Managers", () => openManagers("floor", null, 0), { "aria-label": "Owned managers" }),
-      item("🗺", "Map", () => setView("map"), { class: "nav-btn center" }),
       rushNav(item),
-      // v0.32: Settings lives top right by the 🏠 button; the last slot opens Chip's upgrades (Vault items).
+      item("🏠", "Home", () => setView("home"), { class: "nav-btn center", "aria-label": "Home screen" }),
+      bugsNav(item),
+      item("🗺", "Map", () => setView("map"), { "aria-label": "Map" }),
       item("🤖", "Chip", () => SVT.openChip(), { "aria-label": "Chip upgrades" }));
   }
 
@@ -998,12 +1001,32 @@ window.SVT = window.SVT || {};
     });
     show();
     sheet("Viking Raid", h("div", { class: "sheet-body raid-panel" },
-      h("div", { class: "token-row" }, h("span", { class: "token-pill", text: "🛡 " + SVT.hoardTokens() + " Viking tokens" }),
+      h("div", { class: "token-row" }, tokenPill(),
         h("div", { class: "token-btns" }, h("button", { class: "btn small hoard-btn", onclick: () => SVT.openHoard(), text: "🎰 Hoard" + (SVT.hoardMult() > 1 ? " ⚡×" + SVT.hoardMult() : "") }), h("button", { class: "btn small", onclick: openBoats, text: "⛵ Boats " + SVT.boatsUnlocked() + "/" + R.BOATS }))),
       h("p", { class: "muted small", text: "Five batches of 50 Viking mines. Stage 1 has one shaft and every stage adds one; each batch digs deeper (higher max levels) and starts a little harder than the last stage before it. Managers, abilities, Rush boosts and Chip's items all count. Max out the mine to clear a stage: open every shaft, take every shaft and the lift and warehouse to the batch's max level. Clears pay Viking tokens, which unlock boats for Chip." }),
       tabs, info, stages), { icon: "⚔️", foot: h("div", { class: "panel-foot" }, go) });
   }
   SVT.openRaid = openRaid;
+  // v0.40 (user: "Viking tokens still feel confusing"): one plain explainer, reachable from every token pill.
+  function tokenHelp() {
+    const R = SVT.RAID, earned = SVT.vikingTokens(), left = SVT.hoardTokens(), spent = earned - left;
+    const row = (icon, title, text) => h("div", { class: "hoard-step" }, h("span", { class: "hoard-step-n", text: icon }), h("div", null, h("b", { text: title }), h("span", { text: text })));
+    sheet("Viking tokens", h("div", { class: "sheet-body token-help" },
+      h("div", { class: "token-sum" },
+        h("div", { class: "token-sum-cell" }, h("b", { text: "🛡 " + left }), h("small", { text: "to spend" })),
+        h("div", { class: "token-sum-cell" }, h("b", { text: String(spent) }), h("small", { text: "spent on spins" })),
+        h("div", { class: "token-sum-cell" }, h("b", { text: String(earned) }), h("small", { text: "earned in all" }))),
+      h("div", { class: "hoard-steps" },
+        row("⚔️", "Earn", "Clear a Viking mine (max every shaft, the lift and the warehouse). Stage 1 pays 1 token; later stages pay up to 5, a replay pays 1."),
+        row("🎰", "Spend", "The Hoard spins tokens for relics. Relics on your longship boost Viking mine income."),
+        row("⛵", "Boats", "Boats unlock by tokens earned in all (" + earned + " so far), so spending never costs you a boat. Next boat at 🛡 " + (SVT.boatsUnlocked() < R.BOATS ? R.boatCost(SVT.boatsUnlocked() + 1) : "—") + ".")),
+      h("p", { class: "muted small", text: "Viking tokens are not Vault coins: coins come from the labs (IPO +" + B.VAULT.COIN_PER_BEAT + ", each funding round +" + B.VAULT.ROUND_COINS + ", a new lab +" + B.VAULT.OPEN_COINS + " wild) and roll Chip's items in the Tech Vault." })),
+      { icon: "🛡", foot: h("div", { class: "panel-foot token-help-foot" },
+        h("button", { class: "btn fund-cta", onclick: () => { closeSheet(); SVT.openHoard(); }, text: "🎰 Spin tokens" }),
+        h("button", { class: "btn", onclick: openBoats, text: "⛵ Boats" })) });
+  }
+  SVT.tokenHelp = tokenHelp;
+  const tokenPill = () => h("button", { class: "token-pill", "aria-label": "How Viking tokens work", onclick: tokenHelp, text: "🛡 " + SVT.hoardTokens() + " to spend · " + SVT.vikingTokens() + " earned ⓘ" });
   // Boats: the 50 boats Chip can sail, unlocked with Viking tokens. Tap an unlocked boat to sail it.
   function openBoats() {
     const R = SVT.RAID, have = SVT.vikingTokens(), top = SVT.boatsUnlocked(), cur = SVT.boatIndex();
@@ -1016,7 +1039,7 @@ window.SVT = window.SVT || {};
         h("small", { text: open ? (on ? "⛵ Sailing now" : "Tap to sail") : "🔒 " + cost + " tokens" }));
     });
     sheet("Chip's boats", h("div", { class: "sheet-body boats-panel" },
-      h("div", { class: "token-row" }, h("span", { class: "token-pill", text: "🛡 " + have + " tokens earned" }), h("span", { class: "muted small", text: top + " of " + R.BOATS + " boats unlocked" })),
+      h("div", { class: "token-row" }, tokenPill(), h("span", { class: "muted small", text: top + " of " + R.BOATS + " boats unlocked" })),
       h("p", { class: "muted small", text: "Clearing a Viking mine pays tokens (1 to 5 a stage, more in later batches; a replay pays 1). Boats go by tokens ever earned, so spending tokens on Hoard spins never costs you a boat. Chip sails the boat you pick on the home screen." }),
       h("button", { class: "btn small", onclick: () => SVT.openHoard(), text: "🎰 Viking Hoard: spin tokens for relics ›" }),
       h("div", { class: "boat-grid" }, cards)), { icon: "⛵" });

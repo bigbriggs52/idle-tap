@@ -125,7 +125,7 @@ window.SVT = window.SVT || {};
       h("div", { class: "vault-head" },
         h("span", { class: "vault-logo", "aria-hidden": "true", text: "🛡" }),
         h("h2", { text: "Viking Hoard" }),
-        h("span", { class: "vault-coins hoard-coins", text: "🛡 " + SVT.hoardTokens() }),
+        h("button", { class: "vault-coins hoard-coins", "aria-label": "How Viking tokens work", onclick: () => SVT.tokenHelp && SVT.tokenHelp(), text: "🛡 " + SVT.hoardTokens() + " to spend ⓘ" }),
         h("button", { class: "x-btn", "aria-label": "Close", onclick: close, text: "✕" })),
       h("div", { class: "vault-tabs" },
         h("button", { class: "vault-tab" + (tab === "spin" ? " on" : ""), onclick: () => { tab = "spin"; open(); }, text: "1. Spin" }),
@@ -155,7 +155,7 @@ window.SVT = window.SVT || {};
     const { h } = SVT.ui;
     const step = (n, icon, title, text) => h("div", { class: "hoard-step" + (on === n ? " on" : "") }, h("span", { class: "hoard-step-n", text: n }), h("div", null, h("b", { text: icon + " " + title }), h("span", { text: text })));
     return h("div", { class: "hoard-steps" },
-      step(1, "🛡", "Tokens → spin", "Clearing a Viking mine pays tokens. A spin turns tokens into a relic."),
+      step(1, "🛡", "Tokens → spin", "Clearing a Viking mine pays tokens (1 to 5 a stage). A spin turns tokens into a relic. Boats go by tokens earned, so spending never costs a boat."),
       step(2, "📿", "Relics", "10,000 relics, each with a fixed rarity. Three of one rarity forge into one better."),
       step(3, "⛵", "Longship", "Equip up to " + H.SLOTS + " relics. Their bonuses add up and speed up every Viking mine."));
   }
