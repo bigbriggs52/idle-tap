@@ -775,14 +775,18 @@ const bonus = await page.evaluate(() => {
   const el = SVT.vaultEligible("floor_r");
   out.eligibleOk = el.every((x) => SVT.itemCat(x) === "floor") && el.every((x, i) => !i || el[i - 1].rar >= x.rar);
   out.wristOnlyWrist = v.items.filter((x) => SVT.itemCat(x) === "wrist").every((x) => SVT.vaultFits(x, "wrist") && !SVT.vaultFits(x, "hand_l") && !SVT.vaultFits(x, "neck"));
-  // merging: any 3 unequipped items of one rarity become 1 of the next rarity, a random product from one of their labs
+  // merging (v0.38): any 3 unequipped items of one rarity AND type become 1 of the next rarity, a random product of that type from one of their labs
   const g = SVT.vaultMerges()[0];
+  out.groupsTyped = SVT.vaultMerges().every((m) => m.items.every((x) => SVT.itemCat(x) === m.cat && x.rar === m.rar));
   const before = v.items.length, mergesBefore = SVT.vaultMerges().length;
   const pick = g ? g.items.slice(-3) : [];
   const merged = g ? SVT.vaultMerge(g.rar, pick.map((x) => x.id)) : null;
-  out.merge = merged ? { ok: merged.rar === g.rar + 1 && pick.some((x) => x.lab === merged.lab) && merged.merged.length === 3, count: before - v.items.length, listed: mergesBefore > 0, gone: pick.filter((x) => !SVT.vaultItem(x.id)).length === 3, boostOk: merged.boost >= 1, sameRar: new Set(pick.map((x) => x.rar)).size === 1 } : null;
-  const w = SVT.vaultMerges()[0]; const weak = w ? SVT.vaultMerge(w.rar) : null;
-  out.mergeWeak = !!weak && weak.rar === w.rar + 1;
+  out.merge = merged ? { ok: merged.rar === g.rar + 1 && pick.some((x) => x.lab === merged.lab) && merged.merged.length === 3 && SVT.itemCat(merged) === g.cat, count: before - v.items.length, listed: mergesBefore > 0, gone: pick.filter((x) => !SVT.vaultItem(x.id)).length === 3, boostOk: merged.boost >= 1, sameRar: new Set(pick.map((x) => x.rar)).size === 1 } : null;
+  const w = SVT.vaultMerges()[0]; const weak = w ? SVT.vaultMerge(w.rar, null, w.cat) : null;
+  out.mergeWeak = !!weak && weak.rar === w.rar + 1 && SVT.itemCat(weak) === w.cat;
+  // mixed types never merge
+  const mixed = (() => { const a = v.items.filter((x) => !SVT.vaultSlotOf(x.id) && x.rar === 0); const cats = {}; a.forEach((x) => (cats[SVT.itemCat(x)] = cats[SVT.itemCat(x)] || []).push(x)); const ks = Object.keys(cats).filter((k) => cats[k].length >= 2); if (ks.length < 2) return "skip"; return SVT.vaultMerge(0, [cats[ks[0]][0].id, cats[ks[0]][1].id, cats[ks[1]][0].id]); })();
+  out.mixedRefused = mixed === "skip" || mixed === null;
   out.mergeBad = SVT.vaultMerge(0, [1, 1, 1]) === null;
   // an item on Chip never merges: it is not listed, cannot be picked, and is not among the "3 weakest"
   const wornIds = Object.values(v.show).filter(Boolean);
@@ -794,8 +798,13 @@ const bonus = await page.evaluate(() => {
     notListed: SVT.vaultMerges().every((mm) => mm.items.every((x) => !wornIds.includes(x.id))),
     pickRefused: SVT.vaultMerge(wornItem.rar, [wornItem.id].concat(sameRar.map((x) => x.id))) === null,
     stillThere: !!SVT.vaultItem(wornItem.id) && v.items.length === beforeWorn,
-    weakestKeeps: (() => { for (const mm of SVT.vaultMerges()) { const r = SVT.vaultMerge(mm.rar); if (!r) return false; } return wornIds.every((id) => SVT.vaultItem(id) && SVT.vaultSlotOf(id)); })(),
+    weakestKeeps: (() => { for (const mm of SVT.vaultMerges()) { const r = SVT.vaultMerge(mm.rar, null, mm.cat); if (!r) return false; } return wornIds.every((id) => SVT.vaultItem(id) && SVT.vaultSlotOf(id)); })(),
   };
+  // Max merge cascades until nothing is left to merge, never touching worn items; the needs list names labs per type
+  const nBefore = v.items.length, made = SVT.vaultMergeAll();
+  out.mergeAll = { made: made.length, left: SVT.vaultMerges().length, items: nBefore - v.items.length === made.length * 2, wornSafe: wornIds.every((id) => SVT.vaultItem(id) && SVT.vaultSlotOf(id)) };
+  const needs = SVT.vaultNeeds();
+  out.needs = { n: needs.length, allEmptySlots: needs.every((x) => x.slots.every((sl) => !v.show[sl.id])), labsMake: needs.every((x) => x.labs.length && x.labs.every((l) => SVT.vaultLabCats(l.id).includes(x.cat))), feet: SVT.LABS.filter((l) => SVT.vaultLabCats(l.id).includes("feet")).length };
   return out;
 });
 console.log("bonus", JSON.stringify(bonus));
@@ -805,7 +814,16 @@ if (bonus.mult !== bonus.sum || Math.abs(bonus.ratio - bonus.mult) > 1e-6 || !bo
 if (Object.values(bonus.cats).reduce((a, b) => a + b, 0) !== 900 || Object.keys(bonus.cats).length !== 7) errors.push("Vault: not every product has a slot category " + JSON.stringify(bonus.cats));
 if (JSON.stringify(bonus.catSamples) !== JSON.stringify({ calc: "hand", watch: "wrist", ai: "head", neck: "neck", headphones: "head", server: "floor", shoe: "feet", jacket: "body" })) errors.push("Vault: product categories wrong " + JSON.stringify(bonus.catSamples));
 if (!bonus.handSlot.startsWith("hand") || !bonus.floorSlot.startsWith("floor") || bonus.twice !== null || !bonus.notListedTwice || !bonus.eligibleOk || !bonus.wristOnlyWrist) errors.push("Vault: one-tap equip or per-slot inventory wrong " + JSON.stringify(bonus));
-if (!bonus.merge || !bonus.merge.ok || bonus.merge.count !== 2 || !bonus.merge.listed || !bonus.merge.gone || !bonus.merge.boostOk || !bonus.merge.sameRar || !bonus.mergeWeak || !bonus.mergeBad) errors.push("Vault: merge wrong " + JSON.stringify([bonus.merge, bonus.mergeWeak, bonus.mergeBad]));
+if (!bonus.merge || !bonus.merge.ok || bonus.merge.count !== 2 || !bonus.merge.listed || !bonus.merge.gone || !bonus.merge.boostOk || !bonus.merge.sameRar || !bonus.mergeWeak || !bonus.mergeBad || !bonus.groupsTyped || !bonus.mixedRefused) errors.push("Vault: merge wrong " + JSON.stringify([bonus.merge, bonus.mergeWeak, bonus.mergeBad, bonus.groupsTyped, bonus.mixedRefused]));
+if (!bonus.mergeAll || bonus.mergeAll.left !== 0 || !bonus.mergeAll.items || !bonus.mergeAll.wornSafe) errors.push("Vault: Max merge wrong " + JSON.stringify(bonus.mergeAll));
+if (!bonus.needs || !bonus.needs.allEmptySlots || !bonus.needs.labsMake || !(bonus.needs.feet >= 1)) errors.push("Vault: needs list wrong " + JSON.stringify(bonus.needs));
+// v0.38: tapping a tab swaps the panel in place (class still, no entry animation) instead of replaying the open animation
+await page.evaluate(() => { SVT.closeVault(); SVT.openVault(); }); await page.waitForTimeout(250);
+const stillSwap = await page.evaluate(() => { const first = document.getElementById("vault").classList.contains("still"); document.querySelector(".vault-tab:nth-child(2)").click(); const v = document.getElementById("vault"); return { first, still: v.classList.contains("still"), anim: getComputedStyle(v).animationName, needs: !!document.querySelector(".vault-needs, .vault-needs-none") || true }; });
+if (stillSwap.first || !stillSwap.still || stillSwap.anim !== "none") errors.push("Vault panel replays its open animation on a tab tap: " + JSON.stringify(stillSwap));
+await page.evaluate(() => SVT.openVault()); await page.waitForTimeout(250);
+await page.screenshot({ path: out + "/28-vault-needs.png" });
+if (!(await page.locator(".vault-needs, .vault-needs-none").count())) errors.push("Vault: Chip's needs block missing from the Roll tab");
 await page.evaluate(() => SVT.openMerge()); await page.waitForTimeout(300);
 await page.screenshot({ path: out + "/27-vault-merge.png" });
 if (await page.locator(".vault-merge").count()) { await page.locator(".vault-merge .btn.ghost").first().click(); await page.waitForTimeout(200); if (!(await page.locator(".vault-merge-picks .vault-pick").count())) errors.push("Vault: merge pick list empty"); await page.screenshot({ path: out + "/27b-vault-merge-pick.png" }); }

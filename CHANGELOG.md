@@ -2,6 +2,13 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.38.0 (2026-11-03)
+
+- Tech Vault: Max merge. One button on the Items tab runs every possible merge, weakest three first, and keeps going as the results stack up (so three Commons become an Uncommon that may merge again). Items on Chip are never merged.
+- Tech Vault: merges are same-type only. Three items of the same type (hand, wrist, head, neck, body, feet or floor) and rarity merge into one item of that same type at the next rarity, a random product of that type from one of their labs. The merge rows show the type.
+- Tech Vault: no more "screen reload". Tapping a tab, a lab, a stake, Equip or a slot swaps the panel in place with no entry animation and keeps your scroll position. Same for the Viking Hoard.
+- Tech Vault: "Chip still needs". The Roll tab lists every slot Chip has empty, with the open labs that make that kind of item (tap one to pick it for the roll) and how many more are still locked on the map. Every lab row also shows icons for the item types it makes, with the ones Chip needs highlighted.
+
 ## v0.37.0 (2026-10-30)
 
 - Bug Hunt, a second mini game. Bugs pop out of a 3×3 rack of servers; tap each one before it crawls back in, and leave the 💎 data gems alone (tapping a gem or letting a bug get away costs one of 3 ❤️). 30 seconds, the bugs get quicker, number keys 1–9 work on a keyboard. Squashing 12 / 20 / 28 / 36 bugs earns ×1.5 / ×2 / ×2.5 / ×3 income for 10 / 15 / 20 / 30 minutes. The boost is its own multiplier that stacks with the Rush boost (both pay out at the warehouse, so ×5 Rush and ×3 Bug Hunt make ×15). One hunt every 15 minutes. Tiles react the moment a finger lands.

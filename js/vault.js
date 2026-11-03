@@ -235,25 +235,31 @@ window.SVT = window.SVT || {};
   // and Mythic is the top.
   const mergeable = (it) => it.rar < RAR.length - 1 && !SVT.vaultSlotOf(it.id);
   const weakestFirst = (a, b) => a.boost - b.boost || a.id - b.id;
+  // v0.38 (user rule): only items of the same type (slot category) merge, and the result is a random item of that
+  // same type at the next rarity. Groups are keyed by rarity and type.
+  const CAT_ORDER = ["hand", "wrist", "head", "neck", "body", "feet", "floor"];
   SVT.vaultMerges = () => {
     const groups = {};
-    S().items.forEach((it) => { if (mergeable(it)) (groups[it.rar] = groups[it.rar] || []).push(it); });
-    return Object.keys(groups).map((r) => ({ rar: +r, items: groups[r].sort(weakestFirst), count: groups[r].length }))
-      .filter((g) => g.count >= 3).sort((a, b) => b.rar - a.rar);
+    S().items.forEach((it) => { if (mergeable(it)) { const k = it.rar + ":" + SVT.itemCat(it); (groups[k] = groups[k] || []).push(it); } });
+    return Object.keys(groups).map((k) => ({ rar: +k.split(":")[0], cat: k.split(":")[1], items: groups[k].sort(weakestFirst), count: groups[k].length }))
+      .filter((g) => g.count >= 3).sort((a, b) => b.rar - a.rar || CAT_ORDER.indexOf(a.cat) - CAT_ORDER.indexOf(b.cat));
   };
-  // ids: the three to merge; left out, the three weakest of that rarity go.
-  SVT.vaultMerge = (rar, ids) => {
+  // ids: the three to merge (they fix the type); left out, the three weakest of that rarity and type go (cat picks
+  // the type; left out too, the first type listed for that rarity).
+  SVT.vaultMerge = (rar, ids, cat) => {
     const v = S();
-    const g = SVT.vaultMerges().find((m) => m.rar === rar);
+    if (ids && ids.length) { const first = SVT.vaultItem(ids[0]); if (!first) return null; cat = SVT.itemCat(first); }
+    const g = SVT.vaultMerges().find((m) => m.rar === rar && (!cat || m.cat === cat));
     if (!g) return null;
     const used = ids ? ids.map((id) => g.items.find((it) => it.id === id)) : g.items.slice(0, 3);
     if (used.length !== 3 || used.some((it) => !it) || new Set(used).size !== 3) return null;
     v.items = v.items.filter((it) => !used.includes(it));
     const nr = rar + 1, taken = new Set(v.items.map(lookKey));
     const lab = used[Math.floor(rnd() * 3)].lab, def = SVT.LABS.find((l) => l.id === lab);
+    const pool = def.products.map((p, i) => i).filter((i) => SVT.productCat(def.products[i]) === g.cat);
     let item = null;
     for (let tries = 0; tries < 200; tries++) {
-      const product = Math.floor(rnd() * def.products.length);
+      const product = pool[Math.floor(rnd() * pool.length)];
       item = Object.assign({ lab, product, rarity: RAR[nr].id, rar: nr }, rollLook(nr, product));
       if (!taken.has(lookKey(item))) break;
     }
@@ -263,6 +269,30 @@ window.SVT = window.SVT || {};
     SVT.vaultRecalc();
     SVT.save();
     return item;
+  };
+  // Max merge (v0.38, user ask): every possible merge, weakest three first, cascading until nothing is left to merge.
+  SVT.vaultMergeAll = () => {
+    const made = [];
+    for (let guard = 0; guard < 1000; guard++) {
+      const g = SVT.vaultMerges()[0];
+      if (!g) break;
+      const it = SVT.vaultMerge(g.rar, null, g.cat);
+      if (!it) break;
+      made.push(it);
+    }
+    return made;
+  };
+  // What each lab's products cover, and which types Chip still has an empty slot for (v0.38, user ask: "show me
+  // what mines will have the type of equipment I need, like a feet item").
+  SVT.vaultLabCats = (labId) => { const d = SVT.LABS.find((l) => l.id === labId); const set = new Set(d.products.map(SVT.productCat)); return CAT_ORDER.filter((c) => set.has(c)); };
+  SVT.vaultNeeds = () => {
+    const v = S();
+    return CAT_ORDER.map((cat) => {
+      const slots = SLOTS.filter((sl) => sl.cat === cat && !v.show[sl.id]);
+      if (!slots.length) return null;
+      const labs = SVT.LABS.filter((l) => SVT.vaultLabCats(l.id).includes(cat)).map((l) => ({ id: l.id, name: l.name, icon: l.icon, open: !!SVT.state().labs[l.id], coins: SVT.vaultSpendable(l.id) }));
+      return { cat, name: CATS[cat], icon: slots[0].icon, slots, labs };
+    }).filter(Boolean);
   };
 
   // ---------- names and pictures ----------
@@ -287,8 +317,11 @@ window.SVT = window.SVT || {};
   function onKey(e) { if (e.key === "Escape") close(); }
   function shell(...kids) {
     const { h } = SVT.ui;
+    // v0.38 (user: "when I click a button it reloads the screen"): a panel that is already open is swapped in place
+    // with no entry animation and the same scroll position, so a tap on a tab, stake or Equip no longer "reloads".
+    const was = box, scrollTop = was && was.querySelector(".vault-body") ? was.querySelector(".vault-body").scrollTop : 0;
     if (box) box.remove();
-    box = h("div", { class: "vault", id: "vault", role: "dialog", "aria-label": "Tech Vault" },
+    box = h("div", { class: "vault" + (was ? " still" : ""), id: "vault", role: "dialog", "aria-label": "Tech Vault" },
       h("div", { class: "vault-head" },
         h("span", { class: "vault-logo", "aria-hidden": "true", text: "🎁" }),
         h("h2", { text: "Tech Vault" }),
@@ -301,7 +334,23 @@ window.SVT = window.SVT || {};
         h("button", { class: "vault-tab" + (tab === "trophies" ? " on" : ""), onclick: () => { tab = "trophies"; openVault(); }, text: "Trophies" })),
       ...kids);
     document.body.append(box);
+    if (was && scrollTop) { const b = box.querySelector(".vault-body"); if (b) b.scrollTop = scrollTop; }
     document.addEventListener("keydown", onKey);
+  }
+  const catIcon = (cat) => SLOTS.find((sl) => sl.cat === cat).icon;
+  // "Looking for": Chip's empty slots, and which labs make that kind of thing. Tapping a lab picks it for the roll.
+  function needsBlock() {
+    const { h } = SVT.ui;
+    const needs = SVT.vaultNeeds();
+    if (!needs.length) return h("p", { class: "muted small vault-needs-none", text: "🤖 Every one of Chip's slots is filled. Keep rolling for rarer items and bigger bonuses." });
+    return h("div", { class: "vault-needs" },
+      h("b", { text: "🎯 Chip still needs: " }),
+      needs.map((n) => h("div", { class: "vault-need" },
+        h("span", { class: "vault-need-what", text: n.icon + " " + n.name.toLowerCase() + (n.slots.length > 1 ? " (" + n.slots.length + " slots)" : "") }),
+        h("span", { class: "vault-need-labs" },
+          n.labs.filter((l) => l.open).sort((a, b) => b.coins - a.coins).map((l) => h("button", { class: "vault-need-lab" + (l.id === labPick ? " on" : ""), disabled: !l.coins,
+            onclick: () => { labPick = l.id; openVault(); }, text: l.icon + " " + l.name + (l.coins ? " 🪙 " + l.coins : " · no coins") })),
+          n.labs.some((l) => !l.open) ? h("span", { class: "vault-need-lab locked", text: "🔒 " + n.labs.filter((l) => !l.open).length + " more on the map" }) : null))));
   }
   const pct = (x) => (x * 100 < 1 && x > 0 ? (x * 100).toFixed(1) : Math.round(x * 100)) + "%";
   function oddsTable(coins) {
@@ -312,7 +361,7 @@ window.SVT = window.SVT || {};
 
   function openVault() {
     const { h } = SVT.ui;
-    close();
+    busy = false;
     const v = S();
     if (tab === "gallery") return gallery();
     if (tab === "trophies") return trophies();
@@ -325,16 +374,19 @@ window.SVT = window.SVT || {};
     const have = !labPick ? 0 : labPick === ANY ? Math.max(0, ...labs.map((l) => SVT.vaultSpendable(l.id))) : SVT.vaultSpendable(labPick);
     if (!V.STAKES.includes(stake) || stake > have) stake = V.STAKES.filter((s) => s <= have).pop() || 1;
     const many = labPick ? SVT.vaultMaxRolls(labPick, stake) : 0;
+    const needCats = SVT.vaultNeeds().map((n) => n.cat);
     const pityLeft = Math.max(0, V.PITY.HARD - v.pity);
     const body = h("div", { class: "vault-body" },
       h("p", { class: "vault-lede", text: "Pick a lab, pick a stake, roll. Every roll is a one-of-a-kind collectible from that lab. More coins in one roll means better odds." }),
       SVT.vaultWild() ? h("p", { class: "muted small", text: "🪙 " + SVT.vaultWild() + " wild " + (SVT.vaultWild() === 1 ? "coin rolls" : "coins roll") + " at any open lab (a lab's own coins go first)." }) : null,
+      needsBlock(),
       labs.length
         ? h("div", { class: "vault-labs" },
           h("button", { class: "vault-lab any" + (labPick === ANY ? " on" : ""), onclick: () => { labPick = ANY; openVault(); } },
             h("span", { text: "🎲 Random lab" }), h("b", { text: "🪙 " + SVT.vaultCoins() + " · every roll picks a lab" })),
           labs.map((l) => h("button", { class: "vault-lab" + (l.id === labPick ? " on" : ""), onclick: () => { labPick = l.id; openVault(); } },
-          h("span", { text: l.icon + " " + l.name }), h("b", { text: "🪙 " + (v.coins[l.id] || 0) + (SVT.vaultWild() ? " +" + SVT.vaultWild() + " wild" : "") }))))
+          h("span", { text: l.icon + " " + l.name }), h("b", { text: "🪙 " + (v.coins[l.id] || 0) + (SVT.vaultWild() ? " +" + SVT.vaultWild() + " wild" : "") }),
+          h("span", { class: "vault-lab-cats", "aria-label": "Makes: " + SVT.vaultLabCats(l.id).map((c) => CATS[c]).join(", ") }, SVT.vaultLabCats(l.id).map((c) => h("i", { class: "vault-cat-ic" + (needCats.includes(c) ? " need" : ""), title: CATS[c], text: catIcon(c) }))))))
         : h("p", { class: "vault-empty", text: "No coins yet. Raise a lab's IPO to earn " + V.COIN_PER_BEAT + " coins, then replay a beaten lab from the map for " + V.COIN_PER_BEAT + " more." }),
       labPick ? h("div", { class: "vault-stakes" }, V.STAKES.map((s) => h("button", { class: "vault-stake" + (s === stake ? " on" : ""), disabled: s > have, onclick: () => { stake = s; openVault(); } }, h("b", { text: "🪙 " + s }), h("small", { text: s === 1 ? "1 coin" : s + " coins" })))) : null,
       labPick ? h("button", { class: "vault-bulk" + (bulk ? " on" : ""), "aria-pressed": bulk ? "true" : "false", onclick: () => { bulk = !bulk; openVault(); } },
@@ -481,21 +533,21 @@ window.SVT = window.SVT || {};
   let mergePick = null; // { rar, ids } while the player is choosing three items to merge
   function mergeRow(m) {
     const { h, toast } = SVT.ui;
-    const picking = mergePick && mergePick.rar === m.rar, ids = picking ? mergePick.ids : [];
+    const picking = mergePick && mergePick.rar === m.rar && mergePick.cat === m.cat, ids = picking ? mergePick.ids : [];
     const done = (it) => { if (it) { toast("🔀 Merged into a " + RAR[it.rar].name + " " + SVT.itemProduct(it) + "!", "big"); mergePick = null; reveal(it); } };
     const chosen = ids.map((id) => m.items.find((it) => it.id === id)).filter(Boolean);
     // items of this rarity that are on Chip: shown locked so it is clear they never merge
-    const onChip = S().items.filter((it) => it.rar === m.rar && SVT.vaultSlotOf(it.id)).sort((a, b) => b.boost - a.boost || b.id - a.id);
+    const onChip = S().items.filter((it) => it.rar === m.rar && SVT.itemCat(it) === m.cat && SVT.vaultSlotOf(it.id)).sort((a, b) => b.boost - a.boost || b.id - a.id);
     return h("div", { class: "vault-merge r-" + RAR[m.rar].id },
       h("div", { class: "vault-merge-items" }, (picking ? chosen : m.items.slice(0, 3)).map((it) => SVT.itemArt(it, "mini"))),
       h("div", { class: "vault-merge-body" },
-        h("b", { text: RAR[m.rar].name + " × " + m.count }),
-        h("small", { text: (picking ? ids.length + " of 3 picked" : "Any 3") + " → 1 " + RAR[m.rar + 1].name + ", random item with a new look and bonus roll" + (onChip.length ? " · " + onChip.length + " on Chip stay safe" : "") })),
+        h("b", { text: catIcon(m.cat) + " " + RAR[m.rar].name + " " + m.cat + " × " + m.count }),
+        h("small", { text: (picking ? ids.length + " of 3 picked" : "Any 3") + " → 1 " + RAR[m.rar + 1].name + " " + m.cat + " item, new look and bonus roll" + (onChip.length ? " · " + onChip.length + " on Chip stay safe" : "") })),
       h("div", { class: "vault-merge-btns" },
         picking
           ? h("button", { class: "btn small fund-cta", disabled: ids.length !== 3, onclick: () => done(SVT.vaultMerge(m.rar, ids)), text: "Merge these" })
-          : h("button", { class: "btn small fund-cta", onclick: () => done(SVT.vaultMerge(m.rar)), text: "Merge 3 weakest" }),
-        h("button", { class: "btn small ghost", onclick: () => { mergePick = picking ? null : { rar: m.rar, ids: [] }; gallery(); }, text: picking ? "Cancel" : "Pick 3" })),
+          : h("button", { class: "btn small fund-cta", onclick: () => done(SVT.vaultMerge(m.rar, null, m.cat)), text: "Merge 3 weakest" }),
+        h("button", { class: "btn small ghost", onclick: () => { mergePick = picking ? null : { rar: m.rar, cat: m.cat, ids: [] }; gallery(); }, text: picking ? "Cancel" : "Pick 3" })),
       picking ? h("div", { class: "vault-merge-picks" }, m.items.slice().sort((a, b) => b.boost - a.boost || b.id - a.id).map((it) => {
         const on = ids.includes(it.id);
         return h("button", { class: "vault-pick r-" + it.rarity + (on ? " on" : ""), onclick: () => { if (on) mergePick.ids = ids.filter((x) => x !== it.id); else if (ids.length < 3) mergePick.ids = ids.concat(it.id); else return; gallery(); } },
@@ -514,7 +566,8 @@ window.SVT = window.SVT || {};
       v.items.length ? null : h("p", { class: "vault-empty", text: "Nothing on the shelves yet. Roll a coin to get your first collectible." }),
       v.items.length ? h("div", { class: "vault-shelf" },
         h("h3", { text: "🔀 Merge (" + merges.length + ")" }),
-        merges.length ? merges.map(mergeRow) : h("p", { class: "muted small", text: "Any three items of the same rarity merge into one of the next rarity: a random item from one of their labs. Items on Chip don't count: take them off first." })) : null,
+        merges.length ? h("button", { class: "btn fund-cta vault-merge-all", onclick: () => { const made = SVT.vaultMergeAll(); mergePick = null; SVT.ui.toast("🔀 " + made.length + (made.length === 1 ? " merge" : " merges") + ": " + made.map((it) => RAR[it.rar].name).filter((x, i, a) => a.indexOf(x) === i).join(", "), "big"); if (made.length) reveal(made.sort((a, b) => b.rar - a.rar || b.id - a.id)[0]); else refresh(); }, text: "🔀 Max merge · " + merges.reduce((n, m) => n + Math.floor(m.count / 3), 0) + " now" }) : null,
+        merges.length ? merges.map(mergeRow) : h("p", { class: "muted small", text: "Three items of the same type and rarity merge into one of the next rarity: a random item of that same type from one of their labs. Items on Chip don't count: take them off first." })) : null,
       byLab.map((l) => h("div", { class: "vault-shelf" },
         h("h3", { text: l.icon + " " + l.name }),
         v.items.filter((x) => x.lab === l.id).sort((a, b) => b.rar - a.rar || b.id - a.id).map((x) => itemCard(x))))));

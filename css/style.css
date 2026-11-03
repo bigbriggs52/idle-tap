@@ -1390,3 +1390,19 @@ body.duo { --duo: 60px; }
 .bug-tile.demo::after { display: none; }
 .bug-tile.demo small { color: #fff; font: .78rem var(--f-display); }
 @media (prefers-reduced-motion: reduce) { .bug-leds, .bug-tile.has-bug .bug-face, .bug-tile.has-gem .bug-face { animation: none; } }
+
+/* v0.38: Vault panels swap in place (no "reload" animation), same-type merges, Chip's needs on the Roll tab */
+.vault.still { animation: none; }
+.vault-needs { display: grid; gap: 6px; padding: 8px 10px; border-radius: 12px; background: #fff; border: 3px solid #ffd84d; }
+.vault-needs > b { font-size: .85rem; color: #7a4f00; }
+.vault-need { display: grid; gap: 3px; }
+.vault-need-what { font-weight: 700; font-size: .85rem; }
+.vault-need-labs { display: flex; flex-wrap: wrap; gap: 4px; }
+.vault-need-lab { border: 2px solid #dcc8ff; background: #faf6ff; border-radius: 999px; padding: 3px 9px; font: 700 .75rem var(--f-body); color: #2b1d4a; cursor: pointer; }
+.vault-need-lab.on { background: var(--ink, #2b1d4a); color: #fff; border-color: #2b1d4a; }
+.vault-need-lab.locked, .vault-need-lab:disabled { opacity: .55; cursor: default; }
+.vault-lab { flex-wrap: wrap; }
+.vault-lab-cats { flex-basis: 100%; display: flex; gap: 3px; margin-top: 2px; }
+.vault-cat-ic { font-style: normal; font-size: .8rem; opacity: .45; }
+.vault-cat-ic.need { opacity: 1; background: #ffe36a; border-radius: 6px; padding: 0 3px; box-shadow: 0 0 0 2px #f2b100; }
+.vault-merge-all { width: 100%; }
