@@ -2,6 +2,11 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.41.0 (2026-11-05)
+
+- Viking mines are harder: every stage's target time is tripled and all 250 price scales were refitted. Batch 1 now runs from about 15 minutes (stage 1) to 1 hour (stage 50), batch 2 from 1 to 4 hours, batch 3 from 4 to 16 hours, batch 4 from 16 to 64 hours, batch 5 from 64 to 256 hours. (The pacing sim plays with no abilities, Rush, Bug Hunt or relics, so a real player is still faster than those numbers.)
+- Unlock max: next to "Unlock Shaft N" there is a green "Unlock max ×N" button once the cash would open two or more shafts; it opens as many as the money allows. Same in the labs for floors, where it stops at a tech-era wall.
+
 ## v0.40.2 (2026-11-03)
 
 - Max all now buys the best upgrade for the backlog instead of a fixed order. Each buy goes to whatever is holding income back: a lift that the mines are piling up behind, a warehouse the lift is waiting on, or mines that leave the lift and warehouse idle. It re-checks after every buy and keeps going while anything is affordable, buying up to the next unlock each time so milestone bonuses count. The toast says where most of the money went.

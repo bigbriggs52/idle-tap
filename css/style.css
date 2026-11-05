@@ -1431,3 +1431,8 @@ button.token-pill:active { transform: translateY(1px); }
 .token-help .hoard-steps { margin-top: 10px; }
 .token-help-foot { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .vault-earn { margin: -6px 0 0; }
+
+/* v0.41: Unlock max opens every shaft/floor the cash allows (shown only when it would open 2+) */
+.btn.up.unlock-max { display: none; background: var(--good); border-color: var(--good); }
+.btn.up.unlock-max.show { display: inline-block; }
+.actions .btn.up.unlock-max.show + *, .actions .btn.up { min-width: 0; }

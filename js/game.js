@@ -600,6 +600,27 @@ window.SVT = window.SVT || {};
     return true;
   };
 
+  // v0.41 (user: "a max purchase for mines, buy as many mines as the money allows"): open shafts (or floors) one after
+  // another while the cash lasts, stopping at a tech-era wall or the last one. Returns the count opened.
+  SVT.unlockMany = () => {
+    let n = 0;
+    while (n < 60 && SVT.unlockFloor()) n++;
+    return n;
+  };
+  // How many Unlock max would open right now and what they cost together (no side effects).
+  SVT.unlockManyQuote = (lab) => {
+    const saved = lab.floors, cash = lab.cash;
+    let count = 0, cost = 0;
+    lab.floors = saved.slice();
+    for (let i = 0; i < 60; i++) {
+      const nf = SVT.nextFloor(lab);
+      if (!nf || nf.blocked || cash - cost < nf.cost) break;
+      cost += nf.cost; count++; lab.floors.push(newFloor());
+    }
+    lab.floors = saved;
+    return { count, cost };
+  };
+
   // One independent roll per hire against the rarity odds (rarest first).
   SVT.rollRank = (rnd) => {
     let roll = rnd === undefined ? Math.random() : rnd;

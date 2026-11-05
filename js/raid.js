@@ -64,10 +64,14 @@ window.SVT = window.SVT || {};
     // Shaft price growth per level: the same as the labs (v0.33, "similar numbers to the main levels"). Hub growth is
     // set per stage by hubPrices (stage.growth).
     GROWTH: { floor: SVT.B.FLOOR_GROWTH },
-    // Target clear time for an efficient player (v0.33, user's pacing): batch 1 runs from 5 minutes (stage 1) to
-    // 20 minutes (stage 50); every batch starts where the one before ended and climbs 4x again, so batch 2 runs
-    // 20 to 80 minutes, batch 3 80 minutes to 5.3 hours, batch 4 5.3 to 21 hours, batch 5 21 to 85 hours.
-    time: (s) => 300 * Math.pow(4, R.batchOf(s) - 1) * Math.pow(4, (R.levelOf(s) - 1) / 49),
+    // Target clear time for an efficient player. v0.33 (user's pacing): batch 1 ran from 5 minutes (stage 1) to
+    // 20 minutes (stage 50), every batch starting where the one before ended and climbing 4x again.
+    // v0.41 (user, 2026-11-05: "Viking mine is too easy", the third time): every target is tripled. The pacing sim
+    // plays with no abilities, Rush, Bug Hunt, relics or items, and since v0.39 managers fire every 1 to 5 minutes,
+    // so a real player clears a mine far faster than the sim. Batch 1 now runs 15 minutes to 1 hour, batch 2 1 to 4
+    // hours, batch 3 4 to 16 hours, batch 4 16 to 64 hours, batch 5 64 to 256 hours.
+    HARDER: 3,
+    time: (s) => R.HARDER * 300 * Math.pow(4, R.batchOf(s) - 1) * Math.pow(4, (R.levelOf(s) - 1) / 49),
     // Each deeper shaft costs 1.3x the one above (grow 0.13 x the 10x price step). Income is capped by the lift and
     // warehouse, so the step has to stay small or the deep shafts can never be paid for.
     BASE: { grow: 0.13, step: 1.3 },
@@ -80,11 +84,11 @@ window.SVT = window.SVT || {};
     boatCost: (k) => (k <= 1 ? 0 : Math.round(750 * Math.pow((k - 1) / 49, 1.6))),
     // Price scale per stage, from tests/raid-goals.mjs (the pacing sim fitted to each stage's target time).
     SCALES: [
-      3.7, 3.8, 3.6, 2.8, 3.4, 2.8, 3.9, 3.4, 3.2, 3.5, 2.7, 2.9, 5.4, 4.1, 3.5, 3.7, 4.4, 3.9, 3, 2.7, 4.4, 2.7, 4.3, 3.2, 5.3, 3.4, 2.7, 3.5, 2.9, 2.8, 2.3, 4.5, 3.5, 2.4, 3.9, 1.7, 1.7, 1.4, 1.1, 1.1, 1.4, 0.5, 0.45, 0.48, 0.28, 0.63, 0.23, 0.24, 0.17, 0.2,
-      18, 13, 15, 8.6, 17, 12, 12, 11, 21, 20, 13, 22, 23, 22, 20, 21, 23, 15, 30, 33, 27, 20, 17, 19, 19, 17, 23, 21, 31, 31, 32, 40, 15, 31, 23, 41, 33, 24, 28, 36, 29, 24, 44, 18, 29, 22, 28, 17, 16, 22,
-      37, 67, 48, 99, 91, 55, 40, 83, 53, 43, 44, 99, 54, 63, 49, 64, 120, 94, 140, 79, 100, 150, 54, 99, 120, 140, 120, 160, 88, 100, 140, 150, 96, 180, 110, 120, 120, 210, 170, 200, 220, 230, 120, 120, 150, 90, 130, 170, 100, 170,
-      320, 300, 240, 270, 220, 220, 190, 190, 210, 220, 220, 290, 440, 350, 520, 440, 420, 490, 440, 230, 490, 510, 430, 220, 360, 460, 270, 480, 400, 510, 380, 780, 660, 570, 320, 700, 440, 410, 490, 590, 480, 900, 460, 800, 590, 760, 570, 560, 890, 1100,
-      700, 890, 1300, 1300, 1100, 860, 1000, 660, 1200, 850, 700, 830, 850, 1300, 1800, 1300, 1100, 1800, 1100, 780, 2400, 2000, 2100, 990, 1300, 1200, 1300, 2000, 2000, 2500, 3100, 1400, 2000, 1800, 1800, 3100, 1900, 3000, 2300, 2800, 1800, 2100, 3700, 3300, 3200, 3000, 3800, 4200, 2100, 3700,
+      10, 11, 12, 8.6, 11, 13, 12, 11, 9.8, 11, 11, 11, 18, 13, 12, 12, 15, 12, 9.1, 8.2, 14, 8.3, 13, 9.8, 16, 10, 7.9, 12, 9.7, 8.8, 8, 13, 10, 7.2, 13, 5.5, 5, 4.8, 3.9, 3.6, 4.4, 1.7, 1.4, 1.4, 0.94, 2, 0.71, 0.72, 0.55, 0.58,
+      53, 39, 47, 28, 57, 38, 43, 35, 67, 65, 41, 72, 73, 71, 66, 64, 75, 45, 93, 100, 86, 62, 55, 59, 60, 54, 69, 62, 95, 95, 100, 120, 47, 96, 68, 120, 99, 71, 85, 110, 88, 71, 130, 53, 88, 65, 84, 51, 49, 67,
+      110, 200, 150, 310, 280, 170, 130, 260, 170, 140, 140, 300, 170, 190, 150, 200, 370, 290, 430, 250, 320, 460, 170, 300, 370, 420, 360, 480, 270, 310, 420, 470, 290, 550, 350, 360, 370, 640, 500, 600, 670, 680, 350, 350, 450, 270, 390, 510, 300, 490,
+      950, 910, 700, 830, 650, 670, 570, 580, 640, 660, 670, 900, 1300, 1100, 1600, 1300, 1300, 1500, 1300, 680, 1500, 1500, 1300, 670, 1100, 1400, 780, 1400, 1200, 1500, 1100, 2300, 2000, 1700, 950, 2100, 1300, 1200, 1500, 1800, 1400, 2600, 1400, 2300, 1800, 2300, 1800, 1600, 2600, 3200,
+      2100, 2700, 3900, 3700, 3400, 2500, 3100, 2000, 3500, 2500, 2100, 2500, 2600, 3900, 5400, 3800, 3400, 5500, 3200, 2300, 7200, 6100, 6200, 2900, 3700, 3600, 3900, 5800, 5900, 7400, 9300, 4200, 5900, 5300, 5400, 9100, 5700, 8900, 6900, 8200, 5300, 6500, 11000, 9700, 9400, 9100, 11000, 12000, 6400, 11000,
     ],
   };
 
