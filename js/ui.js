@@ -796,11 +796,17 @@ window.SVT = window.SVT || {};
     const btn = bind(h("button", { class: "btn up", onclick: () => SVT.unlockFloor() }), (e) => {
       setText(e, (inRaid() ? "Unlock Shaft " : "Unlock Floor ") + n + " · $" + fmt(nf.cost)); setDisabled(e, lab().cash < nf.cost);
     });
+    // v0.41 (user ask): Unlock max opens as many shafts (or floors) as the cash allows, shown once it would open 2+.
+    const many = bind(h("button", { class: "btn up unlock-max", onclick: () => { const k = SVT.unlockMany(); if (k) toast((inRaid() ? "⛏ Opened " + k + " shafts" : "⬆ Unlocked " + k + " floors")); } }), (e) => {
+      const q = SVT.unlockManyQuote(lab());
+      toggle(e, "show", q.count >= 2);
+      if (q.count >= 2) setText(e, "Unlock max ×" + q.count + " · $" + fmt(q.cost));
+    });
     return h("div", { class: "floor locked" },
       h("div", { class: "fnum", text: n }),
       h("div", { class: "fbody" },
         h("div", { class: "fname" }, h("b", { text: productName(n) }), h("span", { class: "muted", text: " · " + tierName(n) })),
-        h("div", { class: "actions" }, btn)));
+        h("div", { class: "actions" }, btn, many)));
   }
 
   function building() {

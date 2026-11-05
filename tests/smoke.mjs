@@ -494,7 +494,7 @@ if (!stickyClear.up || stickyClear.x || !stickyClear.home) errors.push("Raid cle
 const viking = await page.evaluate(() => { const R = SVT.RAID, L = SVT.lab(); return { tokens: SVT.vikingTokens(), boats: SVT.boatsUnlocked(), boat: SVT.boatIndex(), stages: R.STAGES, shafts50: R.shafts(50), shafts51: R.shafts(51), t1: R.time(1), t50: R.time(50), t51: R.time(51), t250: R.time(250), loot: R.def(50).products.length, tier: R.def(1).tierOf(50), cost2: R.boatCost(2), cost50: R.boatCost(50), svg: SVT.boatSvg(50).length, names: new Set(SVT.BOATS.map((b) => b.name)).size, omens: R.stage(1).omens.length }; });
 console.log("viking", JSON.stringify(viking));
 if (viking.tokens !== 1 || viking.boats !== 2 || viking.boat !== 2) errors.push("Viking tokens or boats wrong after a clear: " + JSON.stringify(viking));
-if (viking.stages !== 250 || viking.shafts50 !== 50 || viking.shafts51 !== 1 || viking.t1 !== 300 || Math.abs(viking.t50 - 1200) > 1e-6 || Math.abs(viking.t51 - 1200) > 1e-6 || Math.abs(viking.t250 - 307200) > 1e-6) errors.push("Raid batches or pacing wrong: " + JSON.stringify(viking));
+if (viking.stages !== 250 || viking.shafts50 !== 50 || viking.shafts51 !== 1 || viking.t1 !== 900 || Math.abs(viking.t50 - 3600) > 1e-6 || Math.abs(viking.t51 - 3600) > 1e-6 || Math.abs(viking.t250 - 921600) > 1e-6) errors.push("Raid batches or pacing wrong (v0.41: targets x3): " + JSON.stringify(viking));
 if (viking.loot !== 50 || viking.tier !== 4 || viking.cost2 < 1 || viking.cost50 !== 750 || viking.svg < 500 || viking.names !== 50) errors.push("Raid loot, tiers or boats wrong: " + JSON.stringify(viking));
 // v0.35: Viking Hoard. 10,000 relics with fixed rarities; spins spend tokens but boats go by tokens earned; Max and merge.
 const hoard = await page.evaluate(() => {
@@ -572,6 +572,16 @@ await page.evaluate(() => { SVT.closeHoard(); SVT.showRaidClear(1, { tokens: 1 }
 await page.click("text=Raid stage 2");
 await page.waitForTimeout(300);
 if ((await page.evaluate(() => SVT.lab().stage)) !== 2) errors.push("Stage 2 did not open after clearing");
+// v0.41: Unlock max opens shafts while the cash lasts (stage 2 has one more shaft to open), and stops at the last one
+const unlock = await page.evaluate(() => {
+  const L = SVT.lab(), btn = !!document.querySelector(".btn.unlock-max");
+  L.cash = 1e12;
+  const q = SVT.unlockManyQuote(L), f0 = L.floors.length, k = SVT.unlockMany(), nf = SVT.nextFloor(L);
+  return { q: q.count, cost: q.cost, k, grew: L.floors.length - f0, stopped: !nf, again: SVT.unlockMany(), btn, floors: L.floors.length };
+});
+console.log("unlock", JSON.stringify(unlock));
+if (!(unlock.q >= 1) || unlock.k !== unlock.q || unlock.grew !== unlock.k || !unlock.stopped || unlock.again !== 0 || !unlock.btn || unlock.floors !== 2 || !(unlock.cost > 0)) errors.push("Unlock max wrong (v0.41): " + JSON.stringify(unlock));
+await page.evaluate(() => { SVT.lab().cash = 0; });
 await page.evaluate(() => SVT.switchLab("garage"));
 // opening a Level panel always starts on Next (up to the next unlock)
 const reopenBuy = await page.evaluate(async () => {
