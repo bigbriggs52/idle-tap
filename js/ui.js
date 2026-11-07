@@ -228,7 +228,7 @@ window.SVT = window.SVT || {};
     const ab = SVT.ability(m.role, m.ability), st = SVT.abilityStats(m);
     if (ab.kind === "special") return ab.icon + " " + secs(st.active) + " · " + secs(st.cooldown) + " cooldown. " + ab.text + " Passive: " + ab.passiveText + ".";
     const K = B.ABILITY_KINDS[ab.kind];
-    const what = ab.kind === "speed" ? "×" + st.mult + " speed" : ab.kind === "storage" ? "×" + st.mult + " load" : "−" + Math.round(st.off * 100) + "% upgrades";
+    const what = ab.kind === "speed" ? "×" + st.mult + " speed" + (m.role === "floor" ? " (builds)" : m.role === "freight" ? " (travels and loads)" : " (loads and ships)") : ab.kind === "storage" ? "×" + st.mult + " load" : "−" + Math.round(st.off * 100) + "% upgrades";
     return K.icon + " " + ab.name + ": " + what + " for " + secs(st.active) + " · " + secs(st.cooldown) + " cooldown";
   }
 
@@ -267,7 +267,7 @@ window.SVT = window.SVT || {};
     const KIND = { special: 0, speed: 1, storage: 2, discount: 3 }, kindOf = (m) => SVT.ability(m.role, m.ability).kind;
     const list = SVT.owned(L, role).filter((m) => m !== current && (mgrType === "all" || kindOf(m) === mgrType)).map((m, i) => [m, i])
       .sort((a, b) => busy(a[0]) - busy(b[0]) || KIND[kindOf(a[0])] - KIND[kindOf(b[0])] || a[1] - b[1]).map((x) => x[0]);
-    const GROUP = { special: "🌟 Super managers: game changers", speed: "⚡ Speed: runs faster", storage: "📦 Storage: bigger loads", discount: "💸 Price: cheaper upgrades" };
+    const GROUP = { special: "🌟 Super managers: game changers", speed: "⚡ Speed managers: rarer runs faster and longer", storage: "📦 Storage: bigger loads", discount: "💸 Price: cheaper upgrades" };
     let lastGroup = null;
     const cards = list.flatMap((m) => {
       const key = (busy(m) ? "busy-" : "free-") + kindOf(m);
@@ -305,14 +305,18 @@ window.SVT = window.SVT || {};
     } }, h("span", { "aria-hidden": "true", text: "🪄" }), h("span", { text: " Auto-assign floors: best managers at the bottom" })),
       (e) => setDisabled(e, !SVT.owned(L, "floor").length));
     parts.push(auto);
-    // Ability-type filter: Speed, Storage or Price.
-    parts.push(h("div", { class: "filters types", role: "tablist", "aria-label": "Manager type" }, MGR_TYPES.map(([t, ic, label]) =>
+    // v0.42: every manager is a Speed manager, so the type filter is replaced by the rarity table (speed and length).
+    if (MGR_TYPES.length > 2) parts.push(h("div", { class: "filters types", role: "tablist", "aria-label": "Manager type" }, MGR_TYPES.map(([t, ic, label]) =>
       h("button", { class: "filter type" + (t === mgrType ? " on" : ""), role: "tab", "aria-selected": t === mgrType ? "true" : "false", "data-type": t,
         onclick: () => { mgrType = t; openManagers(role, kind, n); } }, h("span", { "aria-hidden": "true", text: ic }), h("small", { text: label + (t === "all" ? "" : " " + SVT.owned(L, role).filter((m) => kindOf(m) === t).length) })))));
+    else parts.push(h("ul", { class: "speed-table", "aria-label": "Speed by rarity" }, B.RANKS.slice().reverse().map((r) => {
+      const st = B.ABILITY_STATS[r.id].speed;
+      return h("li", { class: "r-" + r.id }, h("b", { text: r.name }), h("span", { text: "⚡×" + st.mult + " · " + secs(st.active) }), h("small", { class: "muted", text: secs(st.cooldown) + " rest" }));
+    })));
     const emptyText = here && current ? "No other " + B.ROLE_NAMES[role] + "s yet." : mgrType !== "all" ? "No " + B.ABILITY_KINDS[mgrType].name.toLowerCase() + " managers here yet." : "None yet. Hire one below.";
     parts.push(h("div", { class: "sec-label", text: here ? "Your " + B.ROLE_NAMES[role] + "s:" : B.ROLE_NAMES[role] + "s:" }),
       h("ul", { class: "mlist" }, cards.length ? cards : h("li", { class: "muted empty", text: emptyText })),
-      h("p", { class: "muted small odds", text: "Each hire rolls Legendary 1.5%, Epic 3%, Rare 10%, Uncommon 30% or Common 55.5%. Epic and Legendary hires are super managers with a game-changing ability and a permanent passive. Funding rounds send every manager away." }));
+      h("p", { class: "muted small odds", text: "Each hire rolls Legendary 1.5%, Epic 3%, Rare 10%, Uncommon 30% or Common 55.5%. Every manager is a Speed manager: the rarer, the faster and the longer it runs. Funding rounds send every manager away." }));
     // Children stay put (only their text changes), so a finger on the button never loses its target mid-tap.
     const hireCost = h("b");
     const hire = bind(h("button", { class: "btn fund-cta big hire", onclick: () => {
@@ -1010,11 +1014,18 @@ window.SVT = window.SVT || {};
       closeSheet(); setView("lab");
     });
     show();
+    // v0.42 (user ask): start the Viking journey over without touching the labs. Two taps, like Reset all progress.
+    let resetArmed = false;
+    const resetRaid = h("button", { class: "btn danger small raid-reset", text: "↺ Reset Viking mine only" });
+    resetRaid.addEventListener("click", () => {
+      if (!resetArmed) { resetArmed = true; resetRaid.textContent = "Tap again: back to stage 1, tokens, boats and relics wiped"; return; }
+      SVT.resetRaid(); closeSheet(); setView("home"); toast("⚔️ Viking journey reset: stage 1 awaits");
+    });
     sheet("Viking Raid", h("div", { class: "sheet-body raid-panel" },
       h("div", { class: "token-row" }, tokenPill(),
         h("div", { class: "token-btns" }, h("button", { class: "btn small hoard-btn", onclick: () => SVT.openHoard(), text: "🎰 Hoard" + (SVT.hoardMult() > 1 ? " ⚡×" + SVT.hoardMult() : "") }), h("button", { class: "btn small", onclick: openBoats, text: "⛵ Boats " + SVT.boatsUnlocked() + "/" + R.BOATS }))),
-      h("p", { class: "muted small", text: "Five batches of 50 Viking mines. Stage 1 has one shaft and every stage adds one; each batch digs deeper (higher max levels) and starts a little harder than the last stage before it. Managers, abilities, Rush boosts and Chip's items all count. Max out the mine to clear a stage: open every shaft, take every shaft and the lift and warehouse to the batch's max level. Clears pay Viking tokens, which unlock boats for Chip." }),
-      tabs, info, stages), { icon: "⚔️", foot: h("div", { class: "panel-foot" }, go) });
+      h("p", { class: "muted small", text: "Five batches of 50 Viking mines. Stage 1 has one shaft and every stage adds one. Clear a stage by opening every shaft, taking every shaft to Lv 100 and the lift and warehouse to Lv 500. The further down the map, the pricier the deep shafts and the more bad omens; each batch starts a little harder than the last stage before it. Managers, abilities, Rush boosts and Chip's items all count. Clears pay Viking tokens, which unlock boats for Chip." }),
+      tabs, info, stages, resetRaid), { icon: "⚔️", foot: h("div", { class: "panel-foot" }, go) });
   }
   SVT.openRaid = openRaid;
   // v0.40 (user: "Viking tokens still feel confusing"): one plain explainer, reachable from every token pill.
@@ -1207,6 +1218,17 @@ window.SVT = window.SVT || {};
     return b;
   }
   SVT.duoOn = duoOn;
+  SVT.openSettings = () => openSettings();
+  // v0.42: the Viking-only reset is also in Settings, next to Reset all progress.
+  function viking() {
+    let armed = false;
+    const b = h("button", { class: "btn danger raid-reset", text: "↺ Reset Viking mine only" });
+    b.addEventListener("click", () => {
+      if (!armed) { armed = true; b.textContent = "Tap again: Viking stages, tokens, boats and relics start over (labs stay)"; return; }
+      SVT.resetRaid(); closeSheet(); toast("⚔️ Viking journey reset: stage 1 awaits");
+    });
+    return b;
+  }
   function openSettings() {
     let armed = false;
     const reset = h("button", { class: "btn danger", text: "Reset all progress" });
@@ -1218,6 +1240,7 @@ window.SVT = window.SVT || {};
       h("p", null, h("b", { text: "Silicon Valley Tycoon " + buildTag() })),
       h("button", { class: "btn", onclick: checkUpdate, text: "🔄 Check for update" }),
       duoBtn(),
+      viking(),
       h("p", { class: "muted", text: "Tap floors, the lift and the warehouse to work them. Tap a dashed seat to hire a manager to automate it and keep earning while you're away (up to 2 hours). Income is limited by the slowest of build, freight and commercial, marked Slowest. Tap a blue Level button for stats and upgrades, and hold Upgrade to keep buying." }),
       h("p", { class: "muted", text: "Every 5 levels unlocks new tech (+10% on floors, +2% on hubs). Levels 10, 25, 50, 100 and beyond are big milestones." }),
       h("p", null, h("a", { href: "https://github.com/bigbriggs52/idle-tap/blob/main/CHANGELOG.md", target: "_blank", rel: "noopener", text: "Changelog" })),

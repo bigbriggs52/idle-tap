@@ -53,135 +53,77 @@ const rankIdx = await page.evaluate(() => SVT.RANK_ORDER);
 if (owned.order.some((r, i) => i && rankIdx[r] < rankIdx[owned.order[i - 1]])) errors.push("Owned list not sorted by rarity");
 const grouped = await page.evaluate(() => {
   const L = SVT.lab(); L.cash = 1e12;
-  // At least 12 hires, and keep going (rarely needed) until a Budget Cut manager is on the roster: the type filter and
-  // price ability tests below need one, and a 12-roll streak without one happens about 1 time in 100.
-  for (let i = 0; i < 60 && (i < 12 || !Object.values(L.managers).some((m) => m.ability === "budget")); i++) SVT.hire("floor");
+  for (let i = 0; i < 12; i++) SVT.hire("floor");
   SVT.openManagers("floor", null, 0);
-  const rows = [...document.querySelectorAll("#sheet .mlist > li")].map((li) => li.classList.contains("mgroup") ? "#" + li.textContent : li.querySelector(".minfo b") ? li.dataset.kind || "card" : "?");
+  const rows = [...document.querySelectorAll("#sheet .mlist > li")].map((li) => li.classList.contains("mgroup") ? "#" + li.textContent : li.querySelector(".minfo b") ? "card" : "?");
   const kinds = [...document.querySelectorAll("#sheet .mlist > li.mgroup")].map((li) => li.textContent);
-  return { headers: kinds, first: rows[0] };
+  const table = [...document.querySelectorAll("#sheet .speed-table li")].map((li) => li.textContent);
+  return { headers: kinds, first: rows[0], table, typeFilter: document.querySelectorAll("#sheet .filter.type").length,
+    allSpeed: Object.values(L.managers).every((m) => SVT.abilityOf(m).kind === "speed"), boost: (document.querySelector("#sheet .mcard .boost-text") || {}).textContent };
 });
 console.log("manager groups", JSON.stringify(grouped));
 await page.screenshot({ path: out + "/04b-manager-groups.png" });
-const typed = await page.evaluate(async () => {
-  document.querySelector('#sheet .filter.type[data-type="discount"]').click();
-  await new Promise((r) => setTimeout(r, 150));
-  const kinds = [...document.querySelectorAll("#sheet .mlist .mcard")].map((c) => c.textContent.includes("Budget Cut") ? "discount" : "other");
-  const headers = document.querySelectorAll("#sheet .mlist .mgroup").length;
-  document.querySelector('#sheet .filter.type[data-type="all"]').click();
-  await new Promise((r) => setTimeout(r, 150));
-  return { n: kinds.length, allDiscount: kinds.every((k) => k === "discount"), headers, back: document.querySelectorAll("#sheet .mlist .mgroup").length };
-});
-console.log("type filter", JSON.stringify(typed));
-if (!typed.n || !typed.allDiscount || typed.headers !== 0 || !typed.back) errors.push("Manager type filter is wrong: " + JSON.stringify(typed));
-if (!grouped.first.startsWith("#") || grouped.headers.length < 2 || !/^(🌟 Super|⚡ Speed)/.test(grouped.headers[0])) errors.push("Managers are not grouped by ability type: " + JSON.stringify(grouped));
+// v0.42: every manager is Speed; the panel shows speed and length by rarity instead of a type filter
+if (!grouped.first.startsWith("#⚡ Speed") || grouped.typeFilter !== 0 || grouped.table.length !== 5 || !/^Common⚡×2 · 30 s/.test(grouped.table[0]) || !/^Legendary⚡×10 · 6 min/.test(grouped.table[4]) || !grouped.allSpeed || !/×\d+ speed \(builds\)/.test(grouped.boost)) errors.push("Speed-only managers panel wrong (v0.42): " + JSON.stringify(grouped));
 if (owned.total !== 4 || owned.assigned !== 3) errors.push("Owned/assigned counts wrong");
 await page.click('#sheet [aria-label="Close"]');
-// v0.22: the three ability kinds are visible. Speed runs the cycle faster (same output per second) and marks the
-// scene; storage makes a bigger cycle; price turns the Level button green with the discount on it.
+// v0.42: Speed by rarity. Each tier runs its node faster by its multiplier, for its own time, then rests for its cooldown.
 const kinds = await page.evaluate(async () => {
   const L = SVT.lab(), B = SVT.B, out = {};
-  const pick = (kind) => Object.values(L.managers).find((m) => m.role === "floor" && B.ABILITIES.floor.find((a) => a.id === m.ability).kind === kind && !SVT.slotOfMgr(L, m.id));
   const rate = () => SVT.rates(L).floors[0];
-  const stock = () => L.floors[0].stock;
-  const scene = () => document.querySelector('.floor[data-floor="1"] .scene'); // the lab view may be rebuilt on assign
-  for (const kind of ["speed", "storage", "discount"]) {
-    const m = pick(kind); if (!m) { out[kind] = "none"; continue; }
+  const scene = () => document.querySelector('.floor[data-floor="1"] .scene');
+  for (const rank of ["common", "uncommon", "rare", "epic", "legendary"]) {
+    const m = SVT.hire("floor"); m.rank = rank;
     SVT.assign(m.id, "floor", 1);
-    L.floors[0].left = B.FLOOR_CYCLE; // a fresh cycle, so the countdown cannot wrap during the measurement
-    const r0 = rate(), c0 = SVT.quote(L, "floor", 1).cost, s0 = stock(), left0 = L.floors[0].left;
+    L.floors[0].left = B.FLOOR_CYCLE;
+    const r0 = rate();
     SVT.activate("floor", 1);
-    const a = SVT.activeAbility(L, "floor", 1), st = SVT.abilityStats(m); // v0.30: the tier sets strength and timers
-    await new Promise((f) => setTimeout(f, 450));
-    out[kind] = { ratio: +(rate() / r0).toFixed(3), boost: st.mult, cls: (scene().className.match(/ab-\w+/) || [])[0], sp: scene().style.getPropertyValue("--sp"), tag: scene().querySelector(".ab-tag").hidden,
-      leftDrop: +(left0 - L.floors[0].left).toFixed(2), speedMult: SVT.speedMult(L, "floor", 1), loadMult: +SVT.loadMult(L, "floor", 1).toFixed(3), nodeMult: +SVT.nodeMult(L, "floor", 1).toFixed(3),
-      deal: document.querySelector('.floor[data-floor="1"] .lvl-btn').classList.contains("deal"), cost: +(SVT.quote(L, "floor", 1).cost / c0).toFixed(2), discount: st.off, kindOk: a && a.kind === kind,
-      rank: m.rank, active: st.active, cooldown: st.cooldown, durOk: Math.abs((m.activeUntil - SVT.now()) - st.active) < 1 && Math.abs((m.cdUntil - m.activeUntil) - st.cooldown) < 1 };
-    m.activeUntil = 0; m.cdUntil = 0; SVT.unassign(m.id);
+    const a = SVT.activeAbility(L, "floor", 1), st = SVT.abilityStats(m);
+    await new Promise((f) => setTimeout(f, 300));
+    out[rank] = { ratio: +(rate() / r0).toFixed(3), boost: st.mult, cls: (scene().className.match(/ab-\w+/) || [])[0], speedMult: SVT.speedMult(L, "floor", 1), loadMult: SVT.loadMult(L, "floor", 1), off: SVT.discount(L, "floor", 1),
+      kindOk: !!a && a.kind === "speed", active: st.active, cooldown: st.cooldown, durOk: Math.abs((m.activeUntil - SVT.now()) - st.active) < 1 && Math.abs((m.cdUntil - m.activeUntil) - st.cooldown) < 1 };
+    m.activeUntil = 0; m.cdUntil = 0; SVT.unassign(m.id); delete L.managers[m.id];
   }
-  return out;
-});
-console.log("ability kinds", JSON.stringify(kinds));
-await page.screenshot({ path: out + "/04c-ability-kinds.png" });
-const sp = kinds.speed, st = kinds.storage, dc = kinds.discount;
-for (const k of ["speed", "storage", "discount"]) if (kinds[k] !== "none" && !kinds[k].durOk) errors.push("Ability timers do not follow the tier (v0.30): " + JSON.stringify(kinds[k]));
-// v0.30: the tier table itself, and the six super managers.
-const tiers = await page.evaluate(() => {
-  const B = SVT.B, L = SVT.lab(), out = { stats: B.ABILITY_STATS, supers: {} };
-  for (const role of ["floor", "freight", "commercial"]) for (const rank of ["epic", "legendary"]) {
-    const sp = B.ABILITIES[role].find((a) => a.kind === "special" && a.rank === rank);
-    out.supers[role + ":" + rank] = sp ? { id: sp.id, name: sp.name, active: sp.active, cooldown: sp.cooldown, passive: sp.passive } : null;
-  }
-  // Hiring Epic or Legendary gives the role's super manager; Common to Rare never do.
-  const seen = { super: 0, regular: 0, wrong: 0 };
+  // hires roll every rarity, and every one of them is Speed
   const rnd = Math.random; let i = 0; const seq = [0.001, 0.02, 0.1, 0.5, 0.9, 0.01, 0.03];
   Math.random = () => seq[i++ % seq.length];
-  L.cash = 1e15;
-  for (let k = 0; k < 14; k++) { const m = SVT.hire("freight"); const r = SVT.rank(m.rank), ab = SVT.abilityOf(m); if (!!r.super !== (ab.kind === "special")) seen.wrong++; if (r.super) { seen.super++; if (ab.rank !== m.rank) seen.wrong++; } else seen.regular++; }
+  const ranks = new Set(); let bad = 0;
+  for (let k = 0; k < 14; k++) { const m = SVT.hire("freight"); ranks.add(m.rank); if (SVT.abilityOf(m).kind !== "speed") bad++; }
   Math.random = rnd;
-  out.hires = seen;
+  out.hires = { ranks: ranks.size, bad };
+  out.kinds = Object.keys(B.ABILITY_KINDS).join() + "|" + ["floor", "freight", "commercial"].map((r) => B.ABILITIES[r].length).join();
+  // v0.42: one hire price everywhere, $250 then +30% a hire
+  out.price = { first: B.hireCost("floor", 0), second: B.hireCost("commercial", 1), lab: SVT.hireCost(L, "freight") === B.hireCost("freight", L.hires.freight), sameRoles: B.hireCost("floor", 3) === B.hireCost("freight", 3) };
+  // timers are absolute in the save
+  const m = SVT.owned(L, "freight")[0]; SVT.assign(m.id, "freight", 0); m.activeUntil = 0; m.cdUntil = 0; SVT.activate("freight", 0);
+  SVT.save(); const saved = JSON.parse(localStorage.getItem("svt-save")); const sm = saved.labs[L.id].managers[m.id];
+  out.persist = sm.activeUntil === m.activeUntil && sm.cdUntil === m.cdUntil;
+  // v0.31.2: no selling, and a hire from a slot does not replace a manager mid-ability
+  SVT.openManagers("freight", "freight", 0); document.querySelector("#sheet .btn.hire").click();
+  out.noSwap = SVT.mgrOf(L, "freight", 0) === m; out.noSell = typeof SVT.sell === "undefined" && !document.querySelector("#sheet .btn.sell");
+  m.activeUntil = 0; m.cdUntil = 0; document.querySelector('#sheet [aria-label="Close"]').click();
+  // v0.42 save migration: old Storage/Price/special managers become Speed managers with their rarity kept
+  const S = SVT.state(); const fake = SVT.hire("floor"); fake.ability = "midas"; fake.rank = "legendary"; const fake2 = SVT.hire("floor"); fake2.ability = "budget";
+  S.mgr6 = false; SVT.save(); SVT.load(); SVT.render();
+  const L2 = SVT.lab(), f1 = L2.managers[fake.id], f2 = L2.managers[fake2.id];
+  out.migrate = !!f1 && f1.ability === "crunch" && f1.rank === "legendary" && !!f2 && f2.ability === "crunch" && SVT.state().mgr6 === true;
+  delete L2.managers[fake.id]; delete L2.managers[fake2.id];
   return out;
 });
-console.log("tiers", JSON.stringify(tiers));
-if (tiers.stats.common.speed.mult !== 2.5 || tiers.stats.common.speed.active !== 60 || tiers.stats.common.speed.cooldown !== 60 || tiers.stats.uncommon.storage.mult !== 3.5 || tiers.stats.rare.discount.off !== 0.7 || tiers.stats.rare.discount.active !== 30 || tiers.stats.rare.discount.cooldown !== 300 || tiers.stats.uncommon.speed.cooldown !== 180) errors.push("Regular tier table is off: " + JSON.stringify(tiers.stats));
-if (Object.values(tiers.supers).some((x) => !x) || tiers.supers["floor:legendary"].id !== "midas" || tiers.supers["commercial:legendary"].active !== 20 || tiers.supers["freight:epic"].cooldown !== 900) errors.push("Super managers missing or wrong: " + JSON.stringify(tiers.supers));
-if (tiers.hires.wrong || !tiers.hires.super || !tiers.hires.regular) errors.push("Hiring does not hand out super managers by tier: " + JSON.stringify(tiers.hires));
-// Super manager actives and passives in the tick: Dropshipper sells from the floor at x5, Unicorn adds +25% lab-wide,
-// Hyperloop empties a crate in one go, Quantum Courier warps floor stock to the surface, Overclocker pays x3,
-// Venture Capitalist cuts every price by 90% and shortens cooldowns 15%. Timers are absolute, so they survive a reload.
-const supers = await page.evaluate(() => {
-  const B = SVT.B, L = SVT.lab(), out = {};
-  const give = (role, id) => { const m = SVT.hire(role); m.rank = B.ABILITIES[role].find((a) => a.id === id).rank; m.ability = id; return m; };
-  L.cash = 1e15; while (L.floors.length < 3) SVT.unlockFloor();
-  const siphon = give("floor", "siphon"), unicorn = give("floor", "midas"), hyper = give("freight", "turbine"), courier = give("freight", "wormhole"), over = give("commercial", "overclock"), vc = give("commercial", "baron");
-  SVT.assign(siphon.id, "floor", 1); SVT.assign(unicorn.id, "floor", 2); SVT.assign(hyper.id, "freight", 0); SVT.assign(over.id, "commercial", 0);
-  out.passiveSpeed = SVT.speedMult(L, "floor", 1); out.revenue = SVT.revenueMult(L); out.whSpeed = SVT.passives(L, "commercial", 0).speed; out.liftOff = SVT.discount(L, "freight", 0);
-  const price0 = SVT.quote(L, "floor", 3).cost;
-  const quiet = () => { L.floors.forEach((f) => { f.stock = 0; f.left = 0; }); L.lobby = 0; L.commercial.carry = 0; L.commercial.left = 0; L.lift.load = 0; L.lift.phase = "idle"; L.lift.y = 0; };
-  // Dropshipper: one cycle's output on floor 1 is paid x5 (x1.25 Unicorn) straight to cash, nothing lands in the crate.
-  quiet(); L.floors[1].left = 10; const c0 = L.cash; L.floors[0].left = 0.01; SVT.activate("floor", 1);
-  SVT.tick(0.1);
-  const outF = B.floorOutput(1, L.floors[0].lvl) * SVT.prestigeMult(L) * SVT.loadMult(L, "floor", 1) * B.FLOOR_CYCLE;
-  out.siphon = { cashGain: +((L.cash - c0) / outF).toFixed(3), stockSame: L.floors[0].stock === 0, active: siphon.activeUntil - SVT.now() };
-  // Hyperloop: the lift empties a big crate in one stop.
-  quiet(); L.floors[2].stock = 1e9; SVT.activate("freight", 0);
-  for (let i = 0; i < 60; i++) SVT.tick(0.5);
-  out.hyper = { crate: L.floors[2].stock, speed: SVT.speedMult(L, "freight", 0), lobbyUp: L.lobby + L.lift.load > 1e8 };
-  // Quantum Courier: everything on the floors jumps to the surface, then again 5 s later.
-  hyper.activeUntil = 0; hyper.cdUntil = 0; SVT.assign(courier.id, "freight", 0); quiet(); L.floors[2].stock = 777; L.lift.warpAt = 0; SVT.activate("freight", 0);
-  SVT.tick(0.1); const warped1 = L.lobby, nextIn = L.lift.warpAt - SVT.now();
-  out.courier = { warped1, nextIn: Math.round(nextIn), floor3: L.floors[2].stock, liftCap: SVT.passives(L, "freight", 0).load, liftOff: +SVT.discount(L, "freight", 0).toFixed(2) };
-  // Overclocker: x3 on deliveries, 8x cart speed. Venture Capitalist: −90% everywhere, −15% cooldowns.
-  SVT.activate("commercial", 0); out.over = { cash: SVT.cashMult(L, SVT.now(), true), speed: SVT.speedMult(L, "commercial", 0) };
-  over.activeUntil = 0; over.cdUntil = 0; SVT.assign(vc.id, "commercial", 0); out.cdMult = SVT.cooldownMult(L);
-  SVT.activate("commercial", 0); out.vc = { floorOff: +SVT.discount(L, "floor", 3).toFixed(2), liftOff: +SVT.discount(L, "freight", 0).toFixed(2), price: +(SVT.quote(L, "floor", 3).cost / price0).toFixed(3), active: Math.round(vc.activeUntil - SVT.now()), cd: Math.round(vc.cdUntil - vc.activeUntil) };
-  // Reload: timers are absolute in the save.
-  SVT.save(); const saved = JSON.parse(localStorage.getItem("svt-save")); const sm = saved.labs[L.id].managers[vc.id];
-  out.persist = sm.activeUntil === vc.activeUntil && sm.cdUntil === vc.cdUntil && saved.labs[L.id].lift.warpAt === L.lift.warpAt;
-  SVT.openManagers("floor", "floor", 2); out.card = document.querySelector("#sheet .mcard.assigned .rarity").textContent; document.querySelector('#sheet [aria-label="Close"]').click();
-  // v0.31.2: no selling. A hire from a slot does not replace a manager mid-ability.
-  SVT.assign(unicorn.id, "floor", 2); unicorn.activeUntil = SVT.now() + 60; unicorn.cdUntil = unicorn.activeUntil + 60;
-  SVT.openManagers("floor", "floor", 2); document.querySelector("#sheet .btn.hire").click();
-  out.noSwap = SVT.mgrOf(L, "floor", 2) === unicorn; out.noSell = typeof SVT.sell === "undefined" && !document.querySelector("#sheet .btn.sell");
-  unicorn.activeUntil = 0; unicorn.cdUntil = 0; document.querySelector('#sheet [aria-label="Close"]').click();
-  [siphon, unicorn, hyper, courier, over, vc].forEach((m) => { SVT.unassign(m.id); delete L.managers[m.id]; });
-  Object.values(L.managers).filter((m) => m.role === "floor" && m.id > vc.id).forEach((m) => { SVT.unassign(m.id); delete L.managers[m.id]; });
-  quiet(); while (L.floors.length > 1) L.floors.pop(); SVT.render(); // back to one floor: the next step unlocks four more
-  return out;
-});
-console.log("supers", JSON.stringify(supers));
-if (Math.abs(supers.passiveSpeed - 1.15) > 1e-9 || Math.abs(supers.revenue - 1.15) > 1e-9 || Math.abs(supers.whSpeed - 1.1) > 1e-9 || Math.abs(supers.liftOff - 0.1) > 1e-9) errors.push("Super passives wrong: " + JSON.stringify(supers));
-if (Math.abs(supers.siphon.cashGain - 5 * 1.15) > 0.05 || !supers.siphon.stockSame || Math.abs(supers.siphon.active - 45) > 1) errors.push("Dropshipper does not sell from the floor at x5: " + JSON.stringify(supers.siphon));
-if (supers.hyper.crate !== 0 || Math.abs(supers.hyper.speed - 8) > 1e-9 || !supers.hyper.lobbyUp) errors.push("Hyperloop did not empty the crate at 8x: " + JSON.stringify(supers.hyper));
-if (supers.courier.warped1 !== 777 || supers.courier.nextIn !== 8 || supers.courier.floor3 !== 0 || Math.abs(supers.courier.liftCap - 1.1) > 1e-9 || supers.courier.liftOff !== 0.25) errors.push("Quantum Courier warp wrong: " + JSON.stringify(supers.courier));
-if (supers.over.cash !== 3 * 1.15 || Math.abs(supers.over.speed - 8 * 1.1) > 1e-9) errors.push("Overclocker wrong: " + JSON.stringify(supers.over));
-if (Math.abs(supers.cdMult - 0.85) > 1e-9 || supers.vc.floorOff !== 0.75 || supers.vc.liftOff !== 0.81 || /* v0.39: −75%; 1 − 0.25 × 0.75 with the Courier's passive cut under it */ Math.abs(supers.vc.price - 0.25) > 0.01 || supers.vc.active !== 20 || supers.vc.cd !== Math.round(1200 * 0.85)) errors.push("Venture Capitalist wrong: " + JSON.stringify(supers.vc));
-if (!supers.persist) errors.push("Ability timers are not saved as absolute times");
-if (!supers.noSwap || !supers.noSell) errors.push("Hire replaced a mid-ability manager, or selling still exists (v0.31.2): " + JSON.stringify({ noSwap: supers.noSwap, noSell: supers.noSell }));
-if (!/Legendary · The Unicorn/.test(supers.card)) errors.push("Super manager card does not name the special: " + supers.card);
-if (sp === "none" || !sp.kindOk || sp.cls !== "ab-speed" || sp.sp !== String(sp.boost) || sp.speedMult !== sp.boost || Math.abs(sp.ratio - sp.boost) > 0.05 || (sp.boost * 0.45 < 2.5 && sp.leftDrop < 0.4 * sp.boost * 0.8)) errors.push("Speed ability not visible or wrong: " + JSON.stringify(sp));
-if (st === "none" || !st.kindOk || st.cls !== "ab-storage" || st.speedMult !== 1 || Math.abs(st.loadMult / st.nodeMult - 1) > 1e-6 || Math.abs(st.ratio - st.boost) > 0.05) errors.push("Storage ability wrong: " + JSON.stringify(st));
-if (dc === "none" || !dc.kindOk || dc.cls !== "ab-discount" || !dc.deal || Math.abs(dc.cost - (1 - dc.discount)) > 0.02) errors.push("Price ability wrong: " + JSON.stringify(dc));
+console.log("speed tiers", JSON.stringify(kinds));
+await page.screenshot({ path: out + "/04c-ability-kinds.png" });
+{
+  const R = ["common", "uncommon", "rare", "epic", "legendary"], want = { common: [2, 30, 60], uncommon: [3, 60, 180], rare: [4, 120, 300], epic: [6, 240, 900], legendary: [10, 360, 1800] };
+  for (const r of R) {
+    const k = kinds[r];
+    if (!k.kindOk || k.cls !== "ab-speed" || k.speedMult !== k.boost || k.loadMult !== 1 || k.off !== 0 || Math.abs(k.ratio - k.boost) > 0.05 || !k.durOk || k.boost !== want[r][0] || k.active !== want[r][1] || k.cooldown !== want[r][2]) errors.push("Speed tier " + r + " wrong (v0.42): " + JSON.stringify(k));
+  }
+  if (kinds.hires.bad || kinds.hires.ranks < 4 || kinds.kinds !== "speed|1,1,1") errors.push("Hires are not all Speed (v0.42): " + JSON.stringify(kinds.hires) + " " + kinds.kinds);
+  if (kinds.price.first !== 250 || Math.abs(kinds.price.second - 325) > 1e-9 || !kinds.price.lab || !kinds.price.sameRoles) errors.push("Hire prices not uniform (v0.42): " + JSON.stringify(kinds.price));
+  if (!kinds.persist) errors.push("Ability timers are not saved as absolute times");
+  if (!kinds.noSwap || !kinds.noSell) errors.push("Hire replaced a mid-ability manager, or selling still exists (v0.31.2)");
+  if (!kinds.migrate) errors.push("Old Storage/Price/special managers were not migrated to Speed (v0.42)");
+}
 // v0.31: Auto-assign puts the rarest floor managers on the deepest floors, best lift and warehouse managers in.
 const autoAs = await page.evaluate(() => {
   const L = SVT.lab(), B = SVT.B; L.cash = 1e15; while (L.floors.length < 4) L.floors.push({ lvl: 1, stock: 0, left: 0 });
@@ -294,8 +236,9 @@ const maxes = await page.evaluate(() => {
 });
 console.log("maxes", JSON.stringify(maxes));
 // hires are cash-limited (cost climbs 2.5x a hire), so the count is the quote, and it goes past the open seats
-if (!(maxes.floor.seats >= 1) || maxes.floor.q !== maxes.floor.got || !(maxes.floor.got > maxes.floor.seats) || maxes.floor.owned !== maxes.floor.got || maxes.floor.filled !== 0 || maxes.floor.again !== 0) errors.push("Hire max (floors) wrong: " + JSON.stringify(maxes.floor));
-if (!(maxes.lift.got > 1) || !maxes.lift.assigned || !maxes.lift.bestSeated || maxes.lift.again !== 0 || !maxes.noCash) errors.push("Hire max (lift) wrong: " + JSON.stringify(maxes.lift));
+// v0.42: hires climb only 30% each, so $1e12 buys the full 25 a press (the press cap), and the next press with a limit of 3 hires 3
+if (!(maxes.floor.seats >= 1) || maxes.floor.q !== maxes.floor.got || maxes.floor.got !== 25 || !(maxes.floor.got > maxes.floor.seats) || maxes.floor.owned !== maxes.floor.got || maxes.floor.filled !== 0 || maxes.floor.again !== 3) errors.push("Hire max (floors) wrong: " + JSON.stringify(maxes.floor));
+if (maxes.lift.got !== 25 || !maxes.lift.assigned || !maxes.lift.bestSeated || maxes.lift.again !== 25 || !maxes.noCash) errors.push("Hire max (lift) wrong: " + JSON.stringify(maxes.lift));
 if (!(maxes.all.levels > 0) || maxes.all.sum !== maxes.all.levels || !maxes.all.buyKept || maxes.all.again !== 0 || maxes.all.canQ < 1 || !maxes.all.firstIsLimit || !(maxes.all.firstGain > 0) || !(maxes.all.income1 > maxes.all.income0)) errors.push("Max all wrong (v0.40.2: best upgrade for the backlog): " + JSON.stringify(maxes.all));
 if (maxes.backup.limit !== "freight" || maxes.backup.pick !== "freight" || !(maxes.backup.gain > 0)) errors.push("Max all should pick the lift when the floors back up: " + JSON.stringify(maxes.backup));
 await page.evaluate(() => SVT.setView("lab")); await page.waitForTimeout(300);
@@ -918,6 +861,29 @@ await page.evaluate(() => SVT.closeVault());
 const overscroll = await page.evaluate(() => getComputedStyle(document.documentElement).overscrollBehaviorY + "|" + getComputedStyle(document.body).overscrollBehaviorY);
 console.log("overscroll", overscroll);
 if (overscroll !== "none|none") errors.push("Pull-to-refresh not disabled on html/body: " + overscroll);
+// v0.42: Reset Viking mine only. Two taps on the Raid panel button; Viking stages, tokens and the Hoard start over,
+// the labs and the Vault stay. Viking hires cost the same as lab hires, and every Viking stage is shafts 100, hubs 500.
+const vpre = await page.evaluate(() => {
+  const S = SVT.state();
+  if (!S.raid.cleared) S.raid.cleared = 3;
+  S.raid.tokens = Math.max(S.raid.tokens || 0, 5); S.hoard.spent = 1;
+  if (!S.labs.raid) SVT.startRaid(1);
+  const R = SVT.RAID, caps = [1, 50, 51, 250].every((s) => R.stage(s).max.floor === 100 && R.stage(s).max.freight === 500 && R.stage(s).max.commercial === 500);
+  const rl = S.labs.raid, hireSame = SVT.hireCost(rl, "floor") === SVT.B.hireCost("floor", rl.hires.floor);
+  const step = [R.shaftStep(1), R.shaftStep(250)], bad = [R.stage(51).omens.length, R.stage(250).omens.length];
+  return { caps, hireSame, step, bad, garage: S.labs.garage.lifetime, vault: S.vault.items.length };
+});
+await page.evaluate(() => { SVT.closeVault && SVT.closeVault(); SVT.openRaid(); }); await page.waitForTimeout(250);
+await page.click("#sheet .raid-reset");
+const armedTxt = await page.locator("#sheet .raid-reset").textContent();
+await page.click("#sheet .raid-reset"); await page.waitForTimeout(250);
+const vpost = await page.evaluate(() => { const S = SVT.state(); return { cleared: S.raid.cleared, tokens: SVT.vikingTokens(), spent: S.hoard.spent, relics: Object.keys(S.hoard.owned).length, raidLab: !!S.labs.raid, active: S.activeLab, garage: S.labs.garage.lifetime, vault: S.vault.items.length, boats: SVT.boatsUnlocked() }; });
+await page.evaluate(() => SVT.openSettings && SVT.openSettings()); await page.waitForTimeout(200);
+const settingsBtn = await page.locator("#sheet .raid-reset").count();
+console.log("viking reset", JSON.stringify({ vpre, armedTxt, vpost, settingsBtn }));
+if (!vpre.caps || !vpre.hireSame || !(vpre.step[0] === 1.3 && Math.abs(vpre.step[1] - 1.5) < 1e-9) || vpre.bad[0] < 3 || vpre.bad[1] !== 4) errors.push("Viking caps, hire price, shaft step or omens wrong (v0.42): " + JSON.stringify(vpre));
+if (!/Tap again/.test(armedTxt) || vpost.cleared !== 0 || vpost.tokens !== 0 || vpost.spent !== 0 || vpost.relics !== 0 || vpost.raidLab || vpost.active === "raid" || vpost.garage !== vpre.garage || vpost.vault !== vpre.vault || vpost.boats !== 1) errors.push("Reset Viking mine only wrong (v0.42): " + JSON.stringify(vpost));
+if (typeof settingsBtn === "number" && settingsBtn !== 1) errors.push("Settings has no Reset Viking mine only button");
 const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
 console.log("horizontal overflow", overflow);
 console.log("errors", JSON.stringify(errors));

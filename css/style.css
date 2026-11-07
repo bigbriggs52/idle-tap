@@ -1436,3 +1436,16 @@ button.token-pill:active { transform: translateY(1px); }
 .btn.up.unlock-max { display: none; background: var(--good); border-color: var(--good); }
 .btn.up.unlock-max.show { display: inline-block; }
 .actions .btn.up.unlock-max.show + *, .actions .btn.up { min-width: 0; }
+
+/* v0.42: Reset Viking mine only, at the bottom of the Viking Raid panel */
+.raid-panel .raid-reset { display: block; margin: 18px auto 4px; }
+
+/* v0.42: every manager is Speed; the manager panel shows speed and length per rarity */
+.speed-table { list-style: none; margin: 6px 0 10px; padding: 0; display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
+.speed-table li { display: flex; flex-direction: column; align-items: center; padding: 6px 2px; border-radius: 10px; background: var(--panel-2, rgba(0,0,0,.04)); font-size: .72rem; text-align: center; line-height: 1.25; }
+.speed-table li b { font-size: .74rem; }
+.speed-table li.r-common b { color: #6b7a86; }
+.speed-table li.r-uncommon b { color: #2f9e5b; }
+.speed-table li.r-rare b { color: #2f73d6; }
+.speed-table li.r-epic b { color: #8a4ad6; }
+.speed-table li.r-legendary b { color: #d08a12; }

@@ -19,9 +19,9 @@ window.SVT = window.SVT || {};
   }
 
   const B = {
-    VERSION: "0.41.0",
+    VERSION: "0.42.0",
     // Release time in UTC, set with each release. Shown after the version in the player's local time.
-    BUILT: "2026-11-05T21:50Z",
+    BUILT: "2026-11-07T06:25Z",
     FLOORS: 30,
     // v0.26: lower caps, because the IPO needs every floor, the lift and the warehouse at max level. The hubs cap at
     // Lv 400: that is the income every lab ends with, so the deep floors must stay affordable against it, and
@@ -59,25 +59,28 @@ window.SVT = window.SVT || {};
       { name: "IPO", mult: 4, needFloor: 30, maxed: true },
     ],
 
-    // v0.30: five tiers. Common, Uncommon and Rare managers run one of three regular abilities (speed, storage,
-    // price) whose strength, active time and cooldown come from the tier (ABILITY_STATS). Epic and Legendary
-    // managers are super managers: each role has one named Epic and one named Legendary (the "special" entries in
-    // ABILITIES) with a game-changing active and a permanent passive. The old Super rank folded into Legendary.
+    // v0.30: five tiers. Since v0.42 every tier runs the same Speed ability; the tier sets its strength, active time
+    // and cooldown (ABILITY_STATS). The v0.30 Storage/Price abilities and Epic/Legendary specials were removed.
     RANKS: [
       // Rarest first. Every hire rolls independently against these odds.
-      { id: "legendary", name: "Legendary", odds: 0.015, super: true },
-      { id: "epic", name: "Epic", odds: 0.03, super: true },
+      { id: "legendary", name: "Legendary", odds: 0.015 },
+      { id: "epic", name: "Epic", odds: 0.03 },
       { id: "rare", name: "Rare", odds: 0.10 },
       { id: "uncommon", name: "Uncommon", odds: 0.30 },
       { id: "common", name: "Common", odds: 0.555 },
     ],
     // Regular abilities by tier: mult (speed or load), off (price cut), active seconds, cooldown seconds after the run.
+    // v0.42 (user: "all managers only speed, with different rarities in the speed type: faster at running, loading,
+    // etc., and the rarity is also the time length; no more money or the other one"): Storage and Price abilities and
+    // the named Epic/Legendary specials are gone. Every manager is a Speed manager: while its ability runs, its node
+    // works faster (floors build, the lift travels and loads, carts load and ship). Rarity sets how much faster and for
+    // how long. Cooldowns: 1/3/5 min for Common to Rare (v0.39), Epic and Legendary keep 15 and 30 min.
     ABILITY_STATS: {
-      // v0.39 (user: "managers available early: 1 min, 3 min, 5 min"): Common, Uncommon and Rare abilities are back
-      // after 1, 3 and 5 minutes. Epic and Legendary keep their own timers.
-      common: { speed: { mult: 2.5, active: 60, cooldown: 60 }, storage: { mult: 2, active: 60, cooldown: 60 }, discount: { off: 0.30, active: 15, cooldown: 60 } },
-      uncommon: { speed: { mult: 4, active: 120, cooldown: 180 }, storage: { mult: 3.5, active: 120, cooldown: 180 }, discount: { off: 0.50, active: 20, cooldown: 180 } },
-      rare: { speed: { mult: 6, active: 180, cooldown: 300 }, storage: { mult: 5, active: 180, cooldown: 300 }, discount: { off: 0.70, active: 30, cooldown: 300 } },
+      common: { speed: { mult: 2, active: 30, cooldown: 60 } },
+      uncommon: { speed: { mult: 3, active: 60, cooldown: 180 } },
+      rare: { speed: { mult: 4, active: 120, cooldown: 300 } },
+      epic: { speed: { mult: 6, active: 240, cooldown: 900 } },
+      legendary: { speed: { mult: 10, active: 360, cooldown: 1800 } },
     },
     // Assembly Line Rush (mini game): a 45-second sorting run with 3 lives. The score picks a timed income boost
     // for every lab (not Viking Raid). One run per cooldown; a new boost replaces the old one only if it is bigger.
@@ -142,35 +145,11 @@ window.SVT = window.SVT || {};
     // Super managers (Epic, Legendary) each have one named special with its own active and a passive that is always
     // on while they are assigned. Timers are absolute times in the save, so they survive a reload.
     ABILITIES: {
-      floor: [
-        { id: "crunch", name: "Crunch Time", kind: "speed" },
-        { id: "hackathon", name: "Big Batch", kind: "storage" },
-        { id: "budget", name: "Budget Cut", kind: "discount" },
-        { id: "siphon", name: "The Dropshipper", kind: "special", rank: "epic", icon: "📦", active: 45, cooldown: 15 * 60, direct: 5,
-          passive: { speed: 0.15 }, text: "Products skip the lift and the warehouse and sell straight from the floor at 5× value.", passiveText: "+15% build speed on its floor, always" },
-        { id: "midas", name: "The Unicorn", kind: "special", rank: "legendary", icon: "🦄", active: 30, cooldown: 30 * 60, direct: 10,
-          passive: { revenue: 0.15 }, text: "Every build cycle sells straight from the floor at 10× value.", passiveText: "+15% to everything this lab earns while assigned anywhere" }, // v0.39: 15× / +25% made mines too easy (user)
-      ],
-      freight: [
-        { id: "express", name: "Express Lift", kind: "speed" },
-        { id: "bulk", name: "Bulk Freight", kind: "storage" },
-        { id: "vendor", name: "Vendor Deal", kind: "discount" },
-        { id: "turbine", name: "The Hyperloop", kind: "special", rank: "epic", icon: "🌀", active: 45, cooldown: 15 * 60, speed: 8, vacuum: true,
-          passive: { discount: 0.10 }, text: "Lift at 8× speed, and it empties every crate it stops at in one go.", passiveText: "−10% on lift upgrades, always" },
-        { id: "wormhole", name: "The Quantum Courier", kind: "special", rank: "legendary", icon: "🕳️", active: 30, cooldown: 30 * 60, warp: 8,
-          passive: { discount: 0.25, load: 0.10 }, text: "Every 8 s, everything on every floor jumps to the top of the shaft.", passiveText: "−25% on lift upgrades and +10% lift capacity, always" }, // v0.39: was every 5 s, +20%
-      ],
-      commercial: [
-        { id: "blitz", name: "Launch Blitz", kind: "speed" },
-        { id: "fleet", name: "Fleet Expansion", kind: "storage" },
-        { id: "contract", name: "Bulk Contract", kind: "discount" },
-        { id: "overclock", name: "The Overclocker", kind: "special", rank: "epic", icon: "🔥", active: 45, cooldown: 15 * 60, speed: 8, cash: 3,
-          passive: { speed: 0.10 }, text: "Carts at 8× speed and 3× cash on every delivery.", passiveText: "+10% cart speed, always" },
-        { id: "baron", name: "The Venture Capitalist", kind: "special", rank: "legendary", icon: "💼", active: 20, cooldown: 20 * 60, allDiscount: 0.75,
-          passive: { cooldowns: 0.15 }, text: "−75% on every upgrade in the lab: floors, lift and warehouse.", passiveText: "Every manager's cooldown in this lab is 15% shorter, always" },
-      ],
+      floor: [{ id: "crunch", name: "Crunch Time", kind: "speed" }],
+      freight: [{ id: "express", name: "Express Lift", kind: "speed" }],
+      commercial: [{ id: "blitz", name: "Launch Blitz", kind: "speed" }],
     },
-    ABILITY_KINDS: { special: { icon: "🌟", name: "Super" }, speed: { icon: "⚡", name: "Speed" }, storage: { icon: "📦", name: "Storage" }, discount: { icon: "💸", name: "Price" } },
+    ABILITY_KINDS: { speed: { icon: "⚡", name: "Speed" } },
     ROLE_NAMES: { floor: "Floor Lead", freight: "Logistics Lead", commercial: "Commercial Director" },
   };
 
@@ -219,11 +198,13 @@ window.SVT = window.SVT || {};
     return { count: k, cost };
   };
 
-  // Manager hire cost: H0 x 2.5^k, k = managers of that role hired since the last funding round.
-  B.hireCost = (role, k) => {
-    const h0 = role === "floor" ? 40 : role === "freight" ? 200 : 250;
-    return h0 * Math.pow(2.5, k);
-  };
+  // Manager hire cost. v0.42 (user: "in all the mines the managers should always be the same price and increase the
+  // same, first 250, then up at an increasing rate without making it too hard or easy"): every role, every lab and
+  // every Viking mine prices hires the same way, $250 for the first and 30% more for each one after (k = managers of
+  // that role hired in this mine; a lab's count restarts with each funding round). Was 40/200/250 x 2.5^k times the
+  // lab's price scale, and Viking hires followed the shaft prices.
+  B.HIRE = { first: 250, grow: 1.3 };
+  B.hireCost = (role, k) => B.HIRE.first * Math.pow(B.HIRE.grow, k || 0);
 
   // Per-lab price scaling (see SVT.costScale). v0.28: every lab's floor prices grow 6x per floor (grow 0.6, was 0.72)
   // so 100 levels of floor 30 stay affordable with the hubs capped at Lv 400; the labs differ by scale, fitted with
