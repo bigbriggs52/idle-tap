@@ -20,7 +20,8 @@ window.SVT = window.SVT || {};
   const TEAMS = ["Thralls", "Karls", "Shieldmaidens", "Berserkers", "Jarls"];
   const TIERS = ["Topsoil", "Bedrock", "Old Tunnels", "Dwarf Halls", "Dragon Deep"];
   const BATCHES = ["Coastal Raids", "Fjord Campaign", "Deep Barrows", "Giant Caves", "Dragon Hoard"];
-  // Omens: each stage from 3 on gets one, from 20 on two. They tilt the mine; the goal is tuned with them included.
+  // Omens: each stage from 3 on gets one, from 20 on two, plus one bad omen per batch after the first (v0.42). They
+  // tilt the mine; the goal is tuned with them included.
   const OMENS = [
     { id: "rich", name: "Rich veins", text: "Shafts dig +50%", stat: "floor", mult: 1.5 },
     { id: "thin", name: "Thin veins", text: "Shafts dig −30%", stat: "floor", mult: 0.7 },
@@ -31,6 +32,15 @@ window.SVT = window.SVT || {};
     { id: "jarl", name: "Greedy jarl", text: "Prices +50%", stat: "cost", mult: 1.5 },
     { id: "trade", name: "Trader's luck", text: "Prices −25%", stat: "cost", mult: 0.75 },
   ];
+
+  const OMEN_STATS = 4; // floor, freight, commercial, cost
+  const badOmen = (o) => (o.stat === "cost" ? o.mult > 1 : o.mult < 1);
+  const OMEN_WHAT = { floor: "Shafts dig", freight: "Lift carries", commercial: "Warehouse ships", cost: "Prices" };
+  function harsher(o, batch) {
+    if (batch <= 1) return o;
+    const mult = Math.pow(o.mult, 1 + 0.25 * (batch - 1)), pct = Math.round((mult - 1) * 100);
+    return Object.assign({}, o, { mult, text: OMEN_WHAT[o.stat] + " " + (pct > 0 ? "+" : "−") + Math.abs(pct) + "%" });
+  }
 
   // Small seeded random (mulberry32) so a stage is always the same mine.
   function rng(seed) {
@@ -51,14 +61,15 @@ window.SVT = window.SVT || {};
     levelOf: (s) => ((s - 1) % 50) + 1,
     // Stage l of a batch has l shafts: one more every stage (user's rule, v0.33).
     shafts: (s) => R.levelOf(s),
-    // Max levels per batch. The last batch matches the labs (floors Lv 100, hubs Lv 400); earlier batches stop lower
-    // so their stages stay short.
+    // Max levels. v0.33 to v0.41 raised them per batch (shafts 25 to 100, hubs 100 to 400). v0.42 (user: "Viking
+    // mine should be mines to 100 and then lift and warehouse to 500"): every stage is shafts Lv 100, lift and
+    // warehouse Lv 500. The batches differ by prices, omens and target time instead.
     CAPS: [
-      { floor: 25, freight: 100, commercial: 100 },
-      { floor: 40, freight: 160, commercial: 160 },
-      { floor: 55, freight: 220, commercial: 220 },
-      { floor: 75, freight: 300, commercial: 300 },
-      { floor: 100, freight: 400, commercial: 400 },
+      { floor: 100, freight: 500, commercial: 500 },
+      { floor: 100, freight: 500, commercial: 500 },
+      { floor: 100, freight: 500, commercial: 500 },
+      { floor: 100, freight: 500, commercial: 500 },
+      { floor: 100, freight: 500, commercial: 500 },
     ],
     max: (s) => R.CAPS[R.batchOf(s) - 1],
     // Shaft price growth per level: the same as the labs (v0.33, "similar numbers to the main levels"). Hub growth is
@@ -75,20 +86,23 @@ window.SVT = window.SVT || {};
     // Each deeper shaft costs 1.3x the one above (grow 0.13 x the 10x price step). Income is capped by the lift and
     // warehouse, so the step has to stay small or the deep shafts can never be paid for.
     BASE: { grow: 0.13, step: 1.3 },
-    // Shaft n's first-level price before the stage scale (v0.33.3): shaft 1's lab price, 1.3x per shaft. Before, shaft 2
-    // was 4x cheaper than shaft 1 because the labs price floor 1 as a special case.
-    shaftBase: (n) => SVT.B.floorBase(1) * Math.pow(1.3, n - 1),
+    // Shaft n's first-level price before the stage scale (v0.33.3): shaft 1's lab price, then a step per shaft. Before,
+    // shaft 2 was 4x cheaper than shaft 1 because the labs price floor 1 as a special case.
+    // v0.42 (user: "mineshaft costs differ based on the level of the mine and how far down the map"): the step grows
+    // from 1.3x per shaft on stage 1 to 1.5x on stage 250, so deep shafts on far stages cost much more.
+    shaftStep: (s) => 1.3 + 0.2 * ((s || 1) - 1) / 249,
+    shaftBase: (n, s) => SVT.B.floorBase(1) * Math.pow(R.shaftStep(s), n - 1),
     // Viking tokens: a first clear pays the batch number (1 to 5), a replay pays 1. Boat k unlocks at BOAT_COST(k).
     TOKENS: { replay: 1, total: 750 },
     BOATS: 50,
     boatCost: (k) => (k <= 1 ? 0 : Math.round(750 * Math.pow((k - 1) / 49, 1.6))),
     // Price scale per stage, from tests/raid-goals.mjs (the pacing sim fitted to each stage's target time).
     SCALES: [
-      10, 11, 12, 8.6, 11, 13, 12, 11, 9.8, 11, 11, 11, 18, 13, 12, 12, 15, 12, 9.1, 8.2, 14, 8.3, 13, 9.8, 16, 10, 7.9, 12, 9.7, 8.8, 8, 13, 10, 7.2, 13, 5.5, 5, 4.8, 3.9, 3.6, 4.4, 1.7, 1.4, 1.4, 0.94, 2, 0.71, 0.72, 0.55, 0.58,
-      53, 39, 47, 28, 57, 38, 43, 35, 67, 65, 41, 72, 73, 71, 66, 64, 75, 45, 93, 100, 86, 62, 55, 59, 60, 54, 69, 62, 95, 95, 100, 120, 47, 96, 68, 120, 99, 71, 85, 110, 88, 71, 130, 53, 88, 65, 84, 51, 49, 67,
-      110, 200, 150, 310, 280, 170, 130, 260, 170, 140, 140, 300, 170, 190, 150, 200, 370, 290, 430, 250, 320, 460, 170, 300, 370, 420, 360, 480, 270, 310, 420, 470, 290, 550, 350, 360, 370, 640, 500, 600, 670, 680, 350, 350, 450, 270, 390, 510, 300, 490,
-      950, 910, 700, 830, 650, 670, 570, 580, 640, 660, 670, 900, 1300, 1100, 1600, 1300, 1300, 1500, 1300, 680, 1500, 1500, 1300, 670, 1100, 1400, 780, 1400, 1200, 1500, 1100, 2300, 2000, 1700, 950, 2100, 1300, 1200, 1500, 1800, 1400, 2600, 1400, 2300, 1800, 2300, 1800, 1600, 2600, 3200,
-      2100, 2700, 3900, 3700, 3400, 2500, 3100, 2000, 3500, 2500, 2100, 2500, 2600, 3900, 5400, 3800, 3400, 5500, 3200, 2300, 7200, 6100, 6200, 2900, 3700, 3600, 3900, 5800, 5900, 7400, 9300, 4200, 5900, 5300, 5400, 9100, 5700, 8900, 6900, 8200, 5300, 6500, 11000, 9700, 9400, 9100, 11000, 12000, 6400, 11000,
+      9, 9.9, 10, 6.7, 7.8, 7.9, 6.8, 6.3, 5.4, 6.8, 7.4, 7.5, 11, 8.9, 8.9, 7.8, 10, 10, 7.1, 7.4, 12, 8, 11, 9.6, 15, 10, 9.4, 18, 15, 12, 15, 20, 19, 15, 29, 19, 18, 26, 18, 20, 30, 17, 22, 20, 25, 44, 35, 40, 25, 56,
+      37, 28, 25, 22, 41, 28, 32, 25, 52, 52, 32, 57, 58, 58, 50, 55, 55, 29, 78, 90, 75, 49, 29, 47, 48, 36, 38, 40, 78, 72, 100, 130, 39, 89, 64, 110, 94, 69, 63, 95, 110, 49, 170, 52, 120, 63, 76, 67, 60, 62,
+      53, 86, 58, 230, 170, 61, 62, 150, 65, 66, 68, 130, 82, 120, 77, 79, 220, 200, 320, 100, 220, 350, 96, 110, 130, 190, 260, 300, 110, 130, 160, 220, 190, 360, 150, 150, 160, 520, 190, 420, 560, 570, 240, 170, 190, 170, 180, 270, 190, 220,
+      740, 370, 220, 310, 230, 210, 240, 250, 230, 230, 240, 280, 770, 410, 1100, 540, 750, 870, 790, 300, 610, 620, 510, 330, 390, 550, 360, 580, 430, 600, 620, 1700, 810, 1200, 440, 860, 690, 550, 490, 570, 760, 1600, 620, 1400, 630, 1500, 580, 600, 1600, 2000,
+      520, 690, 2200, 1400, 890, 780, 800, 710, 2300, 770, 790, 930, 950, 2600, 3000, 1000, 1100, 2000, 950, 980, 5000, 2100, 2200, 1100, 1100, 1300, 1200, 1900, 2000, 2600, 6100, 1500, 1600, 1600, 1700, 5100, 1500, 3100, 1800, 2200, 1900, 2000, 6100, 5400, 2600, 5700, 3900, 6900, 2400, 6200,
     ],
   };
 
@@ -106,7 +120,7 @@ window.SVT = window.SVT || {};
   function hubPrices(s) {
     const B = SVT.B, M = R.max(s), F = R.shafts(s);
     const start = B.floorBase(1);
-    const end = R.shaftBase(F) * Math.pow(R.GROWTH.floor, M.floor - 2);
+    const end = R.shaftBase(F, s) * Math.pow(R.GROWTH.floor, M.floor - 2);
     return {
       hub: { freight: start / B.freightBase, commercial: start / B.commercialBase },
       growth: { floor: R.GROWTH.floor, freight: Math.pow(end / start, 1 / (M.freight - 2)), commercial: Math.pow(end / start, 1 / (M.commercial - 2)) },
@@ -119,11 +133,23 @@ window.SVT = window.SVT || {};
     r(); r(); // the first two draws are spare; the price scales were tuned with the omens that follow
     const name = NAMES[s - 1];
     const omens = [];
-    const count = s < 3 ? 0 : s < 20 ? 1 : 2;
+    const count = s < 3 ? 0 : R.levelOf(s) < 20 && s < 20 ? 1 : 2;
     while (omens.length < count) {
       const o = OMENS[Math.floor(r() * OMENS.length)];
       if (!omens.some((x) => x.stat === o.stat)) omens.push(o);
     }
+    // v0.42 (user: "more disadvantages the farther down you go"): every batch after the first adds a bad omen (up to
+    // one per stat), and bad omens bite harder deeper: their effect is raised to the power 1 + 0.25 per batch, so
+    // Thin veins is −30% in batch 1 and −51% in batch 5.
+    for (const o of OMENS.filter(badOmen)) {
+      if (omens.length >= Math.min(OMEN_STATS, count + R.batchOf(s) - 1)) break;
+      if (r() < 0.5 && !omens.some((x) => x.stat === o.stat)) omens.push(o);
+    }
+    for (const o of OMENS.filter(badOmen)) {
+      if (omens.length >= Math.min(OMEN_STATS, count + R.batchOf(s) - 1)) break;
+      if (!omens.some((x) => x.stat === o.stat)) omens.push(o);
+    }
+    for (let i = 0; i < omens.length; i++) if (badOmen(omens[i])) omens[i] = harsher(omens[i], R.batchOf(s));
     const mult = (stat) => omens.reduce((m, o) => (o.stat === stat ? m * o.mult : m), 1);
     const hp = hubPrices(s);
     const st = {

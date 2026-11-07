@@ -2,6 +2,14 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.42.0 (2026-11-07)
+
+- Managers cost the same in every mine. In every lab and every Viking mine, for floors, the lift and the warehouse alike, the first manager is $250 and each one after costs 30% more ($325, $423, $549...). A lab's count restarts with each funding round, and each Viking stage starts fresh.
+- Every manager is a Speed manager now. Storage, Price and the named Epic and Legendary specials are gone. While its ability runs, the node works faster: floors build faster, the lift travels and loads faster, carts load and ship faster. Rarity sets both how much faster and for how long: Common ×2 for 30 s, Uncommon ×3 for 1 min, Rare ×4 for 2 min, Epic ×6 for 4 min, Legendary ×10 for 6 min. Cooldowns stay 1, 3, 5, 15 and 30 min. Managers you already own keep their rarity and switch to Speed. The manager panel shows this table where the type filter used to be.
+- Viking mines go to Lv 100 on every shaft and Lv 500 on the lift and warehouse, on every stage. Clearing a stage means maxing all of them.
+- Deeper on the Viking map is harsher. Each deeper shaft costs more than the one above, and that step grows from 1.3× on stage 1 to 1.5× on stage 250. Every batch after the first adds a bad omen (batch 5 stages carry four omens), and bad omens bite harder the further you go: Thin veins is −30% in batch 1 and −51% in batch 5. All 250 stages were refitted to the same target times as v0.41.
+- Reset Viking mine only. At the bottom of the Viking Raid panel and in ⚙ Settings, two taps start your Viking journey over at stage 1: stages cleared, Viking tokens, boats and Hoard relics are wiped, while your labs, the Tech Vault, Rush and Bug Hunt are untouched.
+
 ## v0.41.0 (2026-11-05)
 
 - Viking mines are harder: every stage's target time is tripled and all 250 price scales were refitted. Batch 1 now runs from about 15 minutes (stage 1) to 1 hour (stage 50), batch 2 from 1 to 4 hours, batch 3 from 4 to 16 hours, batch 4 from 16 to 64 hours, batch 5 from 64 to 256 hours. (The pacing sim plays with no abilities, Rush, Bug Hunt or relics, so a real player is still faster than those numbers.)

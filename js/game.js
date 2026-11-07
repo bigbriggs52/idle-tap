@@ -53,7 +53,7 @@ window.SVT = window.SVT || {};
   // wears on the home screen (slot -> item id).
   function newVault() { return { coins: {}, wild: B.VAULT.START_COINS, beats: {}, items: [], pity: 0, spent: 0, serial: 0, replay: null, show: {} }; }
   function newState() {
-    return { rounds6: true, mgr5: true, v: 3, activeLab: "garage", buy: "next", labs: { garage: newLab("garage") }, raid: newRaid(), hoard: newHoard(), rush: newRush(), bugs: newRush(), vault: newVault(), lastSeen: Date.now(), seenIntro: false };
+    return { rounds6: true, mgr5: true, mgr6: true, v: 3, activeLab: "garage", buy: "next", labs: { garage: newLab("garage") }, raid: newRaid(), hoard: newHoard(), rush: newRush(), bugs: newRush(), vault: newVault(), lastSeen: Date.now(), seenIntro: false };
   }
 
   let S = newState();
@@ -100,7 +100,7 @@ window.SVT = window.SVT || {};
   SVT.labDiff = (lab) => (SVT.isRaid(lab) ? SVT.RAID.stage(lab.stage).diff : B.LAB_DIFF[lab && lab.id] || B.LAB_DIFF.garage);
   SVT.costScale = (lab, kind, n) => {
     const d = SVT.labDiff(lab);
-    if (SVT.isRaid(lab) && kind === "floor") return d.scale * SVT.RAID.shaftBase(n) / B.floorBase(n); // v0.33.3: 1.3x per shaft from shaft 1's price
+    if (SVT.isRaid(lab) && kind === "floor") return d.scale * SVT.RAID.shaftBase(n, lab.stage) / B.floorBase(n); // v0.33.3 step per shaft, v0.42 grows with the stage
     return kind === "floor" ? d.scale * Math.pow(d.grow, n - 1) : d.scale * (d.hub ? d.hub[kind] : 1);
   };
   // Price growth per level: labs use the shared rates; Viking Raid has its own (see RAID.GROWTH).
@@ -213,6 +213,18 @@ window.SVT = window.SVT || {};
     let done = lab.floors.length - 1 + Math.min(m.freight, lab.freight.lvl) - 1 + Math.min(m.commercial, lab.commercial.lvl) - 1;
     lab.floors.forEach((f) => (done += Math.min(m.floor, f.lvl) - 1));
     return { done, total, p: done / total };
+  };
+  // v0.42 (user: "a reset Viking mine only button so I can start my Viking journey over"): back to stage 1 with no
+  // stages cleared, no Viking tokens (so boats go back to the first one) and an empty Hoard, since relics were bought
+  // with those tokens. The labs, the Vault, Rush and Bug Hunt are untouched.
+  SVT.resetRaid = () => {
+    S.raid = newRaid();
+    S.hoard = newHoard();
+    delete S.labs.raid;
+    if (S.activeLab === "raid") S.activeLab = Object.keys(S.labs)[0] || "garage";
+    emit("switch");
+    save();
+    return true;
   };
   // Starts a stage from scratch. Only cleared stages and the next one can be raided.
   SVT.startRaid = (s) => {
@@ -627,16 +639,8 @@ window.SVT = window.SVT || {};
     for (const r of B.RANKS) { if (roll < r.odds) return r.id; roll -= r.odds; }
     return "common";
   };
-  // Viking Raid hires (v0.33.3): the k-th Digger costs half of opening shaft k+1 (so a manager costs about half of
-  // maxing a shaft, and keeps pace with the mine instead of the labs' 2.5^k climb over 50 shafts); a Lift Thrall or
-  // Trader costs half of opening shaft 2, doubling with each rehire.
-  SVT.hireCost = (lab, role) => {
-    if (SVT.isRaid(lab)) {
-      const k = lab.hires[role] || 0, F = SVT.raidStage(lab).floors;
-      return role === "floor" ? 0.5 * SVT.raidUnlock(lab, Math.min(k + 2, Math.max(2, F))) : 0.5 * SVT.raidUnlock(lab, 2) * Math.pow(2, k);
-    }
-    return B.hireCost(role, lab.hires[role]) * SVT.costScale(lab, role, 1);
-  };
+  // v0.42: one price list for every mine, labs and Viking Raid alike (see B.hireCost).
+  SVT.hireCost = (lab, role) => B.hireCost(role, (lab.hires && lab.hires[role]) || 0);
   // Hiring adds a manager to the Owned list; the player chooses where it works.
   SVT.hire = (role) => {
     const lab = SVT.lab();
@@ -645,8 +649,8 @@ window.SVT = window.SVT || {};
     lab.cash -= cost;
     const rank = SVT.rollRank(), r = SVT.rank(rank);
     // Epic and Legendary hires are the role's named super manager; the rest roll one of the three regular abilities.
-    const list = B.ABILITIES[role].filter((a) => (r.super ? a.rank === rank : a.kind !== "special"));
-    const ability = list[Math.floor(Math.random() * list.length)].id;
+    const ability = B.ABILITIES[role][0].id; // v0.42: every manager is a Speed manager; the rarity sets its strength
+    void r;
     const names = SVT.MANAGER_NAMES;
     const mgr = { id: lab.nextMgr++, role, rank, ability, name: names[Math.floor(Math.random() * names.length)], paid: cost, activeUntil: 0, cdUntil: 0 };
     lab.managers[mgr.id] = mgr;
@@ -928,6 +932,19 @@ window.SVT = window.SVT || {};
         else if (r && (B.ABILITIES[m.role].find((a) => a.id === m.ability) || {}).kind === "special") m.ability = B.ABILITIES[m.role][0].id;
       }
       S.mgr5 = true;
+    }
+    // v0.42: Storage, Price and the Epic/Legendary specials are gone; every manager keeps its rarity and becomes that
+    // role's Speed manager. A running special just ends.
+    if (!S.mgr6) {
+      for (const id in S.labs) {
+        const lab = S.labs[id];
+        for (const mid in lab.managers || {}) {
+          const m = lab.managers[mid], ab = B.ABILITIES[m.role] && B.ABILITIES[m.role].find((a) => a.id === m.ability);
+          if (!ab) { m.ability = B.ABILITIES[m.role][0].id; m.activeUntil = 0; }
+        }
+        if (lab.lift) lab.lift.warpAt = 0;
+      }
+      S.mgr6 = true;
     }
     if (S.buy === 100 || S.buy === 50) S.buy = "max"; // v0.20.1 drops the ×50 chip (and v0.6 dropped ×100): Max rounds to 50s
     if (!S.raid) S.raid = newRaid(); // v0.12 adds the Viking Raid island
