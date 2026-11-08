@@ -2,6 +2,12 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.44.0 (2026-11-08)
+
+- Managers dress for their mine. All 30 labs have their own manager look: a hat that fits the theme (a cap in Garage HQ, headphones in the Arcade and Sound Studio, a graduation cap in the Archive Library, a space helmet in the Space Port, Mars Outpost and Moonbase, scrubs and a mask in the Med-Tech Clinic, a straw hat on the farm, a hard hat at the Geothermal Works and Energy Grid, a Santa hat in the Toy Factory, a hood in the Cyber Security Vault, a top hat in the Fintech Tower, a conductor's cap at the Rail Yard, a VR visor in the Holo Theater, and more), an outfit in the lab's colours and the lab's emoji as a badge. Rarity still shows as coloured stripes down the sides, and Legendary hats glow gold. Viking mines keep their Vikings.
+- Rarer is rarer. Hires now roll Common 40%, Uncommon 40%, Rare 15%, Epic 4.5% and Legendary 0.5% (Legendary was 1.5%).
+- Each rarity is a step better than the one before, with no big jump at the top: Common ×2 for 30 s, Uncommon ×2.5 for 1 min, Rare ×3 for 2 min, Epic ×3.5 for 6 min, Legendary ×4 for 12 min. Rests are still 1, 3, 5, 15 and 30 min.
+
 ## v0.43.0 (2026-11-08)
 
 - Viking managers. In Viking Raid every manager is now drawn as a Viking: a horned helmet, a big beard, and a fur-trimmed tunic with a cloak in their rarity colour. Rarer Vikings wear finer helmets: iron for Common and Uncommon, bronze for Rare, dark steel with a purple gem for Epic, gold with golden horns and a ruby for Legendary. New Viking hires get Norse names (Bjorn, Astrid, Ragnar, Freydis, Lagertha...). Lab managers keep their usual look.

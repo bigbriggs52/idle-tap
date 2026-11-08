@@ -64,7 +64,7 @@ const grouped = await page.evaluate(() => {
 console.log("manager groups", JSON.stringify(grouped));
 await page.screenshot({ path: out + "/04b-manager-groups.png" });
 // v0.42: every manager is Speed; the panel shows speed and length by rarity instead of a type filter
-if (!grouped.first.startsWith("#⚡ Speed") || grouped.typeFilter !== 0 || grouped.table.length !== 5 || !/^Common⚡×2 · 30 s/.test(grouped.table[0]) || !/^Legendary⚡×10 · 6 min/.test(grouped.table[4]) || !grouped.allSpeed || !/×\d+ speed \(builds\)/.test(grouped.boost)) errors.push("Speed-only managers panel wrong (v0.42): " + JSON.stringify(grouped));
+if (!grouped.first.startsWith("#⚡ Speed") || grouped.typeFilter !== 0 || grouped.table.length !== 5 || !/^Common⚡×2 · 30 s/.test(grouped.table[0]) || !/^Legendary⚡×4 · 12 min/.test(grouped.table[4]) || !grouped.allSpeed || !/×[\d.]+ speed \(builds\)/.test(grouped.boost)) errors.push("Speed-only managers panel wrong (v0.42): " + JSON.stringify(grouped));
 if (owned.total !== 4 || owned.assigned !== 3) errors.push("Owned/assigned counts wrong");
 await page.click('#sheet [aria-label="Close"]');
 // v0.42: Speed by rarity. Each tier runs its node faster by its multiplier, for its own time, then rests for its cooldown.
@@ -113,7 +113,7 @@ const kinds = await page.evaluate(async () => {
 console.log("speed tiers", JSON.stringify(kinds));
 await page.screenshot({ path: out + "/04c-ability-kinds.png" });
 {
-  const R = ["common", "uncommon", "rare", "epic", "legendary"], want = { common: [2, 30, 60], uncommon: [3, 60, 180], rare: [4, 120, 300], epic: [6, 240, 900], legendary: [10, 360, 1800] };
+  const R = ["common", "uncommon", "rare", "epic", "legendary"], want = { common: [2, 30, 60], uncommon: [2.5, 60, 180], rare: [3, 120, 300], epic: [3.5, 360, 900], legendary: [4, 720, 1800] }; // v0.44
   for (const r of R) {
     const k = kinds[r];
     if (!k.kindOk || k.cls !== "ab-speed" || k.speedMult !== k.boost || k.loadMult !== 1 || k.off !== 0 || Math.abs(k.ratio - k.boost) > 0.05 || !k.durOk || k.boost !== want[r][0] || k.active !== want[r][1] || k.cooldown !== want[r][2]) errors.push("Speed tier " + r + " wrong (v0.42): " + JSON.stringify(k));
@@ -150,7 +150,7 @@ if (!autoAs.btn || autoAs.ranks.join() !== "common,uncommon,rare,legendary" || a
 if (autoAs.cool.ranks.join() !== "common,legendary,uncommon,rare" || autoAs.cool.skipped !== 1) errors.push("Auto-assign moved or seated a cooling-down manager: " + JSON.stringify(autoAs.cool));
 // rarity odds: 100k rolls should land near the stated odds
 const dist = await page.evaluate(() => { const c = {}; for (let i = 0; i < 100000; i++) { const k = SVT.rollRank(); c[k] = (c[k] || 0) + 1; } return c; });
-const want = { legendary: 1500, epic: 3000, rare: 10000, uncommon: 30000, common: 55500 }; // v0.30: Super folded into Legendary
+const want = { legendary: 500, epic: 4500, rare: 15000, uncommon: 40000, common: 40000 }; // v0.44 odds
 for (const k in want) if (Math.abs((dist[k] || 0) - want[k]) > Math.max(150, want[k] * 0.06)) errors.push("Rarity odds off for " + k);
 console.log("rarity rolls", JSON.stringify(dist));
 for (let i = 0; i < 4; i++) await page.click("text=/Unlock Floor/");
@@ -883,8 +883,18 @@ await page.click("#sheet .raid-reset");
 const armedTxt = await page.locator("#sheet .raid-reset").textContent();
 await page.click("#sheet .raid-reset"); await page.waitForTimeout(250);
 const vpost = await page.evaluate(() => { const S = SVT.state(); return { cleared: S.raid.cleared, tokens: SVT.vikingTokens(), spent: S.hoard.spent, relics: Object.keys(S.hoard.owned).length, raidLab: !!S.labs.raid, active: S.activeLab, garage: S.labs.garage.lifetime, vault: S.vault.items.length, boats: SVT.boatsUnlocked() }; });
-const labVikings = await page.evaluate(() => { SVT.setView("lab"); SVT.render(); return { av: document.querySelectorAll(".av").length, vik: document.querySelectorAll(".av.viking").length }; });
+const labVikings = await page.evaluate(() => { SVT.setView("lab"); const LL = SVT.lab(); LL.cash = Math.max(LL.cash, 1e9); if (!SVT.mgrOf(LL, "freight", 0)) { const hm = SVT.hire("freight"); SVT.assign(hm.id, "freight", 0); } SVT.render(); const id = SVT.lab().id, look = SVT.MANAGER_LOOKS[id];
+  return { id, av: document.querySelectorAll(".av").length, vik: document.querySelectorAll(".av.viking").length, themed: document.querySelectorAll(".av.themed.h-" + (look && look[0])).length }; });
 if (labVikings.vik !== 0) errors.push("Lab managers are drawn as Vikings: " + JSON.stringify(labVikings));
+if (!(labVikings.av > 0) || labVikings.themed !== labVikings.av) errors.push("Lab managers do not wear their lab's theme (v0.44): " + JSON.stringify(labVikings));
+// v0.44: every lab has its own look (hat style + colours + badge), and a raid manager is a Viking, not themed
+const looks = await page.evaluate(() => {
+  const L = SVT.MANAGER_LOOKS, ids = SVT.LABS.map((l) => l.id), m = { name: "Test", rank: "rare" };
+  const sig = ids.map((id) => (L[id] || []).join("|")), raid = SVT.avatarEl(m, "raid");
+  return { missing: ids.filter((id) => !L[id]), unique: new Set(sig).size === ids.length, styles: new Set(ids.map((id) => L[id] && L[id][0])).size,
+    cls: SVT.avatarEl(m, "space").className, raid: raid.className };
+});
+if (looks.missing.length || !looks.unique || looks.styles < 10 || !/themed h-bubble/.test(looks.cls) || !/viking/.test(looks.raid) || /themed/.test(looks.raid)) errors.push("Themed manager looks wrong (v0.44): " + JSON.stringify(looks));
 await page.evaluate(() => SVT.openSettings && SVT.openSettings()); await page.waitForTimeout(200);
 const settingsBtn = await page.locator("#sheet .raid-reset").count();
 console.log("viking reset", JSON.stringify({ vpre, armedTxt, vpost, settingsBtn }));
