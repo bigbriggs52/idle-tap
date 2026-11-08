@@ -884,6 +884,16 @@ console.log("viking reset", JSON.stringify({ vpre, armedTxt, vpost, settingsBtn 
 if (!vpre.caps || !vpre.hireSame || !(vpre.step[0] === 1.3 && Math.abs(vpre.step[1] - 1.5) < 1e-9) || vpre.bad[0] < 3 || vpre.bad[1] !== 4) errors.push("Viking caps, hire price, shaft step or omens wrong (v0.42): " + JSON.stringify(vpre));
 if (!/Tap again/.test(armedTxt) || vpost.cleared !== 0 || vpost.tokens !== 0 || vpost.spent !== 0 || vpost.relics !== 0 || vpost.raidLab || vpost.active === "raid" || vpost.garage !== vpre.garage || vpost.vault !== vpre.vault || vpost.boats !== 1) errors.push("Reset Viking mine only wrong (v0.42): " + JSON.stringify(vpost));
 if (typeof settingsBtn === "number" && settingsBtn !== 1) errors.push("Settings has no Reset Viking mine only button");
+// v0.42.2: with a panel open, a toast never covers the cash pill
+await page.evaluate(() => { SVT.closeSheet && SVT.closeSheet(); SVT.setView("lab"); }); await page.waitForTimeout(300);
+await page.evaluate(() => document.querySelector(".lvl-btn").click()); await page.waitForTimeout(300);
+const toastBox = await page.evaluate(async () => {
+  SVT.toast("Unlocked: +10% build speed"); await new Promise((r) => setTimeout(r, 250));
+  const a = document.querySelector(".cash-pill").getBoundingClientRect(), t = document.querySelector("#toasts .toast:last-child").getBoundingClientRect();
+  return { sheet: !!document.querySelector("#sheet"), overlap: !(t.bottom <= a.top || t.top >= a.bottom || t.right <= a.left || t.left >= a.right), toastTop: Math.round(t.top), cashBottom: Math.round(a.bottom) };
+});
+console.log("toast vs cash", JSON.stringify(toastBox));
+if (!toastBox.sheet || toastBox.overlap) errors.push("Toast covers the cash pill with a panel open (v0.42.2): " + JSON.stringify(toastBox));
 const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
 console.log("horizontal overflow", overflow);
 console.log("errors", JSON.stringify(errors));
