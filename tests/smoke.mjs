@@ -871,13 +871,20 @@ const vpre = await page.evaluate(() => {
   const R = SVT.RAID, caps = [1, 50, 51, 250].every((s) => R.stage(s).max.floor === 100 && R.stage(s).max.freight === 500 && R.stage(s).max.commercial === 500);
   const rl = S.labs.raid, hireSame = SVT.hireCost(rl, "floor") === SVT.B.hireCost("floor", rl.hires.floor);
   const step = [R.shaftStep(1), R.shaftStep(250)], bad = [R.stage(51).omens.length, R.stage(250).omens.length];
-  return { caps, hireSame, step, bad, garage: S.labs.garage.lifetime, vault: S.vault.items.length };
+  // v0.43: Viking Raid managers have Norse names and Viking portraits
+  SVT.switchLab("raid"); SVT.setView("lab"); rl.cash = 1e12;
+  const vm = SVT.hire("floor"); SVT.assign(vm.id, "floor", 1); SVT.render();
+  const vik = { norse: SVT.VIKING_NAMES.includes(vm.name), portraits: document.querySelectorAll(".seat .av.viking").length };
+  return { caps, hireSame, step, bad, vik, garage: S.labs.garage.lifetime, vault: S.vault.items.length };
 });
+if (!vpre.vik.norse || !(vpre.vik.portraits >= 1)) errors.push("Viking managers are not drawn as Vikings (v0.43): " + JSON.stringify(vpre.vik));
 await page.evaluate(() => { SVT.closeVault && SVT.closeVault(); SVT.openRaid(); }); await page.waitForTimeout(250);
 await page.click("#sheet .raid-reset");
 const armedTxt = await page.locator("#sheet .raid-reset").textContent();
 await page.click("#sheet .raid-reset"); await page.waitForTimeout(250);
 const vpost = await page.evaluate(() => { const S = SVT.state(); return { cleared: S.raid.cleared, tokens: SVT.vikingTokens(), spent: S.hoard.spent, relics: Object.keys(S.hoard.owned).length, raidLab: !!S.labs.raid, active: S.activeLab, garage: S.labs.garage.lifetime, vault: S.vault.items.length, boats: SVT.boatsUnlocked() }; });
+const labVikings = await page.evaluate(() => { SVT.setView("lab"); SVT.render(); return { av: document.querySelectorAll(".av").length, vik: document.querySelectorAll(".av.viking").length }; });
+if (labVikings.vik !== 0) errors.push("Lab managers are drawn as Vikings: " + JSON.stringify(labVikings));
 await page.evaluate(() => SVT.openSettings && SVT.openSettings()); await page.waitForTimeout(200);
 const settingsBtn = await page.locator("#sheet .raid-reset").count();
 console.log("viking reset", JSON.stringify({ vpre, armedTxt, vpost, settingsBtn }));

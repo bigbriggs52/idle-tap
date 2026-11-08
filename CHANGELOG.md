@@ -2,6 +2,10 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.43.0 (2026-11-08)
+
+- Viking managers. In Viking Raid every manager is now drawn as a Viking: a horned helmet, a big beard, and a fur-trimmed tunic with a cloak in their rarity colour. Rarer Vikings wear finer helmets: iron for Common and Uncommon, bronze for Rare, dark steel with a purple gem for Epic, gold with golden horns and a ruby for Legendary. New Viking hires get Norse names (Bjorn, Astrid, Ragnar, Freydis, Lagertha...). Lab managers keep their usual look.
+
 ## v0.42.2 (2026-11-08)
 
 - Notifications no longer cover your money. With an upgrade or manager panel open, the little notice after a purchase or unlock used to pop up at the very top of the screen, right over the cash. It now shows just above the panel's bottom buttons, so the cash stays in view.
