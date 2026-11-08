@@ -119,7 +119,7 @@ await page.screenshot({ path: out + "/04c-ability-kinds.png" });
     if (!k.kindOk || k.cls !== "ab-speed" || k.speedMult !== k.boost || k.loadMult !== 1 || k.off !== 0 || Math.abs(k.ratio - k.boost) > 0.05 || !k.durOk || k.boost !== want[r][0] || k.active !== want[r][1] || k.cooldown !== want[r][2]) errors.push("Speed tier " + r + " wrong (v0.42): " + JSON.stringify(k));
   }
   if (kinds.hires.bad || kinds.hires.ranks < 4 || kinds.kinds !== "speed|1,1,1") errors.push("Hires are not all Speed (v0.42): " + JSON.stringify(kinds.hires) + " " + kinds.kinds);
-  if (kinds.price.first !== 250 || Math.abs(kinds.price.second - 325) > 1e-9 || !kinds.price.lab || !kinds.price.sameRoles) errors.push("Hire prices not uniform (v0.42): " + JSON.stringify(kinds.price));
+  if (kinds.price.first !== 250 || Math.abs(kinds.price.second - 450) > 1e-9 || !kinds.price.lab || !kinds.price.sameRoles) errors.push("Hire prices not uniform (v0.42): " + JSON.stringify(kinds.price));
   if (!kinds.persist) errors.push("Ability timers are not saved as absolute times");
   if (!kinds.noSwap || !kinds.noSell) errors.push("Hire replaced a mid-ability manager, or selling still exists (v0.31.2)");
   if (!kinds.migrate) errors.push("Old Storage/Price/special managers were not migrated to Speed (v0.42)");
@@ -236,9 +236,9 @@ const maxes = await page.evaluate(() => {
 });
 console.log("maxes", JSON.stringify(maxes));
 // hires are cash-limited (cost climbs 2.5x a hire), so the count is the quote, and it goes past the open seats
-// v0.42: hires climb only 30% each, so $1e12 buys the full 25 a press (the press cap), and the next press with a limit of 3 hires 3
-if (!(maxes.floor.seats >= 1) || maxes.floor.q !== maxes.floor.got || maxes.floor.got !== 25 || !(maxes.floor.got > maxes.floor.seats) || maxes.floor.owned !== maxes.floor.got || maxes.floor.filled !== 0 || maxes.floor.again !== 3) errors.push("Hire max (floors) wrong: " + JSON.stringify(maxes.floor));
-if (maxes.lift.got !== 25 || !maxes.lift.assigned || !maxes.lift.bestSeated || maxes.lift.again !== 25 || !maxes.noCash) errors.push("Hire max (lift) wrong: " + JSON.stringify(maxes.lift));
+// v0.42.1: hires climb 80% each, so the cash runs out before the 25-a-press cap: the count is the quote, past the open seats
+if (!(maxes.floor.seats >= 1) || maxes.floor.q !== maxes.floor.got || !(maxes.floor.got > maxes.floor.seats) || !(maxes.floor.got < 25) || maxes.floor.owned !== maxes.floor.got || maxes.floor.filled !== 0 || maxes.floor.again !== 0) errors.push("Hire max (floors) wrong: " + JSON.stringify(maxes.floor));
+if (!(maxes.lift.got > 1) || !maxes.lift.assigned || !maxes.lift.bestSeated || maxes.lift.again !== 0 || !maxes.noCash) errors.push("Hire max (lift) wrong: " + JSON.stringify(maxes.lift));
 if (!(maxes.all.levels > 0) || maxes.all.sum !== maxes.all.levels || !maxes.all.buyKept || maxes.all.again !== 0 || maxes.all.canQ < 1 || !maxes.all.firstIsLimit || !(maxes.all.firstGain > 0) || !(maxes.all.income1 > maxes.all.income0)) errors.push("Max all wrong (v0.40.2: best upgrade for the backlog): " + JSON.stringify(maxes.all));
 if (maxes.backup.limit !== "freight" || maxes.backup.pick !== "freight" || !(maxes.backup.gain > 0)) errors.push("Max all should pick the lift when the floors back up: " + JSON.stringify(maxes.backup));
 await page.evaluate(() => SVT.setView("lab")); await page.waitForTimeout(300);
