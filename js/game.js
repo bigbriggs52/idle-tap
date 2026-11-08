@@ -651,7 +651,7 @@ window.SVT = window.SVT || {};
     // Epic and Legendary hires are the role's named super manager; the rest roll one of the three regular abilities.
     const ability = B.ABILITIES[role][0].id; // v0.42: every manager is a Speed manager; the rarity sets its strength
     void r;
-    const names = SVT.MANAGER_NAMES;
+    const names = SVT.isRaid(lab) && SVT.VIKING_NAMES ? SVT.VIKING_NAMES : SVT.MANAGER_NAMES; // v0.43: Norse names in the raid
     const mgr = { id: lab.nextMgr++, role, rank, ability, name: names[Math.floor(Math.random() * names.length)], paid: cost, activeUntil: 0, cdUntil: 0 };
     lab.managers[mgr.id] = mgr;
     lab.hires[role]++;

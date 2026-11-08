@@ -1454,3 +1454,27 @@ button.token-pill:active { transform: translateY(1px); }
    toasts sat at the very top of the screen, over the cash pill. They now float just above the panel's bottom bar
    (Level Up, Hire), inside the panel, so the money is always in view. Taps still pass through them. */
 body:has(#sheet) #toasts { top: auto; bottom: calc(132px + env(safe-area-inset-bottom, 0px)); padding: 0 56px; }
+
+/* v0.43 (user: "I want the managers to look like Viking characters"): Viking Raid managers. An iron helmet with ivory
+   horns, a big beard in the hair colour, a fur-trimmed leather tunic with a cloak in the rarity colour. Rarer Vikings
+   get finer helmets: bronze (Rare), dark steel with a gem (Epic), gold with gold horns (Legendary). */
+.av.viking { --cloak: var(--common); --helm: linear-gradient(#c9d1d6, #7d8a92); --horn: linear-gradient(90deg, #fffbe9, #e8dcb0); background: radial-gradient(circle at 50% 40%, #fff, #dfe8ee); }
+.av.viking.r-uncommon { --cloak: var(--uncommon); background: radial-gradient(circle at 50% 40%, #fff, #d7efdd); }
+.av.viking.r-rare { --cloak: var(--rare); --helm: linear-gradient(#f0c27a, #a8682a); background: radial-gradient(circle at 50% 40%, #fff, #d3e5f6); }
+.av.viking.r-epic { --cloak: var(--epic); --helm: linear-gradient(#5d5873, #24212f); background: radial-gradient(circle at 50% 40%, #fff, #e6d6f8); }
+.av.viking.r-legendary { --cloak: var(--legendary); --helm: linear-gradient(#ffe680, #d49512); --horn: linear-gradient(90deg, #fff3b0, #e0a21a); background: radial-gradient(circle at 50% 40%, #fffbe8, #f6e2a5); }
+.av.viking .tie { display: none; }
+.av.viking .body { background:
+    radial-gradient(ellipse 60% 26% at 50% 4%, #efe3cf 0 60%, transparent 62%),
+    linear-gradient(90deg, var(--cloak) 0 20%, #7a4b28 20% 80%, var(--cloak) 80%);
+  border-radius: 46% 46% 0 0; }
+.av.viking .head { background-image: radial-gradient(circle at 35% 50%, #2b2b2b 0 7%, transparent 8%), radial-gradient(circle at 65% 50%, #2b2b2b 0 7%, transparent 8%); }
+.av.viking .head::before { top: 4%; height: 30%; border-radius: 40%; }
+.av.viking .head::after { display: block; content: ""; position: absolute; left: 8%; right: 8%; top: 60%; height: 62%; margin: 0; width: auto; border-radius: 30% 30% 50% 50% / 20% 20% 80% 80%; background: var(--hair); box-shadow: inset 0 -3px 0 #00000022;
+  -webkit-mask: radial-gradient(ellipse 22% 9% at 50% 14%, transparent 0 95%, #000 100%); mask: radial-gradient(ellipse 22% 9% at 50% 14%, transparent 0 95%, #000 100%); }
+.av.viking .hat { display: block; left: 25%; right: 25%; top: 9%; height: 22%; border-radius: 55% 55% 12% 12%; clip-path: none; filter: none; background: var(--helm); box-shadow: inset 0 -3px 0 #00000033, 0 1px 0 #0000002a; z-index: 1; }
+.av.viking .hat::before, .av.viking .hat::after { content: ""; position: absolute; top: -34%; width: 42%; height: 115%; background: var(--horn); box-shadow: inset -2px 0 0 #00000018; }
+.av.viking .hat::before { left: -34%; border-radius: 80% 10% 40% 60%; transform: rotate(-28deg); }
+.av.viking .hat::after { right: -34%; border-radius: 10% 80% 60% 40%; transform: rotate(28deg); }
+.av.viking.r-epic .hat { box-shadow: inset 0 -3px 0 #00000055, inset 0 0 0 2px #8a4ad6; background: radial-gradient(circle at 50% 70%, #c58bff 0 10%, transparent 12%), var(--helm); }
+.av.viking.r-legendary .hat { background: radial-gradient(circle at 50% 70%, #e0453a 0 10%, transparent 12%), var(--helm); }

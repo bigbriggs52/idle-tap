@@ -572,11 +572,14 @@ window.SVT = window.SVT || {};
   // A little character whose outfit and effects get fancier with rarity (see .av.r-* in style.css).
   // Hair and skin vary by name so two managers of the same rarity still look different.
   const HAIR = ["#3b2a20", "#6b4226", "#c98b3c", "#1c1c1c", "#a0522d", "#d8b25a", "#7a3b2e", "#4a4a4a"];
+  const VHAIR = ["#d8b25a", "#c0602b", "#e6c97a", "#8a4b22", "#b33a1e", "#f0dc9a", "#6b4226", "#cfcfcf"]; // blond, red, white beards
   const SKIN = ["#f3d2b3", "#e8b98f", "#c98e63", "#9c6b45", "#f0c9a4", "#7a5134"];
   function avatar(m) {
     let hsh = 0;
     for (const ch of m.name) hsh = (hsh * 31 + ch.charCodeAt(0)) >>> 0;
-    return h("span", { class: "av r-" + m.rank, style: "--hair:" + HAIR[hsh % HAIR.length] + ";--skin:" + SKIN[(hsh >> 3) % SKIN.length], "aria-hidden": "true" },
+    // v0.43 (user ask): in Viking Raid every manager is drawn as a Viking: horned helmet, braided beard, fur cloak.
+    const viking = inRaid();
+    return h("span", { class: "av r-" + m.rank + (viking ? " viking" : ""), style: "--hair:" + (viking ? VHAIR : HAIR)[hsh % (viking ? VHAIR : HAIR).length] + ";--skin:" + SKIN[(hsh >> 3) % SKIN.length], "aria-hidden": "true" },
       h("span", { class: "fx" }), h("span", { class: "body" }), h("span", { class: "tie" }), h("span", { class: "head" }), h("span", { class: "hat" }));
   }
 

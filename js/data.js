@@ -3,6 +3,8 @@ window.SVT = window.SVT || {};
 
 // First names for hired managers. Each lab's `crew` gives the job titles for its floor, lift and warehouse managers
 // (v0.30), so a Rare floor manager in the Arcade District is a "Rare Cabinet Builder".
+// v0.43 (user: "I want the managers to look like Viking characters"): Viking Raid hires get Norse names.
+SVT.VIKING_NAMES = ["Bjorn", "Astrid", "Ragnar", "Freydis", "Leif", "Sigrid", "Ivar", "Gunnhild", "Harald", "Thyra", "Ulf", "Ingrid", "Erik", "Helga", "Sven", "Runa", "Torvald", "Solveig", "Halfdan", "Ylva", "Knut", "Brynja", "Gorm", "Estrid", "Olaf", "Hilda", "Rollo", "Lagertha", "Egil", "Svala"];
 SVT.MANAGER_NAMES = ["Ada", "Grace", "Alan", "Hedy", "Kay", "Steve", "Radia", "Dennis", "Margaret", "Ken", "Frances", "Jean", "Barbara", "Lynn", "Mark", "Priya", "Diego", "Mei", "Omar", "Sofia", "Kofi", "Yuki", "Nina", "Raj", "Leah", "Theo", "Ivy", "Marco", "Zara", "Ben"];
 
 SVT.TIERS = [
