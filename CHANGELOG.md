@@ -2,6 +2,10 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.42.2 (2026-11-08)
+
+- Notifications no longer cover your money. With an upgrade or manager panel open, the little notice after a purchase or unlock used to pop up at the very top of the screen, right over the cash. It now shows just above the panel's bottom buttons, so the cash stays in view.
+
 ## v0.42.1 (2026-11-08)
 
 - Managers are harder to stack up. The first hire still costs $250 in every mine, but each one after now costs 80% more than the last (it was 30%): about $450, $810, $1.5k, $2.6k, then $50k for the 10th and $9M for the 20th. Still one price list for every lab, every Viking mine and every role.

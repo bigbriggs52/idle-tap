@@ -1449,3 +1449,8 @@ button.token-pill:active { transform: translateY(1px); }
 .speed-table li.r-rare b { color: #2f73d6; }
 .speed-table li.r-epic b { color: #8a4ad6; }
 .speed-table li.r-legendary b { color: #d08a12; }
+
+/* v0.42.2 (user: "when you make a purchase the notification covers the amount of money you have"): with a panel open,
+   toasts sat at the very top of the screen, over the cash pill. They now float just above the panel's bottom bar
+   (Level Up, Hire), inside the panel, so the money is always in view. Taps still pass through them. */
+body:has(#sheet) #toasts { top: auto; bottom: calc(132px + env(safe-area-inset-bottom, 0px)); padding: 0 56px; }
