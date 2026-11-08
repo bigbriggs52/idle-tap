@@ -1478,3 +1478,67 @@ body:has(#sheet) #toasts { top: auto; bottom: calc(132px + env(safe-area-inset-b
 .av.viking .hat::after { right: -34%; border-radius: 10% 80% 60% 40%; transform: rotate(28deg); }
 .av.viking.r-epic .hat { box-shadow: inset 0 -3px 0 #00000055, inset 0 0 0 2px #8a4ad6; background: radial-gradient(circle at 50% 70%, #c58bff 0 10%, transparent 12%), var(--helm); }
 .av.viking.r-legendary .hat { background: radial-gradient(circle at 50% 70%, #e0453a 0 10%, transparent 12%), var(--helm); }
+
+/* v0.44 (user: "the managers in each mine should reflect the theme of that mine"): themed lab managers. Every lab
+   sets a hat style (h-*), --hatc and --outfit (SVT.MANAGER_LOOKS in ui.js); the chest badge is the lab's emoji.
+   Rarity: stripes in the rarity colour down the sides from Uncommon up, and a gold glow on Legendary hats. */
+.av.themed { --rcol: transparent; }
+.av.themed.r-uncommon { --rcol: var(--uncommon); }
+.av.themed.r-rare { --rcol: var(--rare); }
+.av.themed.r-epic { --rcol: var(--epic); }
+.av.themed.r-legendary { --rcol: var(--legendary); }
+.av.themed .tie { display: none; }
+.av.themed .body { background: linear-gradient(90deg, var(--rcol) 0 17%, var(--outfit) 17% 83%, var(--rcol) 83%); box-shadow: inset 0 3px 0 #ffffff40; }
+.av.themed .head { background-image: radial-gradient(circle at 35% 58%, #2b2b2b 0 7%, transparent 8%), radial-gradient(circle at 65% 58%, #2b2b2b 0 7%, transparent 8%), radial-gradient(ellipse 18% 8% at 50% 78%, #b5523b 0 90%, transparent 100%); }
+.av.themed .fx { display: block; left: 50%; bottom: 3%; transform: translateX(-50%); font-size: 11px; line-height: 1; z-index: 2; filter: drop-shadow(0 1px 0 #0003); }
+.portrait .av.themed .fx, .node-card .av.themed .fx { font-size: 14px; }
+.av.themed .hat { display: block; clip-path: none; filter: none; background: var(--hatc); border-radius: 0; box-shadow: none; z-index: 1; }
+.av.themed .hat::before, .av.themed .hat::after { content: ""; position: absolute; }
+.av.themed.r-legendary .hat { filter: drop-shadow(0 0 2px #ffd95a) drop-shadow(0 0 1px #e0a21a); }
+/* cap with a brim to the side */
+.av.h-cap .hat { left: 25%; right: 25%; top: 11%; height: 17%; border-radius: 60% 60% 12% 12%; box-shadow: inset 0 -3px 0 #0002; }
+.av.h-cap .hat::after { left: 55%; right: -32%; bottom: -12%; height: 34%; border-radius: 0 70% 70% 0; background: var(--hatc); filter: brightness(.82); }
+/* graduation cap */
+.av.h-grad .hat { left: 16%; right: 16%; top: 7%; height: 9%; border-radius: 2px; background: var(--hatc); transform: perspective(40px) rotateX(35deg); }
+.av.h-grad .hat::before { left: 26%; right: 26%; top: 90%; height: 120%; background: var(--hatc); border-radius: 0 0 30% 30%; }
+.av.h-grad .hat::after { right: 8%; top: 60%; width: 6%; height: 210%; background: #f5b301; border-radius: 2px; }
+/* beanie with a pompom */
+.av.h-beanie .hat { left: 25%; right: 25%; top: 9%; height: 20%; border-radius: 55% 55% 10% 10%; box-shadow: inset 0 -4px 0 #0003; }
+.av.h-beanie .hat::after { left: 39%; width: 22%; top: -32%; height: 44%; border-radius: 50%; background: #fff; }
+/* headphones */
+.av.h-phones .hat { left: 21%; right: 21%; top: 12%; height: 32%; background: transparent; border: 3px solid var(--hatc); border-bottom: 0; border-radius: 50% 50% 0 0; box-sizing: border-box; }
+.av.h-phones .hat::before, .av.h-phones .hat::after { top: 62%; width: 24%; height: 62%; border-radius: 40%; background: var(--hatc); }
+.av.h-phones .hat::before { left: -14%; } .av.h-phones .hat::after { right: -14%; }
+/* beret */
+.av.h-beret .hat { left: 20%; right: 30%; top: 9%; height: 15%; border-radius: 50%; transform: rotate(-12deg); box-shadow: inset 0 -2px 0 #0003; }
+.av.h-beret .hat::after { left: 44%; width: 10%; top: -30%; height: 40%; border-radius: 40%; background: var(--hatc); }
+/* goggles over the eyes */
+.av.h-goggles .hat { left: 22%; right: 22%; top: 34%; height: 7%; border-radius: 3px; }
+.av.h-goggles .hat::before, .av.h-goggles .hat::after { top: -110%; width: 34%; height: 310%; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #fff 0 14%, #a7dcff 16% 100%); border: 2px solid var(--hatc); box-sizing: border-box; }
+.av.h-goggles .hat::before { left: 6%; } .av.h-goggles .hat::after { right: 6%; }
+/* space helmet: a glass bubble round the head */
+.av.h-bubble .hat { left: 17%; right: 17%; top: 6%; height: 64%; border-radius: 50%; background: radial-gradient(circle at 34% 28%, #ffffffc0 0 9%, #c8e6ff40 11% 100%); border: 3px solid var(--hatc); box-sizing: border-box; }
+/* surgical cap and mask */
+.av.h-scrub .hat { left: 24%; right: 24%; top: 9%; height: 18%; border-radius: 55% 55% 20% 20%; }
+.av.h-scrub .hat::after { left: 8%; right: 8%; top: 255%; height: 105%; border-radius: 30% 30% 45% 45%; background: #e9f7f5; box-shadow: inset 0 0 0 1px #0001; }
+/* straw farm hat */
+.av.h-straw .hat { left: 8%; right: 8%; top: 20%; height: 8%; border-radius: 50%; background: var(--hatc); }
+.av.h-straw .hat::before { left: 28%; right: 28%; bottom: 55%; height: 170%; border-radius: 45% 45% 10% 10%; background: var(--hatc); }
+.av.h-straw .hat::after { left: 28%; right: 28%; bottom: 55%; height: 45%; background: #a0522d; }
+/* hard hat */
+.av.h-hardhat .hat { left: 24%; right: 24%; top: 8%; height: 20%; border-radius: 60% 60% 0 0; box-shadow: inset 0 -2px 0 #0002, inset 0 4px 0 #ffffff55; }
+.av.h-hardhat .hat::after { left: -14%; right: -14%; bottom: -14%; height: 26%; border-radius: 4px; background: var(--hatc); filter: brightness(.9); }
+/* santa hat */
+.av.h-santa .hat { left: 24%; right: 24%; top: 2%; height: 26%; background: linear-gradient(transparent 72%, #fff 72%), var(--hatc); clip-path: polygon(0 100%, 100% 100%, 78% 0); }
+/* hood round the face */
+.av.h-hood .hat { left: 13%; right: 13%; top: 5%; height: 66%; border-radius: 50% 50% 42% 42%;
+  -webkit-mask: radial-gradient(ellipse 35% 37% at 50% 57%, transparent 0 95%, #000 100%); mask: radial-gradient(ellipse 35% 37% at 50% 57%, transparent 0 95%, #000 100%); }
+/* top hat with a band */
+.av.h-tophat .hat { left: 33%; right: 33%; top: -2%; height: 26%; background: linear-gradient(transparent 62%, var(--hatc) 62% 80%, transparent 80%), #1a1a1a; border-radius: 2px; }
+.av.h-tophat .hat::after { left: -42%; right: -42%; bottom: -8%; height: 18%; border-radius: 3px; background: #1a1a1a; }
+/* conductor cap */
+.av.h-conductor .hat { left: 22%; right: 22%; top: 10%; height: 15%; border-radius: 6px 6px 2px 2px; box-shadow: inset 0 -3px 0 #0003; }
+.av.h-conductor .hat::before { left: 44%; width: 12%; top: 22%; height: 46%; border-radius: 50%; background: #f5c542; }
+.av.h-conductor .hat::after { left: 12%; right: 12%; bottom: -26%; height: 30%; border-radius: 0 0 50% 50%; background: #111; }
+/* VR visor */
+.av.h-visor .hat { left: 22%; right: 22%; top: 30%; height: 17%; border-radius: 8px; background: linear-gradient(90deg, var(--hatc), #e0ffff 50%, var(--hatc)); box-shadow: 0 0 4px var(--hatc); }

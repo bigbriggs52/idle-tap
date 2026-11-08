@@ -316,7 +316,7 @@ window.SVT = window.SVT || {};
     const emptyText = here && current ? "No other " + B.ROLE_NAMES[role] + "s yet." : mgrType !== "all" ? "No " + B.ABILITY_KINDS[mgrType].name.toLowerCase() + " managers here yet." : "None yet. Hire one below.";
     parts.push(h("div", { class: "sec-label", text: here ? "Your " + B.ROLE_NAMES[role] + "s:" : B.ROLE_NAMES[role] + "s:" }),
       h("ul", { class: "mlist" }, cards.length ? cards : h("li", { class: "muted empty", text: emptyText })),
-      h("p", { class: "muted small odds", text: "Each hire rolls Legendary 1.5%, Epic 3%, Rare 10%, Uncommon 30% or Common 55.5%. Every manager is a Speed manager: the rarer, the faster and the longer it runs. Funding rounds send every manager away." }));
+      h("p", { class: "muted small odds", text: "Each hire rolls Legendary 0.5%, Epic 4.5%, Rare 15%, Uncommon 40% or Common 40%. Every manager is a Speed manager: the rarer, the faster and the longer it runs. Funding rounds send every manager away." }));
     // Children stay put (only their text changes), so a finger on the button never loses its target mid-tap.
     const hireCost = h("b");
     const hire = bind(h("button", { class: "btn fund-cta big hire", onclick: () => {
@@ -574,14 +574,34 @@ window.SVT = window.SVT || {};
   const HAIR = ["#3b2a20", "#6b4226", "#c98b3c", "#1c1c1c", "#a0522d", "#d8b25a", "#7a3b2e", "#4a4a4a"];
   const VHAIR = ["#d8b25a", "#c0602b", "#e6c97a", "#8a4b22", "#b33a1e", "#f0dc9a", "#6b4226", "#cfcfcf"]; // blond, red, white beards
   const SKIN = ["#f3d2b3", "#e8b98f", "#c98e63", "#9c6b45", "#f0c9a4", "#7a5134"];
-  function avatar(m) {
+  // v0.44 (user: "I want the managers in each mine to reflect the theme of that mine"): every lab dresses its managers
+  // in its own theme: a hat style (h-*, drawn in style.css), the hat and outfit colours and a badge on the chest.
+  // Rarity still shows as stripes in the rarity colour down the sides, and Legendary hats glow gold.
+  const LOOKS = {
+    garage: ["cap", "#2f86d6", "#dfe7ec", "🔧"], arcade: ["phones", "#9a5ae0", "#2b1f3a", "🕹️"], library: ["grad", "#222", "#8a5a3c", "📚"],
+    maker: ["beanie", "#ef7d2d", "#3d6a9e", "🛠️"], studio: ["phones", "#222", "#3a3a3a", "🎧"], cinema: ["beret", "#d23a3a", "#1d1d1d", "🎬"],
+    robotics: ["goggles", "#607d8b", "#90a4ae", "🤖"], auto: ["cap", "#e53935", "#2c3e66", "🔋"], space: ["bubble", "#cfd8dc", "#f2f2f2", "🚀"],
+    medtech: ["scrub", "#3bb3a6", "#3bb3a6", "🩺"], agri: ["straw", "#e6c46a", "#5a8f3a", "🌾"], ocean: ["goggles", "#1e88e5", "#1d3557", "🌊"],
+    arctic: ["beanie", "#6fa8dc", "#e8f1fa", "❄️"], geo: ["hardhat", "#ff8c1a", "#ff8c1a", "🌋"], stadium: ["cap", "#d63a3a", "#f5f5f5", "🏆"],
+    fashion: ["beret", "#f06292", "#fce4ec", "👗"], toys: ["santa", "#d32f2f", "#2e8b57", "🧸"], home: ["cap", "#43a047", "#c5e1a5", "🏠"],
+    drone: ["phones", "#6d4c41", "#556b2f", "🛸"], cyber: ["hood", "#1b1b2f", "#26264a", "🔐"], fintech: ["tophat", "#c9a227", "#263238", "💰"],
+    weather: ["hood", "#f2c230", "#f2c230", "⛅"], rail: ["conductor", "#1f3a5f", "#1f3a5f", "🚄"], biotech: ["goggles", "#43a047", "#f7f7f7", "🧬"],
+    quantum: ["goggles", "#7e57c2", "#ece6ff", "⚛️"], satellite: ["phones", "#455a64", "#78909c", "📡"], energy: ["hardhat", "#fdd835", "#c6e03a", "⚡"],
+    holo: ["visor", "#26c6da", "#222244", "🥽"], mars: ["bubble", "#ff8a65", "#e2733b", "🪐"], moon: ["bubble", "#b0bec5", "#dfe3e8", "🌙"],
+  };
+  SVT.MANAGER_LOOKS = LOOKS;
+  function avatar(m, labId) {
     let hsh = 0;
     for (const ch of m.name) hsh = (hsh * 31 + ch.charCodeAt(0)) >>> 0;
+    const id = labId || lab().id;
     // v0.43 (user ask): in Viking Raid every manager is drawn as a Viking: horned helmet, braided beard, fur cloak.
-    const viking = inRaid();
-    return h("span", { class: "av r-" + m.rank + (viking ? " viking" : ""), style: "--hair:" + (viking ? VHAIR : HAIR)[hsh % (viking ? VHAIR : HAIR).length] + ";--skin:" + SKIN[(hsh >> 3) % SKIN.length], "aria-hidden": "true" },
-      h("span", { class: "fx" }), h("span", { class: "body" }), h("span", { class: "tie" }), h("span", { class: "head" }), h("span", { class: "hat" }));
+    const viking = id === "raid", look = !viking && LOOKS[id];
+    const cls = "av r-" + m.rank + (viking ? " viking" : look ? " themed h-" + look[0] : "");
+    const style = "--hair:" + (viking ? VHAIR : HAIR)[hsh % (viking ? VHAIR : HAIR).length] + ";--skin:" + SKIN[(hsh >> 3) % SKIN.length] + (look ? ";--hatc:" + look[1] + ";--outfit:" + look[2] : "");
+    return h("span", { class: cls, style, "aria-hidden": "true", "data-lab": id },
+      h("span", { class: "fx", text: look ? look[3] : "" }), h("span", { class: "body" }), h("span", { class: "tie" }), h("span", { class: "head" }), h("span", { class: "hat" }));
   }
+  SVT.avatarEl = (m, labId) => avatar(m, labId);
 
   // ---------- shared Idle Miner-style pieces ----------
   // Manager seat: the manager's face (rarity ring) or an empty dashed seat. Tap to hire, pick or swap.

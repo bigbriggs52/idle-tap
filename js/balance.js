@@ -19,9 +19,9 @@ window.SVT = window.SVT || {};
   }
 
   const B = {
-    VERSION: "0.43.0",
+    VERSION: "0.44.0",
     // Release time in UTC, set with each release. Shown after the version in the player's local time.
-    BUILT: "2026-11-08T02:05Z",
+    BUILT: "2026-11-08T02:25Z",
     FLOORS: 30,
     // v0.26: lower caps, because the IPO needs every floor, the lift and the warehouse at max level. The hubs cap at
     // Lv 400: that is the income every lab ends with, so the deep floors must stay affordable against it, and
@@ -63,11 +63,12 @@ window.SVT = window.SVT || {};
     // and cooldown (ABILITY_STATS). The v0.30 Storage/Price abilities and Epic/Legendary specials were removed.
     RANKS: [
       // Rarest first. Every hire rolls independently against these odds.
-      { id: "legendary", name: "Legendary", odds: 0.015 },
-      { id: "epic", name: "Epic", odds: 0.03 },
-      { id: "rare", name: "Rare", odds: 0.10 },
-      { id: "uncommon", name: "Uncommon", odds: 0.30 },
-      { id: "common", name: "Common", odds: 0.555 },
+      // v0.44 (user: "harder to get legendary and each one slightly better, Common at 40%").
+      { id: "legendary", name: "Legendary", odds: 0.005 },
+      { id: "epic", name: "Epic", odds: 0.045 },
+      { id: "rare", name: "Rare", odds: 0.15 },
+      { id: "uncommon", name: "Uncommon", odds: 0.40 },
+      { id: "common", name: "Common", odds: 0.40 },
     ],
     // Regular abilities by tier: mult (speed or load), off (price cut), active seconds, cooldown seconds after the run.
     // v0.42 (user: "all managers only speed, with different rarities in the speed type: faster at running, loading,
@@ -75,12 +76,14 @@ window.SVT = window.SVT || {};
     // the named Epic/Legendary specials are gone. Every manager is a Speed manager: while its ability runs, its node
     // works faster (floors build, the lift travels and loads, carts load and ship). Rarity sets how much faster and for
     // how long. Cooldowns: 1/3/5 min for Common to Rare (v0.39), Epic and Legendary keep 15 and 30 min.
+    // v0.44 (user: "each one slightly better"): even steps of +0.5x speed per rarity, and longer runs, so every tier is
+    // a little better than the one below on average (about 1.33x, 1.38x, 1.57x, 1.71x, 1.86x over a full cycle).
     ABILITY_STATS: {
       common: { speed: { mult: 2, active: 30, cooldown: 60 } },
-      uncommon: { speed: { mult: 3, active: 60, cooldown: 180 } },
-      rare: { speed: { mult: 4, active: 120, cooldown: 300 } },
-      epic: { speed: { mult: 6, active: 240, cooldown: 900 } },
-      legendary: { speed: { mult: 10, active: 360, cooldown: 1800 } },
+      uncommon: { speed: { mult: 2.5, active: 60, cooldown: 180 } },
+      rare: { speed: { mult: 3, active: 120, cooldown: 300 } },
+      epic: { speed: { mult: 3.5, active: 360, cooldown: 900 } },
+      legendary: { speed: { mult: 4, active: 720, cooldown: 1800 } },
     },
     // Assembly Line Rush (mini game): a 45-second sorting run with 3 lives. The score picks a timed income boost
     // for every lab (not Viking Raid). One run per cooldown; a new boost replaces the old one only if it is bigger.
