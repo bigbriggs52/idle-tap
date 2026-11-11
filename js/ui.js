@@ -911,7 +911,8 @@ window.SVT = window.SVT || {};
       const by = {}; r.order.forEach((o) => { const k = o.replace(/\d+$/, ""); by[k] = (by[k] || 0) + 1; });
       const top = Object.keys(by).sort((a, b) => by[b] - by[a])[0];
       const where = top === "freight" ? ", mostly the lift" : top === "commercial" ? ", mostly the warehouse" : top ? ", mostly the mines" : "";
-      toast(r.levels ? "⬆ Max all: +" + r.levels + " levels across " + r.nodes + (r.nodes === 1 ? " upgrade" : " upgrades") + " for $" + fmt(r.spent) + where : "Nothing affordable to upgrade right now");
+      const save = r.saving ? " · saving for " + (inRaid() ? "Shaft " : "Floor ") + r.saving.n + " ($" + fmt(r.saving.cost) + ")" : "";
+      toast(r.levels ? "⬆ Max all: +" + r.levels + " levels across " + r.nodes + (r.nodes === 1 ? " upgrade" : " upgrades") + " for $" + fmt(r.spent) + where + save : r.saving ? "Nothing left that raises income" + save : "Nothing affordable to upgrade right now");
     }, text: "⬆" }), (e) => { const can = SVT.upgradeAllQuote(lab()); toggle(e, "show", can > 0); e.title = can ? "Max all: +" + can + " levels" : ""; });
     return h("div", { class: "jump-btns" }, maxAll, up, down);
   }

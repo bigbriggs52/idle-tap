@@ -437,7 +437,7 @@ if (!stickyClear.up || stickyClear.x || !stickyClear.home) errors.push("Raid cle
 const viking = await page.evaluate(() => { const R = SVT.RAID, L = SVT.lab(); return { tokens: SVT.vikingTokens(), boats: SVT.boatsUnlocked(), boat: SVT.boatIndex(), stages: R.STAGES, shafts50: R.shafts(50), shafts51: R.shafts(51), t1: R.time(1), t50: R.time(50), t51: R.time(51), t250: R.time(250), loot: R.def(50).products.length, tier: R.def(1).tierOf(50), cost2: R.boatCost(2), cost50: R.boatCost(50), svg: SVT.boatSvg(50).length, names: new Set(SVT.BOATS.map((b) => b.name)).size, omens: R.stage(1).omens.length }; });
 console.log("viking", JSON.stringify(viking));
 if (viking.tokens !== 1 || viking.boats !== 2 || viking.boat !== 2) errors.push("Viking tokens or boats wrong after a clear: " + JSON.stringify(viking));
-if (viking.stages !== 250 || viking.shafts50 !== 50 || viking.shafts51 !== 1 || viking.t1 !== 900 || Math.abs(viking.t50 - 3600) > 1e-6 || Math.abs(viking.t51 - 3600) > 1e-6 || Math.abs(viking.t250 - 921600) > 1e-6) errors.push("Raid batches or pacing wrong (v0.41: targets x3): " + JSON.stringify(viking));
+if (viking.stages !== 250 || viking.shafts50 !== 50 || viking.shafts51 !== 1 || viking.t1 !== 3000 || Math.abs(viking.t50 - 12000) > 1e-6 || Math.abs(viking.t51 - 12000) > 1e-6 || Math.abs(viking.t250 - 3072000) > 1e-6) errors.push("Raid batches or pacing wrong (v0.45: HARDER 10): " + JSON.stringify(viking));
 if (viking.loot !== 50 || viking.tier !== 4 || viking.cost2 < 1 || viking.cost50 !== 750 || viking.svg < 500 || viking.names !== 50) errors.push("Raid loot, tiers or boats wrong: " + JSON.stringify(viking));
 // v0.35: Viking Hoard. 10,000 relics with fixed rarities; spins spend tokens but boats go by tokens earned; Max and merge.
 const hoard = await page.evaluate(() => {
@@ -515,6 +515,15 @@ await page.evaluate(() => { SVT.closeHoard(); SVT.showRaidClear(1, { tokens: 1 }
 await page.click("text=Raid stage 2");
 await page.waitForTimeout(300);
 if ((await page.evaluate(() => SVT.lab().stage)) !== 2) errors.push("Stage 2 did not open after clearing");
+// v0.45: with shaft 1 maxed and the lift/warehouse already moving more than it digs, Max all saves for shaft 2
+const saveChk = await page.evaluate(() => {
+  const L = SVT.lab(); L.floors[0].lvl = SVT.maxLevel(L, "floor"); L.freight.lvl = 300; L.commercial.lvl = 300;
+  L.cash = SVT.nextFloor(L).cost * 0.9;
+  const cash = L.cash, r = SVT.upgradeAll();
+  return { levels: r.levels, saving: r.saving && r.saving.n, kept: L.cash === cash, lift: L.freight.lvl };
+});
+console.log("maxAllSaves", JSON.stringify(saveChk));
+if (saveChk.levels !== 0 || saveChk.saving !== 2 || !saveChk.kept || saveChk.lift !== 300) errors.push("Max all spent on lift levels that add no income (v0.45): " + JSON.stringify(saveChk));
 // v0.41: Unlock max opens shafts while the cash lasts (stage 2 has one more shaft to open), and stops at the last one
 const unlock = await page.evaluate(() => {
   const L = SVT.lab(), btn = !!document.querySelector(".btn.unlock-max");
@@ -767,10 +776,10 @@ const bonus = await page.evaluate(() => {
   const base = (() => { const m = SVT.vaultMult(); v.show = {}; SVT.vaultRecalc(); const r = SVT.rates(L).income; SVT.vaultWear("hand_l", strong[0].id); SVT.vaultWear("hand_r", strong[1].id); return r; })();
   out.ratio = SVT.rates(L).income / base;
   out.raidSame = !S.labs.raid || (() => { const R = S.labs.raid, m = SVT.vaultMult(), a = SVT.cashMult(R, SVT.now(), true); v.show = {}; SVT.vaultRecalc(); const b = SVT.cashMult(R, SVT.now(), true); SVT.vaultWear("hand_l", strong[0].id); SVT.vaultWear("hand_r", strong[1].id); return Math.abs(a / b - m) < 1e-6; })(); // v0.33: worn bonuses count in the raid too
-  // cap: six x1.5 items would be x4; the total stops at MAX_BONUS
+  // v0.45: no cap: every worn x1.5 item adds 0.5 (six make x4, nine make x5.5)
   const big = v.items.filter((x) => x.rar >= 4).slice(0, 6); big.forEach((x) => { x.boost = 1.5; });
   v.show = {}; SVT.vaultSlots().forEach((sl, i) => { if (big[i]) { const fit = v.items.find((x) => x.boost === 1.5 && !SVT.vaultSlotOf(x.id) && SVT.vaultFits(x, sl.id)); if (fit) SVT.vaultWear(sl.id, fit.id); } });
-  out.capped = SVT.vaultMult() <= B.MAX_BONUS;
+  out.capped = SVT.vaultMult() === Math.round((1 + Object.values(v.show).filter(Boolean).reduce((a, id) => a + SVT.vaultItem(id).boost - 1, 0)) * 100) / 100 && B.MAX_BONUS === Infinity;
   // slots by product category: every product on every floor of every lab gets one, and a hand-held thing goes to
   // a hand, a floor thing to the floor; an item already on Chip can't be equipped twice; per-slot lists are rarest first
   v.show = {}; SVT.vaultRecalc();

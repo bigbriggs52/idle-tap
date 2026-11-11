@@ -260,7 +260,7 @@ window.SVT = window.SVT || {};
     });
     shell(h("div", { class: "vault-body" },
       steps(3),
-      h("div", { class: "hoard-shipbar big" }, h("b", { text: multText(SVT.hoardMult()) }), h("span", { class: "muted small", text: ship.length ? "Every Viking mine digs, lifts and sells ×" + SVT.hoardMult() + " faster. Bonuses add up (Common ×" + H.BONUS[0] + " … Mythic ×" + H.BONUS[5] + "), up to ×" + H.MAX_BONUS + "." : "Nothing equipped yet. Each relic adds its rarity's bonus: Common ×" + H.BONUS[0] + ", Uncommon ×" + H.BONUS[1] + ", Rare ×" + H.BONUS[2] + ", Epic ×" + H.BONUS[3] + ", Legendary ×" + H.BONUS[4] + ", Mythic ×" + H.BONUS[5] + "." })),
+      h("div", { class: "hoard-shipbar big" }, h("b", { text: multText(SVT.hoardMult()) }), h("span", { class: "muted small", text: ship.length ? "Every Viking mine digs, lifts and sells ×" + SVT.hoardMult() + " faster. Bonuses add up (Common ×" + H.BONUS[0] + " … Mythic ×" + H.BONUS[5] + ")." : "Nothing equipped yet. Each relic adds its rarity's bonus: Common ×" + H.BONUS[0] + ", Uncommon ×" + H.BONUS[1] + ", Rare ×" + H.BONUS[2] + ", Epic ×" + H.BONUS[3] + ", Legendary ×" + H.BONUS[4] + ", Mythic ×" + H.BONUS[5] + "." })),
       h("div", { class: "hoard-slotbtns" },
         SVT.hoardCount() ? h("button", { class: "btn small fund-cta", onclick: () => { SVT.hoardBest(); toast("⛵ Best 5 on the longship: " + multText(SVT.hoardMult())); refresh(); }, text: "Equip best 5 → ×" + bestMult() }) : null,
         ship.length ? h("button", { class: "btn small", onclick: () => { ship.forEach((id) => SVT.hoardUnequip(id)); refresh(); }, text: "Take all off" }) : null),

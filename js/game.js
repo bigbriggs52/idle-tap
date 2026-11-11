@@ -162,7 +162,7 @@ window.SVT = window.SVT || {};
     if (n - own) S.vault.wild -= n - own;
     return true;
   };
-  // Income bonus from the items Chip wears: their boosts add up, capped at MAX_BONUS. Cached; call vaultRecalc after
+  // Income bonus from the items Chip wears: their boosts add up (uncapped since v0.45). Cached; call vaultRecalc after
   // a change to S.vault.show or S.vault.items.
   let vaultMult = 1;
   SVT.vaultMult = () => vaultMult;
@@ -734,22 +734,26 @@ window.SVT = window.SVT || {};
       const gain = SVT.rates(lab, t).income - base;
       node.lvl -= q.count;
       const score = gain / q.cost;
-      if (!best || score > best.score) best = { kind, n, q, gain, score };
+      if (!best || score > best.score) best = { kind, n, q, gain, score, base };
     }
     return best;
   };
   SVT.upgradeAll = () => {
     const lab = SVT.lab(), t = now();
-    let levels = 0, spent = 0, nodes = 0;
+    let levels = 0, spent = 0, nodes = 0, saving = null;
     const order = [];
     for (let step = 0; step < SVT.UPGRADE_MAX_STEPS; step++) {
       const b = SVT.bestUpgrade(lab, t);
+      // v0.45 (user: "why does the lift upgrade so quick when I click max on Viking mine"): when nothing left raises
+      // income (shafts maxed, lift and warehouse already move more than the shafts dig) and a new shaft can still be
+      // opened, stop and save for it instead of pouring the cash into lift levels that add nothing.
+      if (b && b.gain <= b.base * 1e-9 && SVT.nextFloor(lab) && !SVT.nextFloor(lab).blocked) { saving = SVT.nextFloor(lab); break; }
       if (!b || !SVT.upgradeBy(lab, b.kind, b.n, b.q)) break;
       levels += b.q.count; spent += b.q.cost; nodes++;
       order.push(b.kind + (b.kind === "floor" ? b.n : ""));
     }
     if (levels) emit("change");
-    return { levels, spent, nodes, order };
+    return { levels, spent, nodes, order, saving };
   };
   // Roughly how many levels Max all could buy right now (each node quoted against the full cash; no side effects).
   SVT.upgradeAllQuote = (lab) => {

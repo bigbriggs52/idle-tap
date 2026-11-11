@@ -19,9 +19,9 @@ window.SVT = window.SVT || {};
   }
 
   const B = {
-    VERSION: "0.44.0",
+    VERSION: "0.45.0",
     // Release time in UTC, set with each release. Shown after the version in the player's local time.
-    BUILT: "2026-11-08T02:25Z",
+    BUILT: "2026-11-11T14:50Z",
     FLOORS: 30,
     // v0.26: lower caps, because the IPO needs every floor, the lift and the warehouse at max level. The hubs cap at
     // Lv 400: that is the income every lab ends with, so the deep floors must stay affordable against it, and
@@ -139,9 +139,10 @@ window.SVT = window.SVT || {};
       PITY: { SOFT: 50, SOFT_STEP: 0.012, HARD: 75 },
       FIRST_ROLL_MIN: 2, // index into RARITIES: the first roll ever is at least Rare
       // Some items boost lab income while Chip wears them. BONUS[rarity index] = { chance the item has one, its
-      // multiplier }. Worn bonuses add up (x1.2 and x1.5 make x1.7), capped at MAX_BONUS. Labs only, not Viking Raid.
+      // multiplier }. Worn bonuses add up (x1.2 and x1.5 make x1.7). v0.45 (user: "shouldn't this be more than 3x" with
+      // 9 of 9 slots at x1.5): no cap any more, so 9 Mythic items make x5.5. Counts in Viking Raid too (v0.33).
       BONUS: [{ chance: 0.2, mult: 1.05 }, { chance: 0.35, mult: 1.1 }, { chance: 0.5, mult: 1.15 }, { chance: 0.7, mult: 1.25 }, { chance: 1, mult: 1.35 }, { chance: 1, mult: 1.5 }],
-      MAX_BONUS: 3,
+      MAX_BONUS: Infinity,
     },
     // Regular abilities (Common to Rare): "speed" runs the node faster (shorter cycles, a quicker lift and cart),
     // "storage" makes every cycle, lift trip and cart load carry more, "discount" cuts that node's upgrade prices.
