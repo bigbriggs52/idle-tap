@@ -74,7 +74,7 @@ window.SVT = window.SVT || {};
     const size = SIZES.indexOf(weighted(SIZES, SIZES.map((s) => s[1])));
     const n = RAR[rar].mods, pool = MODS.slice(), mods = [];
     while (mods.length < n && pool.length) mods.push(pool.splice(Math.floor(rnd() * pool.length), 1)[0]);
-    if (rar === RAR.length - 1) mods.push(pick(SIGNATURE));
+    if (rar >= V.ROLLED - 1) mods.push(pick(SIGNATURE));
     return { color, finish, size, mods };
   }
   // Spends `coins` of one lab and rolls an item. Returns the item (null if the coins are not there).
@@ -232,7 +232,7 @@ window.SVT = window.SVT || {};
   // ---------- merging ----------
   // Any three items of the same rarity (any product, any lab) merge into one item of the next rarity: a random
   // product from one of the merged items' labs, with a new look and a new bonus chance. Items on Chip don't merge,
-  // and Mythic is the top.
+  // and Singularity is the top (v0.46: 10 merge-only rarities above Mythic).
   const mergeable = (it) => it.rar < RAR.length - 1 && !SVT.vaultSlotOf(it.id);
   const weakestFirst = (a, b) => a.boost - b.boost || a.id - b.id;
   // v0.38 (user rule): only items of the same type (slot category) merge, and the result is a random item of that
@@ -356,7 +356,7 @@ window.SVT = window.SVT || {};
   function oddsTable(coins) {
     const { h } = SVT.ui;
     const p = SVT.vaultOdds(coins);
-    return h("div", { class: "vault-odds" }, RAR.map((r, i) => h("div", { class: "vault-odd r-" + r.id }, h("b", { text: r.name }), h("span", { text: pct(p[i]) }))));
+    return h("div", { class: "vault-odds" }, RAR.slice(0, V.ROLLED).map((r, i) => h("div", { class: "vault-odd r-" + r.id }, h("b", { text: r.name }), h("span", { text: pct(p[i]) }))));
   }
 
   function openVault() {
@@ -524,11 +524,11 @@ window.SVT = window.SVT || {};
     const { h, toast } = SVT.ui;
     busy = false;
     shell(h("div", { class: "vault-body vault-reveal r-" + it.rarity },
-      h("p", { class: "vault-got", text: it.rar >= 5 ? "✨ MYTHIC! ✨" : it.rar === 4 ? "⭐ Legendary! ⭐" : it.rar === 3 ? "Epic!" : "You got…" }),
+      h("p", { class: "vault-got", text: it.rar >= 5 ? "✨ " + RAR[it.rar].name.toUpperCase() + "! ✨" : it.rar === 4 ? "⭐ Legendary! ⭐" : it.rar === 3 ? "Epic!" : "You got…" }),
       itemCard(it, true),
       h("p", { class: "muted small", text: "One of a kind: nothing else in your Vault will ever share this look." })),
       h("div", { class: "vault-foot" }, h("button", { class: "btn fund-cta big", onclick: () => { tab = "roll"; openVault(); }, text: SVT.vaultCoins() ? "Roll again" : "Back to the Vault" })));
-    if (it.rar >= 4) toast((it.rar >= 5 ? "✨ Mythic " : "⭐ Legendary ") + SVT.itemProduct(it) + "!", "big");
+    if (it.rar >= 4) toast((it.rar >= 5 ? "✨ " + RAR[it.rar].name + " " : "⭐ Legendary ") + SVT.itemProduct(it) + "!", "big");
     if (SVT.render) SVT.render();
   }
   let mergePick = null; // { rar, ids } while the player is choosing three items to merge
@@ -587,7 +587,7 @@ window.SVT = window.SVT || {};
           h("b", { text: "🏆 ×" + v.beats[l.id] + " · 🪙 " + (v.coins[l.id] || 0) + " · " + v.items.filter((x) => x.lab === l.id).length + " items" }))))
         : h("p", { class: "vault-empty", text: "No trophies yet. Raise a lab's IPO to beat it." }),
       h("h3", { class: "vault-h", text: "📦 Inventory (" + v.items.length + " items)" }),
-      h("div", { class: "vault-odds" }, RAR.map((r, i) => h("div", { class: "vault-odd r-" + r.id }, h("b", { text: r.name }), h("span", { text: String(counts[i]) })))),
+      h("div", { class: "vault-odds" }, RAR.map((r, i) => (i < V.ROLLED || counts[i] ? h("div", { class: "vault-odd r-" + r.id }, h("b", { text: r.name }), h("span", { text: String(counts[i]) })) : null))),
       h("p", { class: "muted small", text: v.spent + " coins spent so far · " + v.pity + " since your last Legendary." }),
       h("button", { class: "btn", onclick: () => { tab = "chip"; slotPick = null; openVault(); }, text: "🤖 Chip's slots · ⚡ ×" + SVT.vaultMult() })));
   }

@@ -19,9 +19,9 @@ window.SVT = window.SVT || {};
   }
 
   const B = {
-    VERSION: "0.45.0",
+    VERSION: "0.46.0",
     // Release time in UTC, set with each release. Shown after the version in the player's local time.
-    BUILT: "2026-11-11T14:50Z",
+    BUILT: "2026-11-11T18:10Z",
     FLOORS: 30,
     // v0.26: lower caps, because the IPO needs every floor, the lift and the warehouse at max level. The hubs cap at
     // Lv 400: that is the income every lab ends with, so the deep floors must stay affordable against it, and
@@ -128,7 +128,20 @@ window.SVT = window.SVT || {};
         { id: "epic", name: "Epic", mods: 2 },
         { id: "legendary", name: "Legendary", mods: 3 },
         { id: "mythic", name: "Mythic", mods: 3 },
+        // v0.46 (user: "add in another 10 rarities after mythic with merging allowed"): merge-only, never rolled.
+        // Three of one rarity merge into one of the next, all the way up to Singularity.
+        { id: "divine", name: "Divine", mods: 3 },
+        { id: "celestial", name: "Celestial", mods: 3 },
+        { id: "cosmic", name: "Cosmic", mods: 3 },
+        { id: "eternal", name: "Eternal", mods: 3 },
+        { id: "ascended", name: "Ascended", mods: 3 },
+        { id: "transcendent", name: "Transcendent", mods: 3 },
+        { id: "primordial", name: "Primordial", mods: 3 },
+        { id: "infinite", name: "Infinite", mods: 3 },
+        { id: "omega", name: "Omega", mods: 3 },
+        { id: "singularity", name: "Singularity", mods: 3 },
       ],
+      ROLLED: 6, // rarities a roll can give (Common..Mythic); the rest come only from merging
       STAKES: [1, 3, 5, 10],
       ODDS: {
         1: [0.50, 0.28, 0.14, 0.06, 0.018, 0.002],
@@ -141,7 +154,10 @@ window.SVT = window.SVT || {};
       // Some items boost lab income while Chip wears them. BONUS[rarity index] = { chance the item has one, its
       // multiplier }. Worn bonuses add up (x1.2 and x1.5 make x1.7). v0.45 (user: "shouldn't this be more than 3x" with
       // 9 of 9 slots at x1.5): no cap any more, so 9 Mythic items make x5.5. Counts in Viking Raid too (v0.33).
-      BONUS: [{ chance: 0.2, mult: 1.05 }, { chance: 0.35, mult: 1.1 }, { chance: 0.5, mult: 1.15 }, { chance: 0.7, mult: 1.25 }, { chance: 1, mult: 1.35 }, { chance: 1, mult: 1.5 }],
+      BONUS: [{ chance: 0.2, mult: 1.05 }, { chance: 0.35, mult: 1.1 }, { chance: 0.5, mult: 1.15 }, { chance: 0.7, mult: 1.25 }, { chance: 1, mult: 1.35 }, { chance: 1, mult: 1.5 },
+        // the 10 merge-only rarities: +0.25 each, Divine x1.75 up to Singularity x4
+        { chance: 1, mult: 1.75 }, { chance: 1, mult: 2 }, { chance: 1, mult: 2.25 }, { chance: 1, mult: 2.5 }, { chance: 1, mult: 2.75 },
+        { chance: 1, mult: 3 }, { chance: 1, mult: 3.25 }, { chance: 1, mult: 3.5 }, { chance: 1, mult: 3.75 }, { chance: 1, mult: 4 }],
       MAX_BONUS: Infinity,
     },
     // Regular abilities (Common to Rare): "speed" runs the node faster (shorter cycles, a quicker lift and cart),

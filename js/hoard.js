@@ -6,7 +6,7 @@
 window.SVT = window.SVT || {};
 
 (function () {
-  const B = SVT.B, V = B.VAULT, RAR = V.RARITIES;
+  const B = SVT.B, V = B.VAULT, RAR = V.RARITIES.slice(0, V.ROLLED); // relics stop at Mythic (the 10 merge-only rarities are the Vault's)
   const MATERIALS = [["Iron", "#6b7a8a"], ["Bronze", "#b5713a"], ["Oak", "#8a5a2b"], ["Bone", "#e8dcc2"], ["Amber", "#ff9f1c"],
     ["Silver", "#c9d3dc"], ["Jet", "#2b2b33"], ["Walrus ivory", "#f3ead6"], ["Gold", "#f2c230"], ["Dwarf-steel", "#4fa3ff"]];
   const EPITHETS = ["of the Fjord", "of the Storm", "of the Raven", "of the Wolf", "of the Long Winter", "of the Jarl", "of the Shield-wall",
@@ -17,7 +17,7 @@ window.SVT = window.SVT || {};
     "🦅", "🦄", "🧵", "🚣", "💍", "🦷", "⛓️", "⚡", "🍃", "🗝️"];
   // Relics equipped on the longship (v0.36) boost Viking mine income by their rarity; the boosts add up, capped.
   const H = { N: 10000, PER_LOOT: 200, COUNTS: [5000, 2800, 1500, 550, 130, 20], STAKES: V.STAKES, ODDS: V.ODDS, PITY: V.PITY, FIRST_MIN: V.FIRST_ROLL_MIN, BULK_MAX: 100,
-    SLOTS: 5, BONUS: V.BONUS.map((b) => b.mult), MAX_BONUS: V.MAX_BONUS };
+    SLOTS: 5, BONUS: V.BONUS.slice(0, V.ROLLED).map((b) => b.mult), MAX_BONUS: V.MAX_BONUS };
   const rnd = () => Math.random();
   function mulberry(seed) { return function () { seed = (seed + 0x6d2b79f5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
   // rarOf[id]: a seeded shuffle of the 10,000 ids, cut into the rarity counts, so every relic's rarity is fixed forever.

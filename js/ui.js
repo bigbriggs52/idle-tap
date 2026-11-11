@@ -433,7 +433,7 @@ window.SVT = window.SVT || {};
     const btn = h("button", { class: "btn up lvlup" }, top, cost);
     return bind(holdToRepeat(btn, up), (e) => {
       const L = lab(), lv = SVT.levelOf(L, kind, n);
-      if (lv >= SVT.maxLevel(lab(), kind)) { setText(top, "Level Up x0"); setText(cost, "MAX"); setDisabled(e, true); return; }
+      if (lv >= SVT.maxLevel(lab(), kind)) { setText(top, "Level Up x0"); setText(cost, SVT.gated(L, kind) ? "Level up shafts first" : "MAX"); setDisabled(e, true); return; }
       const q = SVT.quote(L, kind, n);
       setText(top, "Level Up x" + q.count); setText(cost, "$" + fmt(q.cost));
       setDisabled(e, L.cash < q.cost);
@@ -517,7 +517,7 @@ window.SVT = window.SVT || {};
     return bind(holdToRepeat(h("button", { class: "btn up" }), () => SVT.upgrade(kind, n)), (e) => {
       const L = lab();
       const lv = SVT.levelOf(L, kind, n);
-      if (lv >= SVT.maxLevel(lab(), kind)) { setText(e, "Max level"); setDisabled(e, true); return; }
+      if (lv >= SVT.maxLevel(lab(), kind)) { setText(e, SVT.gated(L, kind) ? "Level up shafts first (Lv " + SVT.maxLevel(L, kind) + " for now)" : "Max level"); setDisabled(e, true); return; }
       const q = SVT.quote(L, kind, n);
       const disc = SVT.discount(L, kind, n);
       setText(e, "Upgrade ×" + q.count + " · $" + fmt(q.cost));
@@ -638,7 +638,7 @@ window.SVT = window.SVT || {};
     const el = h("button", { class: "lvl-btn", onclick: (e) => { e.stopPropagation(); openNode(kind, n); } },
       h("span", { text: "Level" }), num, badge, deal);
     bind(el, () => {
-      const L = lab(), lv = SVT.levelOf(L, kind, n), max = lv >= SVT.maxLevel(lab(), kind);
+      const L = lab(), lv = SVT.levelOf(L, kind, n), max = lv >= SVT.finalLevel(L, kind);
       const d = SVT.discount(L, kind, n);
       toggle(el, "deal", d > 0);
       if (d > 0) setText(deal, "−" + Math.round(d * 100) + "%");
@@ -810,7 +810,7 @@ window.SVT = window.SVT || {};
   }
   function lockedRow() {
     const nf = SVT.nextFloor(lab());
-    if (!nf) return h("div", { class: "floor done" }, h("div", { class: "fbody" }, h("b", { text: inRaid() ? "All " + lab().floors.length + " shafts open. Take every shaft to Lv " + SVT.raidStage(lab()).max.floor + " and the lift and warehouse to Lv " + SVT.raidStage(lab()).max.freight + " to clear the raid." : maxedText(lab()) })));
+    if (!nf) return h("div", { class: "floor done" }, h("div", { class: "fbody" }, h("b", { text: inRaid() ? (lab().floors.length === 1 ? "The shaft is open. Take it" : "All " + lab().floors.length + " shafts open. Take every shaft") + " to Lv " + SVT.raidStage(lab()).max.floor + " and the lift and warehouse to Lv " + SVT.raidStage(lab()).max.freight + " to clear the raid." : maxedText(lab()) })));
     const n = nf.n;
     if (nf.blocked) {
       return h("div", { class: "floor locked wall" },
@@ -1048,7 +1048,7 @@ window.SVT = window.SVT || {};
     sheet("Viking Raid", h("div", { class: "sheet-body raid-panel" },
       h("div", { class: "token-row" }, tokenPill(),
         h("div", { class: "token-btns" }, h("button", { class: "btn small hoard-btn", onclick: () => SVT.openHoard(), text: "🎰 Hoard" + (SVT.hoardMult() > 1 ? " ⚡×" + SVT.hoardMult() : "") }), h("button", { class: "btn small", onclick: openBoats, text: "⛵ Boats " + SVT.boatsUnlocked() + "/" + R.BOATS }))),
-      h("p", { class: "muted small", text: "Five batches of 50 Viking mines. Stage 1 has one shaft and every stage adds one. Clear a stage by opening every shaft, taking every shaft to Lv 100 and the lift and warehouse to Lv 500. The further down the map, the pricier the deep shafts and the more bad omens; each batch starts a little harder than the last stage before it. Managers, abilities, Rush boosts and Chip's items all count. Clears pay Viking tokens, which unlock boats for Chip." }),
+      h("p", { class: "muted small", text: "Five batches of 50 Viking mines. Stage 1 has one shaft and every stage adds one. Clear a stage by opening every shaft, taking every shaft to Lv 100 and the lift and warehouse to their max: Lv 100 with one shaft, rising to Lv 500 with 50. The lift and warehouse can only go as far as your shafts have got. The further down the map, the pricier the deep shafts and the more bad omens; each batch starts a little harder than the last stage before it. Managers, abilities, Rush boosts and Chip's items all count. Clears pay Viking tokens, which unlock boats for Chip." }),
       tabs, info, stages, resetRaid), { icon: "⚔️", foot: h("div", { class: "panel-foot" }, go) });
   }
   SVT.openRaid = openRaid;

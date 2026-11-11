@@ -1542,3 +1542,10 @@ body:has(#sheet) #toasts { top: auto; bottom: calc(132px + env(safe-area-inset-b
 .av.h-conductor .hat::after { left: 12%; right: 12%; bottom: -26%; height: 30%; border-radius: 0 0 50% 50%; background: #111; }
 /* VR visor */
 .av.h-visor .hat { left: 22%; right: 22%; top: 30%; height: 17%; border-radius: 8px; background: linear-gradient(90deg, var(--hatc), #e0ffff 50%, var(--hatc)); box-shadow: 0 0 4px var(--hatc); }
+
+/* v0.46: 10 merge-only rarities above Mythic */
+:root { --divine: #ffb300; --celestial: #36c5f0; --cosmic: #6a3df0; --eternal: #00b894; --ascended: #f0f0ff; --transcendent: #e84393; --primordial: #8d5524; --infinite: #00cec9; --omega: #d63031; --singularity: #111; }
+.r-divine { --rc: var(--divine); } .r-celestial { --rc: var(--celestial); } .r-cosmic { --rc: var(--cosmic); } .r-eternal { --rc: var(--eternal); } .r-ascended { --rc: #9aa0ff; } .r-transcendent { --rc: var(--transcendent); } .r-primordial { --rc: var(--primordial); } .r-infinite { --rc: var(--infinite); } .r-omega { --rc: var(--omega); } .r-singularity { --rc: var(--singularity); }
+:is(.vault-card, .vault-seg.lock):is(.r-divine, .r-celestial, .r-cosmic, .r-eternal, .r-ascended, .r-transcendent, .r-primordial, .r-infinite, .r-omega, .r-singularity) { background: linear-gradient(160deg, #fff, color-mix(in srgb, var(--rc) 18%, #fff)); animation: glow 1.6s ease-in-out infinite; }
+.vault-seg.lock:is(.r-divine, .r-celestial, .r-cosmic, .r-eternal, .r-ascended, .r-transcendent, .r-primordial, .r-infinite, .r-omega, .r-singularity) { background: var(--rc); }
+@media (prefers-reduced-motion: reduce) { .vault-card[class*="r-"] { animation: none; } }

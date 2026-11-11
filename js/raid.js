@@ -71,7 +71,11 @@ window.SVT = window.SVT || {};
       { floor: 100, freight: 500, commercial: 500 },
       { floor: 100, freight: 500, commercial: 500 },
     ],
-    max: (s) => R.CAPS[R.batchOf(s) - 1],
+    // v0.46 (user: "Viking mine needs to have lift and warehouse levels better associated with each level in the
+    // mine"): the lift and warehouse go to 100 on a one-shaft stage, rising evenly to 500 on a 50-shaft stage (in
+    // steps of 10), and while you play they can only go as far as the shafts have got (see SVT.hubGate).
+    hubMax: (s) => 10 * Math.round((100 + (400 * (R.shafts(s) - 1)) / 49) / 10),
+    max: (s) => { const c = R.CAPS[R.batchOf(s) - 1], h = R.hubMax(s); return { floor: c.floor, freight: Math.min(c.freight, h), commercial: Math.min(c.commercial, h) }; },
     // Shaft price growth per level: the same as the labs (v0.33, "similar numbers to the main levels"). Hub growth is
     // set per stage by hubPrices (stage.growth).
     GROWTH: { floor: SVT.B.FLOOR_GROWTH },
@@ -84,6 +88,11 @@ window.SVT = window.SVT || {};
     // v0.45 (user, 2026-11-11: "Viking mine also is too easy still", the fourth time): 3 -> 10. Batch 1 is now 50 min
     // to 3.3 h, batch 2 3.3 to 13 h, batch 3 13 to 53 h, batch 4 53 to 213 h, batch 5 213 to 853 h.
     HARDER: 10,
+    // v0.46 (user, 2026-11-11, after v0.45: "still giving Viking mine issues"; their screenshot had 5x the cash a stage-1
+    // clear costs): the pacing sim used to play with no boosts, but Rush x5, Bug Hunt x3, Chip's items (up to x5.5+) and
+    // relics all count in the raid and stack (x82.5 in the screenshot). The sim now assumes a steady x40 cash boost, so
+    // the target times hold for a player who keeps boosts running; with none, a stage takes about 40x longer.
+    SIM_BOOST: 40,
     time: (s) => R.HARDER * 300 * Math.pow(4, R.batchOf(s) - 1) * Math.pow(4, (R.levelOf(s) - 1) / 49),
     // Each deeper shaft costs 1.3x the one above (grow 0.13 x the 10x price step). Income is capped by the lift and
     // warehouse, so the step has to stay small or the deep shafts can never be paid for.
@@ -100,11 +109,11 @@ window.SVT = window.SVT || {};
     boatCost: (k) => (k <= 1 ? 0 : Math.round(750 * Math.pow((k - 1) / 49, 1.6))),
     // Price scale per stage, from tests/raid-goals.mjs (the pacing sim fitted to each stage's target time).
     SCALES: [
-      30, 35, 38, 29, 38, 44, 38, 33, 30, 35, 36, 38, 56, 46, 42, 36, 51, 44, 34, 32, 52, 33, 49, 41, 64, 44, 39, 73, 58, 49, 57, 84, 75, 59, 110, 71, 65, 96, 64, 71, 110, 60, 80, 73, 83, 160, 120, 140, 90, 190,
-      120, 93, 83, 73, 140, 100, 120, 94, 200, 190, 120, 210, 220, 210, 180, 200, 190, 100, 280, 320, 270, 170, 100, 160, 170, 130, 130, 140, 270, 250, 350, 430, 140, 310, 220, 370, 330, 240, 210, 330, 370, 170, 570, 180, 400, 220, 260, 220, 200, 210,
-      180, 290, 190, 770, 570, 210, 220, 540, 230, 230, 240, 460, 280, 400, 260, 270, 770, 700, 1100, 330, 760, 1200, 320, 380, 450, 650, 870, 1000, 380, 430, 530, 730, 630, 1200, 500, 520, 530, 1700, 630, 1400, 1900, 1900, 800, 570, 630, 580, 600, 900, 630, 730,
-      2500, 1200, 730, 1100, 770, 700, 800, 830, 770, 770, 800, 930, 2600, 1400, 3800, 1800, 2500, 2900, 2600, 1000, 2000, 2100, 1700, 1100, 1300, 1800, 1200, 1900, 1400, 2000, 2100, 5700, 2700, 3900, 1500, 2900, 2400, 1800, 1600, 1900, 2500, 5300, 2100, 5000, 2100, 5200, 1900, 2000, 5600, 6700,
-      1700, 2300, 7300, 4700, 3000, 2600, 2700, 2500, 7700, 2600, 2600, 3100, 3200, 8700, 10000, 3300, 3500, 6700, 3200, 3300, 17000, 7200, 7300, 3700, 3800, 4500, 4000, 6600, 6700, 8700, 21000, 5200, 5300, 5300, 5700, 17000, 5000, 10000, 6200, 7600, 6500, 6700, 20000, 18000, 8700, 19000, 13000, 23000, 8000, 21000,
+      1200, 890, 570, 270, 220, 150, 130, 88, 100, 66, 66, 62, 100, 79, 54, 67, 73, 51, 46, 36, 53, 32, 71, 44, 82, 46, 31, 53, 48, 43, 41, 88, 57, 50, 100, 52, 52, 53, 56, 64, 110, 44, 52, 62, 55, 130, 65, 82, 74, 120,
+      5300, 2400, 920, 470, 810, 270, 370, 190, 300, 320, 230, 230, 220, 280, 260, 190, 270, 170, 280, 250, 200, 180, 120, 180, 170, 160, 140, 100, 230, 350, 170, 270, 110, 280, 190, 360, 250, 190, 120, 400, 210, 120, 330, 130, 220, 230, 140, 130, 140, 170,
+      7200, 5600, 2800, 3900, 2800, 820, 710, 1500, 570, 480, 480, 470, 460, 420, 370, 370, 930, 910, 930, 400, 850, 860, 350, 410, 720, 380, 810, 830, 350, 350, 710, 340, 350, 880, 370, 450, 370, 940, 840, 970, 1000, 990, 420, 430, 440, 450, 460, 440, 450, 470,
+      78000, 22000, 11000, 5400, 4200, 2800, 2400, 2100, 1900, 1600, 1600, 1600, 4200, 1400, 3400, 1400, 3400, 3400, 3400, 1200, 1300, 1300, 1200, 1200, 1100, 1100, 1100, 1100, 1100, 1200, 1100, 3000, 1400, 3200, 1200, 1200, 1200, 1500, 1300, 1600, 1300, 3600, 1700, 3800, 1400, 4000, 1500, 1400, 4000, 4100,
+      71000, 59000, 100000, 19000, 30000, 9400, 8100, 7000, 19000, 5300, 5200, 5200, 4900, 14000, 13000, 4200, 4200, 4600, 4200, 4000, 11000, 4400, 3900, 3900, 3600, 4200, 3600, 3700, 3800, 3800, 11000, 3700, 3800, 4600, 4700, 12000, 4000, 5000, 5100, 11000, 5300, 4400, 13000, 14000, 12000, 15000, 6100, 14000, 4900, 15000,
     ],
   };
 

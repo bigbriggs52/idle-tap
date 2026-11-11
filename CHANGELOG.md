@@ -2,6 +2,12 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.46.0 (2026-11-11)
+
+- Viking lift and warehouse now match the mine. Their max level depends on how many shafts the stage has: Lv 100 on a one-shaft stage, rising evenly to Lv 500 on a 50-shaft stage (Lv 300 at 25 shafts). They can also only be levelled as far as your shafts have got. For example, one shaft at Lv 50 on a one-shaft stage lets them reach Lv 50, and on a 25-shaft stage every shaft level you add opens up more. When they are held back, the button says "Level up shafts first". Each lift level now costs about 5% more than the last, like a shaft, so Max no longer jumps hundreds of levels at once.
+- Viking mines take your boosts into account. Rush (×5), Bug Hunt (×3), Chip's items and Hoard relics all multiply Viking mine income and stack (×82.5 on the warehouse in your screenshot), but stage prices were tuned as if you had none. That is why you had five times the cash a stage-1 clear costs. All 250 stages are now priced for a player who keeps a steady ×40 boost running: stage 1 takes about 50 minutes with ×40, and longer with less.
+- 10 new rarities above Mythic: Divine, Celestial, Cosmic, Eternal, Ascended, Transcendent, Primordial, Infinite, Omega and Singularity. They only come from merging (any 3 of one rarity and type become 1 of the next, all the way up), and each is worth +0.25 more on Chip: Divine ×1.75 up to Singularity ×4. Max merge climbs through them too. Hoard relics still top out at Mythic.
+
 ## v0.45.0 (2026-11-11)
 
 - Chip's item bonuses have no cap any more. Worn bonuses simply add up, so 9 slots at ×1.5 make ×5.5 lab income (it was stuck at ×3). The Hoard longship's 5 relics are uncapped too.
