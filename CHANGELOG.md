@@ -2,6 +2,12 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.46.1 (2026-11-11)
+
+- Fix: Viking lift and warehouse stuck at Lv 10. The new "shafts first" limit counted shafts you had not opened yet as Lv 0, so on a stage with several shafts the lift and warehouse could not pass Lv 10 and the mine earned too little to open shaft 2. The limit now follows your best shaft: with your best shaft at Lv 25 of 100, the lift and warehouse can go to a quarter of their max (Lv 35 of 140 on stage 6). All 250 stage prices were refitted for it.
+- Max all spends as much as it can. It keeps buying the best-value upgrade until nothing more is affordable (since v0.45 it stopped early to save for the next shaft).
+- The 25-shaft example in v0.46.0 is replaced: the lift and warehouse keep pace with your furthest shaft, not with all shafts added together.
+
 ## v0.46.0 (2026-11-11)
 
 - Viking lift and warehouse now match the mine. Their max level depends on how many shafts the stage has: Lv 100 on a one-shaft stage, rising evenly to Lv 500 on a 50-shaft stage (Lv 300 at 25 shafts). They can also only be levelled as far as your shafts have got. For example, one shaft at Lv 50 on a one-shaft stage lets them reach Lv 50, and on a 25-shaft stage every shaft level you add opens up more. When they are held back, the button says "Level up shafts first". Each lift level now costs about 5% more than the last, like a shaft, so Max no longer jumps hundreds of levels at once.
