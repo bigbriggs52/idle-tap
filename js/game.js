@@ -206,7 +206,18 @@ window.SVT = window.SVT || {};
   SVT.raidStage = (lab) => SVT.RAID.stage(lab.stage);
   SVT.raidNext = () => Math.min(SVT.RAID.STAGES, S.raid.cleared + 1);
   // Raid shafts, lift and warehouse stop at the stage's max level; labs use the normal caps.
-  SVT.maxLevel = (lab, kind) => (SVT.isRaid(lab) ? SVT.raidStage(lab).max[kind] : B.maxLevel(kind));
+  // v0.46: in the raid the lift and warehouse can only be levelled as far as the shafts have got: the stage's hub max
+  // times the share of all shaft levels reached (shafts not yet opened count as 0), at least 10. One shaft at Lv 50 of
+  // 100 on a one-shaft stage lets the hubs reach 50.
+  SVT.hubGate = (lab) => {
+    const st = SVT.raidStage(lab), m = st.max;
+    let lv = 0; lab.floors.forEach((f) => (lv += Math.min(m.floor, f.lvl)));
+    return Math.min(m.freight, Math.max(10, Math.ceil((m.freight * lv) / (st.floors * m.floor))));
+  };
+  SVT.maxLevel = (lab, kind) => (SVT.isRaid(lab) ? (kind === "floor" ? SVT.raidStage(lab).max.floor : Math.min(SVT.raidStage(lab).max[kind], SVT.hubGate(lab))) : B.maxLevel(kind));
+  // The level a node can finally reach (the stage max in the raid, ignoring the shaft gate).
+  SVT.finalLevel = (lab, kind) => (SVT.isRaid(lab) ? SVT.raidStage(lab).max[kind] : B.maxLevel(kind));
+  SVT.gated = (lab, kind) => SVT.isRaid(lab) && kind !== "floor" && SVT.levelOf(lab, kind, 0) >= SVT.maxLevel(lab, kind) && SVT.maxLevel(lab, kind) < SVT.finalLevel(lab, kind);
   // A stage is cleared by opening every shaft and taking every shaft, the lift and the warehouse to max level.
   SVT.raidProgress = (lab) => {
     const st = SVT.raidStage(lab), m = st.max, total = st.floors * (m.floor - 1) + (m.freight - 1) + (m.commercial - 1) + (st.floors - 1);
@@ -747,7 +758,7 @@ window.SVT = window.SVT || {};
       // v0.45 (user: "why does the lift upgrade so quick when I click max on Viking mine"): when nothing left raises
       // income (shafts maxed, lift and warehouse already move more than the shafts dig) and a new shaft can still be
       // opened, stop and save for it instead of pouring the cash into lift levels that add nothing.
-      if (b && b.gain <= b.base * 1e-9 && SVT.nextFloor(lab) && !SVT.nextFloor(lab).blocked) { saving = SVT.nextFloor(lab); break; }
+      if ((!b || b.gain <= b.base * 1e-9) && SVT.nextFloor(lab) && !SVT.nextFloor(lab).blocked) { saving = SVT.nextFloor(lab); break; }
       if (!b || !SVT.upgradeBy(lab, b.kind, b.n, b.q)) break;
       levels += b.q.count; spent += b.q.cost; nodes++;
       order.push(b.kind + (b.kind === "floor" ? b.n : ""));

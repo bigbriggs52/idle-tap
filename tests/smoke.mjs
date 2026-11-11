@@ -409,10 +409,11 @@ const capped = await page.evaluate(() => {
   const L = SVT.lab(), max = SVT.raidStage(L).max.freight;
   SVT.state().buy = "max";
   const q = SVT.quote(L, "freight", 0);
-  SVT.upgrade("freight", 0); SVT.upgrade("commercial", 0);
+  const gatedFirst = SVT.maxLevel(L, "freight"); // v0.46: shafts first, then the hubs can follow
   L.floors.forEach((f, i) => SVT.upgrade("floor", i + 1));
+  SVT.upgrade("freight", 0); SVT.upgrade("commercial", 0);
   SVT.tick(1);
-  return { max, lift: L.freight.lvl, shaft: L.floors[0].lvl, shaftMax: SVT.raidStage(L).max.floor, quoteAtMax: SVT.quote(L, "freight", 0).count, first: q.count, won: L.won, p: SVT.raidProgress(L).p };
+  return { max, gatedFirst, lift: L.freight.lvl, shaft: L.floors[0].lvl, shaftMax: SVT.raidStage(L).max.floor, quoteAtMax: SVT.quote(L, "freight", 0).count, first: q.count, won: L.won, p: SVT.raidProgress(L).p };
 });
 console.log("raid max", JSON.stringify(capped));
 if (capped.lift !== capped.max || capped.shaft !== capped.shaftMax || capped.quoteAtMax !== 0 || !capped.won) errors.push("Raid max level or clear-by-maxing is wrong");
@@ -821,12 +822,22 @@ const bonus = await page.evaluate(() => {
   // Max merge cascades until nothing is left to merge, never touching worn items; the needs list names labs per type
   const nBefore = v.items.length, made = SVT.vaultMergeAll();
   out.mergeAll = { made: made.length, left: SVT.vaultMerges().length, items: nBefore - v.items.length === made.length * 2, wornSafe: wornIds.every((id) => SVT.vaultItem(id) && SVT.vaultSlotOf(id)) };
+  // v0.46: 10 merge-only rarities above Mythic: 3 Mythic -> 1 Divine, 3 Omega -> 1 Singularity (the top, never merges);
+  // rolls still stop at Mythic
+  const R16 = B.RARITIES, free = v.items.filter((x) => !SVT.vaultSlotOf(x.id)), cat0 = SVT.itemCat(free.find((x) => free.filter((y) => SVT.itemCat(y) === SVT.itemCat(x)).length >= 6) || free[0]);
+  const same = free.filter((x) => SVT.itemCat(x) === cat0).slice(0, 6);
+  const setR = (x, r) => { x.rar = r; x.rarity = R16[r].id; };
+  same.slice(0, 3).forEach((x) => setR(x, 5)); same.slice(3, 6).forEach((x) => setR(x, 14));
+  const div = SVT.vaultMerge(5, same.slice(0, 3).map((x) => x.id)), sing = SVT.vaultMerge(14, same.slice(3, 6).map((x) => x.id));
+  out.tiers = { n: R16.length, rolled: B.ROLLED, div: div && div.rarity, divBoost: div && div.boost, sing: sing && sing.rarity, singBoost: sing && sing.boost,
+    topStays: !SVT.vaultMerges().some((m) => m.rar === R16.length - 1), same: same.length, rollTop: SVT.vaultOdds(10, 0).length };
   const needs = SVT.vaultNeeds();
   out.needs = { n: needs.length, allEmptySlots: needs.every((x) => x.slots.every((sl) => !v.show[sl.id])), labsMake: needs.every((x) => x.labs.length && x.labs.every((l) => SVT.vaultLabCats(l.id).includes(x.cat))), feet: SVT.LABS.filter((l) => SVT.vaultLabCats(l.id).includes("feet")).length };
   return out;
 });
 console.log("bonus", JSON.stringify(bonus));
 if (!bonus.allHaveBoost || !bonus.mythicBoost) errors.push("Vault: item boosts missing");
+if (JSON.stringify(bonus.tiers) !== JSON.stringify({ n: 16, rolled: 6, div: "divine", divBoost: 1.75, sing: "singularity", singBoost: 4, topStays: true, same: 6, rollTop: 6 })) errors.push("Vault: merge-only rarities wrong (v0.46) " + JSON.stringify(bonus.tiers));
 if (!bonus.wornMerge || !bonus.wornMerge.worn || !bonus.wornMerge.notListed || !bonus.wornMerge.pickRefused || !bonus.wornMerge.stillThere || !bonus.wornMerge.weakestKeeps) errors.push("Vault: an equipped item could be merged " + JSON.stringify(bonus.wornMerge));
 if (bonus.mult !== bonus.sum || Math.abs(bonus.ratio - bonus.mult) > 1e-6 || !bonus.raidSame || !bonus.capped) errors.push("Vault: bonus multiplier wrong " + JSON.stringify(bonus));
 if (Object.values(bonus.cats).reduce((a, b) => a + b, 0) !== 900 || Object.keys(bonus.cats).length !== 7) errors.push("Vault: not every product has a slot category " + JSON.stringify(bonus.cats));
@@ -877,14 +888,19 @@ const vpre = await page.evaluate(() => {
   if (!S.raid.cleared) S.raid.cleared = 3;
   S.raid.tokens = Math.max(S.raid.tokens || 0, 5); S.hoard.spent = 1;
   if (!S.labs.raid) SVT.startRaid(1);
-  const R = SVT.RAID, caps = [1, 50, 51, 250].every((s) => R.stage(s).max.floor === 100 && R.stage(s).max.freight === 500 && R.stage(s).max.commercial === 500);
+  const R = SVT.RAID, caps = [[1, 100], [25, 300], [50, 500], [51, 100], [250, 500]].every(([s, h]) => R.stage(s).max.floor === 100 && R.stage(s).max.freight === h && R.stage(s).max.commercial === h);
+  // v0.46: the hubs can only go as far as the shafts have got
+  const gl = SVT.newLab("raid"); gl.stage = 25; gl.floors[0].lvl = 1; const g1 = SVT.hubGate(gl);
+  for (let i = 1; i < 25; i++) gl.floors.push({ lvl: 100 }); gl.floors[0].lvl = 100; const g2 = SVT.hubGate(gl);
+  gl.floors.length = 1; gl.floors[0].lvl = 100; const g3 = SVT.hubGate(gl);
+  const gateOk = g1 === 10 && g2 === 300 && g3 === 12 && SVT.maxLevel(gl, "freight") === 12 && SVT.maxLevel(gl, "floor") === 100;
   const rl = S.labs.raid, hireSame = SVT.hireCost(rl, "floor") === SVT.B.hireCost("floor", rl.hires.floor);
   const step = [R.shaftStep(1), R.shaftStep(250)], bad = [R.stage(51).omens.length, R.stage(250).omens.length];
   // v0.43: Viking Raid managers have Norse names and Viking portraits
   SVT.switchLab("raid"); SVT.setView("lab"); rl.cash = 1e12;
   const vm = SVT.hire("floor"); SVT.assign(vm.id, "floor", 1); SVT.render();
   const vik = { norse: SVT.VIKING_NAMES.includes(vm.name), portraits: document.querySelectorAll(".seat .av.viking").length };
-  return { caps, hireSame, step, bad, vik, garage: S.labs.garage.lifetime, vault: S.vault.items.length };
+  return { caps: caps && gateOk, gate: [g1, g2, g3], hireSame, step, bad, vik, garage: S.labs.garage.lifetime, vault: S.vault.items.length };
 });
 if (!vpre.vik.norse || !(vpre.vik.portraits >= 1)) errors.push("Viking managers are not drawn as Vikings (v0.43): " + JSON.stringify(vpre.vik));
 await page.evaluate(() => { SVT.closeVault && SVT.closeVault(); SVT.openRaid(); }); await page.waitForTimeout(250);

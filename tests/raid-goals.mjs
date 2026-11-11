@@ -6,6 +6,8 @@ import { loadGame, play } from "./pace.mjs";
 
 const SVT = loadGame();
 const R = SVT.RAID, scales = [];
+// v0.46: the sim plays with a steady RAID.SIM_BOOST cash boost (what Rush, Bug Hunt, Chip's items and relics give a player)
+const plainBoost = SVT.boostMult; SVT.boostMult = (l, t) => plainBoost(l, t) * (SVT.isRaid(l) ? R.SIM_BOOST : 1);
 const clear = (s) => {
   const lab = SVT.newLab("raid");
   lab.stage = s;
