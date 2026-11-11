@@ -2,6 +2,12 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.45.0 (2026-11-11)
+
+- Chip's item bonuses have no cap any more. Worn bonuses simply add up, so 9 slots at ×1.5 make ×5.5 lab income (it was stuck at ×3). The Hoard longship's 5 relics are uncapped too.
+- Max all no longer wastes cash. When every shaft is maxed and the lift and warehouse already carry more than the shafts dig, more lift levels add nothing, so Max all now stops and saves for the next shaft (the toast says which one and its price). Before, it spent millions pushing the lift hundreds of levels up for no extra income.
+- Viking mines are harder again: every stage's target time is ×3.3 and all 250 price scales were refitted. Batch 1 now runs from about 50 minutes (stage 1) to 3.3 hours (stage 50), batch 2 from 3.3 to 13 hours, batch 3 13 to 53 hours, batch 4 53 to 213 hours, batch 5 213 to 853 hours (sim times, with no boosts).
+
 ## v0.44.0 (2026-11-08)
 
 - Managers dress for their mine. All 30 labs have their own manager look: a hat that fits the theme (a cap in Garage HQ, headphones in the Arcade and Sound Studio, a graduation cap in the Archive Library, a space helmet in the Space Port, Mars Outpost and Moonbase, scrubs and a mask in the Med-Tech Clinic, a straw hat on the farm, a hard hat at the Geothermal Works and Energy Grid, a Santa hat in the Toy Factory, a hood in the Cyber Security Vault, a top hat in the Fintech Tower, a conductor's cap at the Rail Yard, a VR visor in the Holo Theater, and more), an outfit in the lab's colours and the lab's emoji as a badge. Rarity still shows as coloured stripes down the sides, and Legendary hats glow gold. Viking mines keep their Vikings.

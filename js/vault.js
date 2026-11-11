@@ -513,7 +513,7 @@ window.SVT = window.SVT || {};
         }));
     }
     shell(h("div", { class: "vault-body" },
-      h("div", { class: "vault-total" }, h("b", { text: "⚡ ×" + total + " lab income" }), h("small", { text: worn.length + " of " + SLOTS.length + " slots worn · bonuses add up, max ×" + V.MAX_BONUS + " · counts in Viking Raid too" })),
+      h("div", { class: "vault-total" }, h("b", { text: "⚡ ×" + total + " lab income" }), h("small", { text: worn.length + " of " + SLOTS.length + " slots worn · bonuses add up · counts in Viking Raid too" })),
       h("button", { class: "btn boats-link", onclick: () => SVT.openBoats(), text: "⛵ Viking tokens 🛡 " + SVT.hoardTokens() + " · sailing " + SVT.BOATS[SVT.boatIndex() - 1].name + " ›" }),
       h("button", { class: "btn fund-cta vault-auto", disabled: !v.items.length, onclick: () => { const n = SVT.vaultAutoEquip(); SVT.ui.toast(n ? "🤖 Chip changed " + n + (n === 1 ? " slot" : " slots") + ": best bonus in every slot." : "🤖 Chip already wears the best of everything."); refresh(); }, text: "⚡ Auto-equip best" }),
       h("div", { class: "vault-slotgrid" }, SLOTS.map(slotCard)),

@@ -14,7 +14,7 @@ const clear = (s) => {
 const FROM = +(process.env.FROM || 1), TO = +(process.env.TO || R.STAGES);
 for (let s = FROM; s <= TO; s++) {
   const st = R.stage(s), T = R.time(s), omen = st.diff.scale / (R.SCALES[s - 1] || 1);
-  let k = 0.05, t = 0;
+  let k = (+process.env.INIT || 0) * (R.SCALES[s - 1] || 0) || 0.05, t = 0; // INIT: start from the current scale times this
   for (let pass = 0; pass < 10; pass++) {
     st.diff.scale = k * omen;
     t = clear(s);
