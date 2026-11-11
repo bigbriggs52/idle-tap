@@ -206,13 +206,14 @@ window.SVT = window.SVT || {};
   SVT.raidStage = (lab) => SVT.RAID.stage(lab.stage);
   SVT.raidNext = () => Math.min(SVT.RAID.STAGES, S.raid.cleared + 1);
   // Raid shafts, lift and warehouse stop at the stage's max level; labs use the normal caps.
-  // v0.46: in the raid the lift and warehouse can only be levelled as far as the shafts have got: the stage's hub max
-  // times the share of all shaft levels reached (shafts not yet opened count as 0), at least 10. One shaft at Lv 50 of
-  // 100 on a one-shaft stage lets the hubs reach 50.
+  // v0.46: in the raid the lift and warehouse can only be levelled as far as the shafts have got. v0.46.1 (user:
+  // "won't let me upgrade shaft or warehouse"): the gate follows the best opened shaft (hub max x its level / shaft
+  // max, at least 10). Before, unopened shafts counted as Lv 0, which held the lift at Lv 10 on a 6-shaft stage with
+  // one shaft open, so income was too low to ever open shaft 2.
   SVT.hubGate = (lab) => {
-    const st = SVT.raidStage(lab), m = st.max;
-    let lv = 0; lab.floors.forEach((f) => (lv += Math.min(m.floor, f.lvl)));
-    return Math.min(m.freight, Math.max(10, Math.ceil((m.freight * lv) / (st.floors * m.floor))));
+    const m = SVT.raidStage(lab).max;
+    let best = 1; lab.floors.forEach((f) => (best = Math.max(best, Math.min(m.floor, f.lvl))));
+    return Math.min(m.freight, Math.max(10, Math.ceil((m.freight * best) / m.floor)));
   };
   SVT.maxLevel = (lab, kind) => (SVT.isRaid(lab) ? (kind === "floor" ? SVT.raidStage(lab).max.floor : Math.min(SVT.raidStage(lab).max[kind], SVT.hubGate(lab))) : B.maxLevel(kind));
   // The level a node can finally reach (the stage max in the raid, ignoring the shaft gate).
@@ -751,20 +752,18 @@ window.SVT = window.SVT || {};
   };
   SVT.upgradeAll = () => {
     const lab = SVT.lab(), t = now();
-    let levels = 0, spent = 0, nodes = 0, saving = null;
+    let levels = 0, spent = 0, nodes = 0;
     const order = [];
     for (let step = 0; step < SVT.UPGRADE_MAX_STEPS; step++) {
       const b = SVT.bestUpgrade(lab, t);
-      // v0.45 (user: "why does the lift upgrade so quick when I click max on Viking mine"): when nothing left raises
-      // income (shafts maxed, lift and warehouse already move more than the shafts dig) and a new shaft can still be
-      // opened, stop and save for it instead of pouring the cash into lift levels that add nothing.
-      if ((!b || b.gain <= b.base * 1e-9) && SVT.nextFloor(lab) && !SVT.nextFloor(lab).blocked) { saving = SVT.nextFloor(lab); break; }
+      // v0.46.1 (user: "If I click max all I want it to max as much as it can until I have no money left"): it keeps
+      // buying the best-value upgrade until nothing is affordable (v0.45 stopped early to save for the next shaft).
       if (!b || !SVT.upgradeBy(lab, b.kind, b.n, b.q)) break;
       levels += b.q.count; spent += b.q.cost; nodes++;
       order.push(b.kind + (b.kind === "floor" ? b.n : ""));
     }
     if (levels) emit("change");
-    return { levels, spent, nodes, order, saving };
+    return { levels, spent, nodes, order };
   };
   // Roughly how many levels Max all could buy right now (each node quoted against the full cash; no side effects).
   SVT.upgradeAllQuote = (lab) => {

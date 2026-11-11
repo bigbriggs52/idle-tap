@@ -516,15 +516,15 @@ await page.evaluate(() => { SVT.closeHoard(); SVT.showRaidClear(1, { tokens: 1 }
 await page.click("text=Raid stage 2");
 await page.waitForTimeout(300);
 if ((await page.evaluate(() => SVT.lab().stage)) !== 2) errors.push("Stage 2 did not open after clearing");
-// v0.45: with shaft 1 maxed and the lift/warehouse already moving more than it digs, Max all saves for shaft 2
+// v0.46.1: Max all spends until nothing more is affordable (user: "max as much as it can until I have no money left")
 const saveChk = await page.evaluate(() => {
-  const L = SVT.lab(); L.floors[0].lvl = SVT.maxLevel(L, "floor"); L.freight.lvl = 300; L.commercial.lvl = 300;
+  const L = SVT.lab(); L.floors[0].lvl = 40; L.freight.lvl = 10; L.commercial.lvl = 10;
   L.cash = SVT.nextFloor(L).cost * 0.9;
   const cash = L.cash, r = SVT.upgradeAll();
-  return { levels: r.levels, saving: r.saving && r.saving.n, kept: L.cash === cash, lift: L.freight.lvl };
+  return { levels: r.levels, spent: cash - L.cash, left: SVT.bestUpgrade(L) === null };
 });
-console.log("maxAllSaves", JSON.stringify(saveChk));
-if (saveChk.levels !== 0 || saveChk.saving !== 2 || !saveChk.kept || saveChk.lift !== 300) errors.push("Max all spent on lift levels that add no income (v0.45): " + JSON.stringify(saveChk));
+console.log("maxAllSpends", JSON.stringify(saveChk));
+if (!(saveChk.levels > 0) || !(saveChk.spent > 0) || !saveChk.left) errors.push("Max all did not spend down to nothing affordable (v0.46.1): " + JSON.stringify(saveChk));
 // v0.41: Unlock max opens shafts while the cash lasts (stage 2 has one more shaft to open), and stops at the last one
 const unlock = await page.evaluate(() => {
   const L = SVT.lab(), btn = !!document.querySelector(".btn.unlock-max");
@@ -893,7 +893,7 @@ const vpre = await page.evaluate(() => {
   const gl = SVT.newLab("raid"); gl.stage = 25; gl.floors[0].lvl = 1; const g1 = SVT.hubGate(gl);
   for (let i = 1; i < 25; i++) gl.floors.push({ lvl: 100 }); gl.floors[0].lvl = 100; const g2 = SVT.hubGate(gl);
   gl.floors.length = 1; gl.floors[0].lvl = 100; const g3 = SVT.hubGate(gl);
-  const gateOk = g1 === 10 && g2 === 300 && g3 === 12 && SVT.maxLevel(gl, "freight") === 12 && SVT.maxLevel(gl, "floor") === 100;
+  const gateOk = g1 === 10 && g2 === 300 && g3 === 300 && SVT.maxLevel(gl, "freight") === 300 && (gl.floors[0].lvl = 25, SVT.hubGate(gl)) === 75 && SVT.maxLevel(gl, "floor") === 100;
   const rl = S.labs.raid, hireSame = SVT.hireCost(rl, "floor") === SVT.B.hireCost("floor", rl.hires.floor);
   const step = [R.shaftStep(1), R.shaftStep(250)], bad = [R.stage(51).omens.length, R.stage(250).omens.length];
   // v0.43: Viking Raid managers have Norse names and Viking portraits
