@@ -1397,10 +1397,16 @@ window.SVT = window.SVT || {};
     // One loop: the game steps every animation frame so movement is smooth, moving parts redraw every frame,
     // and numbers and buttons refresh about 7 times a second.
     let lastUi = 0;
+    // v0.46.2 (user: "game gets glitchy on rush"): while a full-screen mini game (Rush, Bug Hunt) covers the lab, the
+    // lab keeps earning but stops redrawing, so the phone spends every frame on the mini game.
+    let cover = null;
     (function loop(t) {
       SVT.step();
-      for (let i = 0; i < frames.length; i++) { const f = frames[i]; if (f.e.isConnected) f.fn(f.e); }
-      if (dirty || t - lastUi > 150) { dirty = false; update(); lastUi = t; }
+      if (!(cover && cover.isConnected)) cover = document.querySelector("#rush, #bugs");
+      if (!cover) {
+        for (let i = 0; i < frames.length; i++) { const f = frames[i]; if (f.e.isConnected) f.fn(f.e); }
+        if (dirty || t - lastUi > 150) { dirty = false; update(); lastUi = t; }
+      } else dirty = true;
       requestAnimationFrame(loop);
     })(0);
     if (!SVT.state().seenIntro) showIntro();

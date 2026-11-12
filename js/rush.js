@@ -101,7 +101,12 @@ window.SVT = window.SVT || {};
 
     const g = (game = { parts: [], t: 0, next: 0.6, score: 0, lives: B.RUSH.LIVES, streak: 0, over: false, raf: 0 });
     let last = performance.now(), x0 = null, y0 = 0;
-    const H = () => belt.clientHeight || 400;
+    // v0.46.2: the belt height is measured once (and on resize), not every frame; reading layout each frame after the
+    // part moves forced a full relayout per frame, which stuttered on phones.
+    let beltH = 0;
+    const H = () => beltH || (beltH = belt.clientHeight || 400);
+    const onResize = () => { beltH = 0; };
+    window.addEventListener("resize", onResize);
     const drawLives = () => (lives.textContent = "❤️".repeat(g.lives) + "🖤".repeat(B.RUSH.LIVES - g.lives));
     drawLives();
 
@@ -140,7 +145,7 @@ window.SVT = window.SVT || {};
         combo.textContent = g.streak >= 5 ? "🔥 " + g.streak : "";
       } else lose();
     };
-    g.stop = () => { g.over = true; cancelAnimationFrame(g.raf); };
+    g.stop = () => { g.over = true; cancelAnimationFrame(g.raf); window.removeEventListener("resize", onResize); };
     g.end = end;
     function end() {
       if (g.over && g.ended) return;
@@ -158,7 +163,7 @@ window.SVT = window.SVT || {};
       const bottom = H() - 30;
       for (const x of g.parts.slice()) {
         x.y += x.v * dt;
-        x.el.style.transform = "translate(-50%," + x.y.toFixed(1) + "px)";
+        x.el.style.transform = "translate3d(-50%," + x.y.toFixed(1) + "px,0)";
         if (x.y > bottom) {
           x.done = true;
           x.el.classList.add("drop");
@@ -169,7 +174,7 @@ window.SVT = window.SVT || {};
         }
       }
       const nearest = g.parts.reduce((a, b) => (!a || b.y > a.y ? b : a), null);
-      g.parts.forEach((x) => x.el.classList.toggle("next", x === nearest));
+      if (nearest !== g.nearest) { if (g.nearest) g.nearest.el.classList.remove("next"); if (nearest) nearest.el.classList.add("next"); g.nearest = nearest; }
       timeFill.style.transform = "scaleX(" + Math.max(0, 1 - g.t / B.RUSH.SECONDS).toFixed(4) + ")";
       if (g.t >= B.RUSH.SECONDS) { end(); return; }
       g.raf = requestAnimationFrame(frame);
