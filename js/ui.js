@@ -1342,6 +1342,7 @@ window.SVT = window.SVT || {};
     }
     if (type === "floor") { toast((inRaid() ? "New shaft: " : "New floor: ") + productName(d.n)); render(); }
     if (type === "assign" || type === "switch") render();
+    if (type === "error") toast("⚠️ Game error (" + d.where + "): " + d.msg + ". A screenshot of this helps fix it.", "big");
     if (type === "hire") { const y = window.scrollY; render(); window.scrollTo(0, y); }
     if (type === "raise") { toast("💰 Raised " + d.round.name + "! Lab income now ×" + d.mult + (d.coins ? " · +" + d.coins + " 🪙" : ""), "big"); render(); }
     if (type === "tap") squish(document.querySelector(d.kind === "floor" ? '.floor[data-floor="' + d.n + '"] .scene' : d.kind === "freight" ? ".lift-tower" : ".wh-tower"));
@@ -1401,13 +1402,15 @@ window.SVT = window.SVT || {};
     // lab keeps earning but stops redrawing, so the phone spends every frame on the mini game.
     let cover = null;
     (function loop(t) {
-      SVT.step();
+      requestAnimationFrame(loop); // v0.46.3: queued first, so an error below can never stop the game loop
+      try { SVT.step(); } catch (e) { SVT.reportError(e, "step"); }
       if (!(cover && cover.isConnected)) cover = document.querySelector("#rush, #bugs");
       if (!cover) {
-        for (let i = 0; i < frames.length; i++) { const f = frames[i]; if (f.e.isConnected) f.fn(f.e); }
-        if (dirty || t - lastUi > 150) { dirty = false; update(); lastUi = t; }
+        try {
+          for (let i = 0; i < frames.length; i++) { const f = frames[i]; if (f.e.isConnected) f.fn(f.e); }
+          if (dirty || t - lastUi > 150) { dirty = false; update(); lastUi = t; }
+        } catch (e) { SVT.reportError(e, "screen"); }
       } else dirty = true;
-      requestAnimationFrame(loop);
     })(0);
     if (!SVT.state().seenIntro) showIntro();
     else if (off) showOffline(off);
