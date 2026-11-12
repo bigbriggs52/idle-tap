@@ -6,7 +6,7 @@ const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 });
 const errors = [];
 page.on("pageerror", (e) => errors.push(e.message));
-page.on("console", (m) => { if (m.type() === "error") errors.push(m.text()); });
+page.on("console", (m) => { if (m.type() === "error" && !m.text().startsWith("SVT error in")) errors.push(m.text()); });
 await page.goto(url);
 await page.waitForTimeout(500);
 await page.screenshot({ path: out + "/01-intro.png" });
@@ -525,6 +525,19 @@ const saveChk = await page.evaluate(() => {
 });
 console.log("maxAllSpends", JSON.stringify(saveChk));
 if (!(saveChk.levels > 0) || !(saveChk.spent > 0) || !saveChk.left) errors.push("Max all did not spend down to nothing affordable (v0.46.1): " + JSON.stringify(saveChk));
+// v0.46.3: an error in one lab's step is caught and shown; the game loop and the other labs keep running
+const errChk = await page.evaluate(async () => {
+  const S = SVT.state(), L = SVT.lab(), other = Object.keys(S.labs).find((id) => S.labs[id] !== L && !SVT.labBeaten(S.labs[id]));
+  const bad = S.labs[other]; const keep = bad.floors; bad.floors = null; // makes that lab's step throw
+  const cash0 = L.cash; L.cash += 0; await new Promise((r) => setTimeout(r, 600));
+  const shown = [...document.querySelectorAll("#toasts *")].some((e) => /Game error/.test(e.textContent));
+  bad.floors = keep;
+  const t0 = SVT.lab().lifetime; await new Promise((r) => setTimeout(r, 400));
+  return { err: !!SVT.lastError, where: SVT.lastError && SVT.lastError.where, shown, still: SVT.lab().lifetime >= t0 };
+});
+console.log("errors caught", JSON.stringify(errChk));
+if (!errChk.err || !errChk.shown || !errChk.still) errors.push("Lab step errors not caught or shown (v0.46.3): " + JSON.stringify(errChk));
+await page.evaluate(() => { SVT.lastError = null; });
 // v0.41: Unlock max opens shafts while the cash lasts (stage 2 has one more shaft to open), and stops at the last one
 const unlock = await page.evaluate(() => {
   const L = SVT.lab(), btn = !!document.querySelector(".btn.unlock-max");

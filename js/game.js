@@ -289,14 +289,17 @@ window.SVT = window.SVT || {};
   // Effective stat = base stat x passive multiplier x active multiplier. Passives come from a super manager assigned
   // to the node (or, for revenue and cooldowns, anywhere in the lab); actives from the running ability. Timers
   // (activeUntil, cdUntil, lift.warpAt) are absolute times stored in the save, so they carry across reloads.
-  SVT.abilityOf = (m) => SVT.ability(m.role, m.ability);
+  // v0.46.3: a manager from an old save with a rarity or ability this version no longer has falls back to Common Speed
+  // instead of throwing (which stopped the whole game step).
+  SVT.statsOf = (m, ab) => { const r = B.ABILITY_STATS[m.rank] || B.ABILITY_STATS.common; return r[ab.kind] || r.speed; };
+  SVT.abilityOf = (m) => SVT.ability(m.role, m.ability) || B.ABILITIES[m.role][0];
   SVT.isSuper = (m) => !!m && SVT.abilityOf(m).kind === "special";
   SVT.isActive = (m, t) => !!m && m.activeUntil > (t || now());
   // Active seconds, cooldown seconds and headline numbers of a manager's ability.
   SVT.abilityStats = (m) => {
     const ab = SVT.abilityOf(m);
     if (ab.kind === "special") return { active: ab.active, cooldown: ab.cooldown, mult: ab.speed || ab.direct || ab.cash || 1, off: ab.allDiscount || 0 };
-    const st = B.ABILITY_STATS[m.rank][ab.kind];
+    const st = SVT.statsOf(m, ab);
     return { active: st.active, cooldown: st.cooldown, mult: st.mult || 1, off: st.off || 0 };
   };
   // The super manager on a node, if any: { ab, m, live }.
@@ -336,7 +339,7 @@ window.SVT = window.SVT || {};
       return { kind: "special", id: ab.id, name: ab.name, icon: ab.icon, mult: ab.speed || ab.direct || ab.cash || ab.allDiscount || 1, speed: ab.speed || 1, load: 1,
         direct: ab.direct || 0, cash: ab.cash || 1, vacuum: !!ab.vacuum, warp: ab.warp || 0, off: ab.allDiscount || 0 };
     }
-    const st = B.ABILITY_STATS[m.rank][ab.kind];
+    const st = SVT.statsOf(m, ab);
     return { kind: ab.kind, id: ab.id, name: ab.name, icon: B.ABILITY_KINDS[ab.kind].icon, mult: ab.kind === "discount" ? st.off : st.mult,
       speed: ab.kind === "speed" ? st.mult : 1, load: ab.kind === "storage" ? st.mult : 1, direct: 0, cash: 1, vacuum: false, warp: 0, off: ab.kind === "discount" ? st.off : 0 };
   };
@@ -462,7 +465,11 @@ window.SVT = window.SVT || {};
   }
   function stepWarehouse(lab, dt, t) {
     const c = lab.commercial, mgr = !!SVT.mgrOf(lab, "commercial", 0);
-    dt *= SVT.speedMult(lab, "commercial", 0, t);
+    // v0.46.3: heal a cart or lobby left in a broken state by an old save (NaN or Infinity stopped every trip)
+    if (!Number.isFinite(c.left) || c.left > B.WH_TRIP) { c.left = 0; c.loaded = false; c.carry = 0; }
+    if (!Number.isFinite(lab.lobby) || lab.lobby < 0) lab.lobby = 0;
+    const sp = SVT.speedMult(lab, "commercial", 0, t);
+    dt *= Number.isFinite(sp) && sp > 0 ? sp : 1;
     let earned = 0, guard = 50;
     while (dt > 1e-9 && guard-- > 0) {
       if (!(c.left > 0)) {
@@ -518,11 +525,19 @@ window.SVT = window.SVT || {};
     return earned;
   }
   // Long gaps (app in background) are replayed in 1-second steps so nothing is lost.
+  SVT.lastError = null;
+  SVT.reportError = (e, where) => {
+    const msg = (e && e.message) || String(e), first = !SVT.lastError || SVT.lastError.msg !== msg;
+    SVT.lastError = { msg, where: where || "", at: Date.now(), stack: (e && e.stack) || "" };
+    if (first) { console.error("SVT error in " + (where || "?"), e); emit("error", SVT.lastError); }
+  };
   SVT.tick = (dt) => {
     const t = now();
     for (const id in S.labs) {
       if (SVT.labBeaten(S.labs[id])) continue; // beaten labs are closed
-      for (let s = dt; s > 0; s -= 1) tickLab(S.labs[id], Math.min(1, s), t - s + Math.min(1, s));
+      // v0.46.3: one broken lab must not stop the others (or the warehouse after it) from running; the error is kept
+      // and shown once so it can be reported.
+      try { for (let s = dt; s > 0; s -= 1) tickLab(S.labs[id], Math.min(1, s), t - s + Math.min(1, s)); } catch (e) { SVT.reportError(e, id); }
     }
     S.lastSeen = Date.now();
   };

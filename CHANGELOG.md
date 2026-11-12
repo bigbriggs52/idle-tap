@@ -2,6 +2,13 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.46.3 (2026-11-12)
+
+- Warehouse and game-loop safety. If anything in one lab's step goes wrong (for example a manager carried over from an old save with a rarity or ability this version no longer has), that lab is skipped for the moment instead of stopping the whole game, so the other labs, the lift and the warehouse keep running. The game shows a "⚠️ Game error" message naming what broke, so a screenshot of it pinpoints the problem.
+- Old managers with a removed rarity or ability fall back to Common Speed instead of breaking the step.
+- A warehouse cart or top-of-shaft amount left in a broken state by an old save heals itself.
+- Reminder: with no warehouse manager, every trip needs a tap on the warehouse (after tapping the lift to bring money up). A manager runs it on its own.
+
 ## v0.46.2 (2026-11-12)
 
 - Smoother Rush. While Rush or Bug Hunt is open, the lab underneath stops drawing and animating (it keeps earning), and the belt no longer re-measures the screen every frame. In a test on a slowed-down phone profile, Rush used about half the CPU and stopped dropping frames.
