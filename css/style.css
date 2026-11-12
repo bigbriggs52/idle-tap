@@ -1549,3 +1549,8 @@ body:has(#sheet) #toasts { top: auto; bottom: calc(132px + env(safe-area-inset-b
 :is(.vault-card, .vault-seg.lock):is(.r-divine, .r-celestial, .r-cosmic, .r-eternal, .r-ascended, .r-transcendent, .r-primordial, .r-infinite, .r-omega, .r-singularity) { background: linear-gradient(160deg, #fff, color-mix(in srgb, var(--rc) 18%, #fff)); animation: glow 1.6s ease-in-out infinite; }
 .vault-seg.lock:is(.r-divine, .r-celestial, .r-cosmic, .r-eternal, .r-ascended, .r-transcendent, .r-primordial, .r-infinite, .r-omega, .r-singularity) { background: var(--rc); }
 @media (prefers-reduced-motion: reduce) { .vault-card[class*="r-"] { animation: none; } }
+
+/* v0.46.2 (user: "game gets glitchy on rush"): while Rush or Bug Hunt covers the screen, the lab underneath stops
+   painting and animating, so the phone spends its frames on the mini game. */
+body:has(> #rush, > #bugs) > #app { visibility: hidden; }
+body:has(> #rush, > #bugs) > #app * { animation-play-state: paused !important; }

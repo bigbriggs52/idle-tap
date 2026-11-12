@@ -2,6 +2,11 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.46.2 (2026-11-12)
+
+- Smoother Rush. While Rush or Bug Hunt is open, the lab underneath stops drawing and animating (it keeps earning), and the belt no longer re-measures the screen every frame. In a test on a slowed-down phone profile, Rush used about half the CPU and stopped dropping frames.
+- The warehouse cart picks up the whole drop. It used to load the moment it reached the lift, often while the lift was still pouring money out, so it drove off with part of it and left the rest sitting there for a whole trip. Now it loads as it leaves, and if the lift is still unloading, it waits for the rest.
+
 ## v0.46.1 (2026-11-11)
 
 - Fix: Viking lift and warehouse stuck at Lv 10. The new "shafts first" limit counted shafts you had not opened yet as Lv 0, so on a stage with several shafts the lift and warehouse could not pass Lv 10 and the mine earned too little to open shaft 2. The limit now follows your best shaft: with your best shaft at Lv 25 of 100, the lift and warehouse can go to a quarter of their max (Lv 35 of 140 on stage 6). All 250 stage prices were refitted for it.

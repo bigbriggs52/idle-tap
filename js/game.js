@@ -469,11 +469,15 @@ window.SVT = window.SVT || {};
         if (!mgr || !(lab.lobby > 0)) return earned;
         SVT.startShip(lab, t);
       }
-      // The empty cart reaches the lift halfway through the trip and loads there, then is paid back at the warehouse.
-      const half = B.WH_TRIP / 2;
+      // The empty cart reaches the lift and loads there, then is paid back at the warehouse. v0.46.2 (user: "warehouse
+      // isn't always picking up money"): it loads as it leaves the lift (55% of the trip, where the picture has it
+      // pull away) instead of the moment it arrives, and if the lift is still pouring money out it waits for the
+      // rest, so it no longer drives off with part of a drop and leaves the rest sitting there for a whole trip.
+      const half = B.WH_TRIP * 0.45;
       if (!c.loaded && c.left > half) {
         if (c.left - half > dt) { c.left -= dt; return earned; }
         dt -= c.left - half; c.left = half;
+        if (lab.lift && lab.lift.phase === "unload" && lab.lobby < SVT.shipLoad(lab, t)) return earned;
         const take = Math.min(lab.lobby, SVT.shipLoad(lab, t));
         lab.lobby -= take; c.carry = take; c.loaded = true;
         continue;
