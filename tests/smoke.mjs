@@ -301,7 +301,7 @@ const cyc = await page.evaluate(() => {
   L.assign = {}; L.floors.forEach((f) => { f.left = 0; f.stock = 0; }); L.commercial.left = 0; L.lobby = 100; L.cash = 0;
   L.lift = { phase: "idle", y: 0, load: 0, timer: 0, at: 0 };
   SVT.tap("floor", 1); SVT.tap("floor", 1); SVT.tap("commercial", 0);
-  for (let i = 0; i < 1000; i++) SVT.tick(0.05); // v0.46.4: a heavy cart walks back slower (up to WH_HEAVY trips' time)
+  for (let i = 0; i < 200; i++) SVT.tick(0.05); // v0.46.5: one normal-speed trip carries the whole pile
   const one = SVT.B.floorOutput(1, L.floors[0].lvl) * SVT.prestigeMult(L) * SVT.B.FLOOR_CYCLE;
   return { cycles: L.floors[0].stock / one, floorLeft: L.floors[0].left, shipped: L.cash, trip: SVT.shipLoad(L), whLeft: L.commercial.left, lift: L.lift.phase };
 });

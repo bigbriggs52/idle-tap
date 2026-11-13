@@ -486,19 +486,15 @@ window.SVT = window.SVT || {};
         dt -= c.left - half; c.left = half;
         const cap = SVT.shipLoad(lab, t);
         if (lab.lift && lab.lift.phase === "unload" && lab.lobby < cap) return earned;
-        // v0.46.4 (user, third report: "warehouse ... not picking up all the time"): one lift drop is often several
-        // cart loads (the lift's trip is longer than the cart's), so a full cart left the rest of the pile sitting at
-        // the top. Now the cart takes the whole pile (up to HEAVY loads) and walks back slower in proportion, so the
-        // warehouse still moves exactly its capacity per second, it just never leaves money behind.
-        const f = cap > 0 ? Math.min(B.WH_HEAVY, Math.max(1, lab.lobby / cap)) : 1;
-        const take = Math.min(lab.lobby, cap * f);
+        // v0.46.4 (user: "warehouse ... not picking up all the time"): one lift drop is often several cart loads (the
+        // lift's trip is longer than the cart's), so a full cart left the rest of the pile at the top. The cart takes
+        // the whole pile, up to HEAVY loads. v0.46.5 (user: "now it goes slower than it should"): at normal speed.
+        const take = Math.min(lab.lobby, cap * B.WH_HEAVY);
         lab.lobby -= take; c.carry = take; c.loaded = true;
-        c.slow = (f - 0.55) / 0.45; // the return leg (45% of a trip) stretches so the whole trip takes f trips' time
         continue;
       }
-      const slow = c.loaded && c.slow > 1 ? c.slow : 1;
-      if (c.left * slow > dt) { c.left -= dt / slow; return earned; }
-      dt -= c.left * slow; c.left = 0; c.slow = 1;
+      if (c.left > dt) { c.left -= dt; return earned; }
+      dt -= c.left; c.left = 0;
       const pay = (c.carry || 0) * SVT.cashMult(lab, t, true); // v0.30: Unicorn +25%, Overclocker x3 on deliveries
       earned += pay; lab.cash += pay; lab.lifetime += pay; c.carry = 0;
     }
@@ -508,7 +504,7 @@ window.SVT = window.SVT || {};
   // A trip starts at the warehouse: the worker pushes the empty cart to the lift, loads up, and pushes it back.
   SVT.startShip = (lab) => {
     const c = lab.commercial;
-    c.carry = 0; c.loaded = false; c.left = B.WH_TRIP; c.slow = 1;
+    c.carry = 0; c.loaded = false; c.left = B.WH_TRIP; delete c.slow;
   };
   function tickLab(lab, dt, t) {
     let earned = 0;

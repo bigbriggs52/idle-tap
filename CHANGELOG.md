@@ -2,6 +2,10 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.46.5 (2026-11-13)
+
+- The warehouse cart is back to normal speed. It still takes the whole pile at the top of the shaft (up to 10 loads), but it no longer walks back slower when it's heavy. Viking stage times were checked and are unchanged.
+
 ## v0.46.4 (2026-11-13)
 
 - The warehouse picks up everything. One lift drop is often more than one cart load, because the lift's trip takes longer than the cart's. So a full cart drove off and left the rest of the money sitting at the top of the shaft until its next trip. Now the cart takes the whole pile (up to 10 loads) and walks back slower to match. The warehouse still earns exactly its capacity per second, but it never leaves money behind. With no manager, one tap ships the whole pile.
