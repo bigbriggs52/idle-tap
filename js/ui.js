@@ -194,7 +194,7 @@ window.SVT = window.SVT || {};
     const label = b.lastChild;
     return bind(b, (e) => {
       const left = leftFn();
-      setText(label, left > 0 ? "×" + multFn() + " " + SVT.rushClock(left) : name);
+      setText(label, left > 0 ? "×" + multFn() + " " + SVT.boostShort(left) : name);
       toggle(e, "ready", !waitFn() && !left);
       toggle(e, "boosted", left > 0);
     });
@@ -1172,7 +1172,7 @@ window.SVT = window.SVT || {};
     const label = b.querySelector(".bubble-label"), badge = b.querySelector(".bubble-badge");
     return bind(b, () => {
       const left = leftFn();
-      setText(label, left > 0 ? "×" + multFn() + " " + SVT.rushClock(left) : name);
+      setText(label, left > 0 ? "×" + multFn() + " " + SVT.boostShort(left) : name);
       badge.hidden = waitFn() > 0 || left > 0;
     });
   }

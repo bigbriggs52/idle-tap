@@ -48,7 +48,7 @@ window.SVT = window.SVT || {};
     const { h } = ui();
     return h("div", { class: "rush-tiers" }, B.BUGS.TIERS.map((x) =>
       h("div", { class: "rush-tier" + (hit && hit.mult === x.mult ? " hit" : "") },
-        h("b", { text: "×" + x.mult }), h("span", { text: x.score + "+ bugs" }), h("small", { text: x.minutes + " min" }))));
+        h("b", { text: "×" + x.mult }), h("span", { text: x.score + "+ bugs" }), h("small", { text: SVT.boostDur(x.minutes) }))));
   }
 
   // Start screen: rules, rewards, the current boost and the cooldown.
@@ -176,12 +176,12 @@ window.SVT = window.SVT || {};
       h("div", { class: "rush-big", text: String(n) }),
       h("p", { class: "rush-sub", text: "bugs squashed" }),
       tier
-        ? h("p", { class: "rush-win", text: res.applied ? "⚡ ×" + tier.mult + " income in every lab for " + tier.minutes + " minutes, on top of any Rush boost!" : "⚡ You earned ×" + tier.mult + ", but your current Bug Hunt boost is bigger, so it stays." })
+        ? h("p", { class: "rush-win", text: res.applied ? "⚡ ×" + tier.mult + " income in every lab for " + SVT.boostDur(tier.minutes) + ", on top of any Rush boost!" : "⚡ You earned ×" + tier.mult + ", but your current Bug Hunt boost is bigger, so it stays." })
         : h("p", { class: "rush-miss", text: "No boost this time. Squash " + B.BUGS.TIERS[0].score + " bugs for ×" + B.BUGS.TIERS[0].mult + "." }),
       tier && next ? h("p", { class: "muted small", text: next.score - n + " more for ×" + next.mult + "." }) : null,
       rewardTable(tier)),
       h("div", { class: "rush-foot" }, h("button", { class: "btn fund-cta big", onclick: close, text: "Back to the lab" })));
-    if (tier && res.applied) SVT.ui.toast("⚡ ×" + tier.mult + " Bug Hunt boost for " + tier.minutes + " min!", "big");
+    if (tier && res.applied) SVT.ui.toast("⚡ ×" + tier.mult + " Bug Hunt boost for " + SVT.boostDur(tier.minutes) + "!", "big");
   }
 
   SVT.openBugs = openBugs;

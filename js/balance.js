@@ -19,9 +19,9 @@ window.SVT = window.SVT || {};
   }
 
   const B = {
-    VERSION: "0.46.5",
+    VERSION: "0.47.0",
     // Release time in UTC, set with each release. Shown after the version in the player's local time.
-    BUILT: "2026-11-13T20:55Z",
+    BUILT: "2026-11-13T22:45Z",
     FLOORS: 30,
     // v0.26: lower caps, because the IPO needs every floor, the lift and the warehouse at max level. The hubs cap at
     // Lv 400: that is the income every lab ends with, so the deep floors must stay affordable against it, and
@@ -92,11 +92,13 @@ window.SVT = window.SVT || {};
       SECONDS: 45,
       LIVES: 3,
       COOLDOWN: 15 * 60,
+      // v0.47 (user: "I want the rush and bug bonuses to last for like 24 hours"): every tier lasts 24 hours (was 10
+      // to 30 min). A better run within those 24 hours still upgrades the boost; the same tier refreshes the clock.
       TIERS: [
-        { score: 20, mult: 2, minutes: 10 },
-        { score: 35, mult: 3, minutes: 15 },
-        { score: 50, mult: 4, minutes: 20 },
-        { score: 65, mult: 5, minutes: 30 },
+        { score: 20, mult: 2, minutes: 1440 },
+        { score: 35, mult: 3, minutes: 1440 },
+        { score: 50, mult: 4, minutes: 1440 },
+        { score: 65, mult: 5, minutes: 1440 },
       ],
     },
     // Bug Hunt (second mini game, v0.37): a 30-second whack-a-mole run on a 3x3 server rack with 3 lives. Its boost
@@ -105,11 +107,11 @@ window.SVT = window.SVT || {};
       SECONDS: 30,
       LIVES: 3,
       COOLDOWN: 15 * 60,
-      TIERS: [
-        { score: 12, mult: 1.5, minutes: 10 },
-        { score: 20, mult: 2, minutes: 15 },
-        { score: 28, mult: 2.5, minutes: 20 },
-        { score: 36, mult: 3, minutes: 30 },
+      TIERS: [ // v0.47: 24 hours each, like Rush
+        { score: 12, mult: 1.5, minutes: 1440 },
+        { score: 20, mult: 2, minutes: 1440 },
+        { score: 28, mult: 2.5, minutes: 1440 },
+        { score: 36, mult: 3, minutes: 1440 },
       ],
     },
     // Tech Vault (collectible roll): a new player starts with START_COINS wild coins (good at any open lab), and
