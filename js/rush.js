@@ -19,7 +19,13 @@ window.SVT = window.SVT || {};
 
   let box = null, game = null;
   const ui = () => SVT.ui;
-  const clock = (s) => { s = Math.ceil(s); const m = Math.floor(s / 60); return m + ":" + String(s % 60).padStart(2, "0"); };
+  // m:ss, or h:mm:ss from an hour up (v0.47: boosts last 24 hours)
+  const clock = (s) => { s = Math.ceil(s); const hr = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = String(s % 60).padStart(2, "0"); return hr ? hr + ":" + String(m).padStart(2, "0") + ":" + sec : m + ":" + sec; };
+  // "10 min", "2 h", "24 h"
+  const dur = (min) => (min >= 60 ? +(min / 60).toFixed(1) + " h" : min + " min");
+  SVT.boostDur = dur;
+  // compact label for the bottom bar and bubbles: hours left ("23h") from an hour up, else m:ss
+  SVT.boostShort = (s) => (s >= 3600 ? Math.floor(s / 3600) + "h" : clock(s));
 
   function close() {
     if (game) game.stop();
@@ -50,7 +56,7 @@ window.SVT = window.SVT || {};
     const { h } = ui();
     return h("div", { class: "rush-tiers" }, B.RUSH.TIERS.map((x) =>
       h("div", { class: "rush-tier" + (hit && hit.mult === x.mult ? " hit" : "") },
-        h("b", { text: "×" + x.mult }), h("span", { text: x.score + "+ parts" }), h("small", { text: x.minutes + " min" }))));
+        h("b", { text: "×" + x.mult }), h("span", { text: x.score + "+ parts" }), h("small", { text: dur(x.minutes) }))));
   }
 
   // Start screen: rules, rewards, the current boost and the cooldown.
@@ -201,12 +207,12 @@ window.SVT = window.SVT || {};
       h("div", { class: "rush-big", text: String(n) }),
       h("p", { class: "rush-sub", text: "parts sorted" }),
       tier
-        ? h("p", { class: "rush-win", text: res.applied ? "⚡ ×" + tier.mult + " income in every lab for " + tier.minutes + " minutes!" : "⚡ You earned ×" + tier.mult + ", but your current boost is bigger, so it stays." })
+        ? h("p", { class: "rush-win", text: res.applied ? "⚡ ×" + tier.mult + " income in every lab for " + dur(tier.minutes) + "!" : "⚡ You earned ×" + tier.mult + ", but your current boost is bigger, so it stays." })
         : h("p", { class: "rush-miss", text: "No boost this time. Sort " + B.RUSH.TIERS[0].score + " parts for ×" + B.RUSH.TIERS[0].mult + "." }),
       tier && next ? h("p", { class: "muted small", text: next.score - n + " more for ×" + next.mult + "." }) : null,
       rewardTable(tier)),
       h("div", { class: "rush-foot" }, h("button", { class: "btn fund-cta big", onclick: close, text: "Back to the lab" })));
-    if (tier && res.applied) SVT.ui.toast("⚡ ×" + tier.mult + " income boost for " + tier.minutes + " min!", "big");
+    if (tier && res.applied) SVT.ui.toast("⚡ ×" + tier.mult + " income boost for " + dur(tier.minutes) + "!", "big");
   }
 
   SVT.openRush = openRush;

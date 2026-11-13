@@ -2,6 +2,10 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.47.0 (2026-11-13)
+
+- Rush and Bug Hunt boosts last 24 hours. Every tier now runs for 24 hours (it was 10 to 30 minutes). You can still play again after the 15-minute cooldown: a better score upgrades the boost, and the same tier restarts the 24-hour clock. The bottom bar shows the hours left (for example "×5 23h"), and the game screens show the full time.
+
 ## v0.46.5 (2026-11-13)
 
 - The warehouse cart is back to normal speed. It still takes the whole pile at the top of the shaft (up to 10 loads), but it no longer walks back slower when it's heavy. Viking stage times were checked and are unchanged.
