@@ -2,6 +2,10 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.46.4 (2026-11-13)
+
+- The warehouse picks up everything. One lift drop is often more than one cart load, because the lift's trip takes longer than the cart's. So a full cart drove off and left the rest of the money sitting at the top of the shaft until its next trip. Now the cart takes the whole pile (up to 10 loads) and walks back slower to match. The warehouse still earns exactly its capacity per second, but it never leaves money behind. With no manager, one tap ships the whole pile.
+
 ## v0.46.3 (2026-11-12)
 
 - Warehouse and game-loop safety. If anything in one lab's step goes wrong (for example a manager carried over from an old save with a rarity or ability this version no longer has), that lab is skipped for the moment instead of stopping the whole game, so the other labs, the lift and the warehouse keep running. The game shows a "⚠️ Game error" message naming what broke, so a screenshot of it pinpoints the problem.
