@@ -2,6 +2,10 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.47.1 (2026-11-14)
+
+- Fixed the warehouse sometimes not picking up money, with or without managers. If the cart reached the lift while the lift was still unloading, it waited and could then drive back empty. Now it never waits: it takes whatever money is at the top when it gets there and heads straight back.
+
 ## v0.47.0 (2026-11-13)
 
 - Rush and Bug Hunt boosts last 24 hours. Every tier now runs for 24 hours (it was 10 to 30 minutes). You can still play again after the 15-minute cooldown: a better score upgrades the boost, and the same tier restarts the 24-hour clock. The bottom bar shows the hours left (for example "×5 23h"), and the game screens show the full time.

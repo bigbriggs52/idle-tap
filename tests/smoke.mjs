@@ -310,6 +310,21 @@ const SVT_HEAVY = await page.evaluate(() => SVT.B.WH_HEAVY);
 if (Math.abs(cyc.cycles - 1) > 1e-6 || cyc.floorLeft > 0) errors.push("Floor tap did not run exactly one cycle");
 if (Math.abs(cyc.shipped - Math.min(100, cyc.trip * SVT_HEAVY)) > 1e-6 || cyc.whLeft > 0) errors.push("Warehouse tap did not ship the whole pile in one trip (v0.46.4)");
 if (cyc.lift !== "idle") errors.push("Lift moved without a tap");
+// v0.47.1 (user: "I don't want it to wait. If there is available money to pick up it should pick it up"): with no
+// managers, the cart reaches the top while the lift is still pouring money out; it takes what is there straight away,
+// finishes its trip on time, and gets paid (the old cart waited, then could drive off empty).
+const nowait = await page.evaluate(() => {
+  const L = SVT.lab();
+  L.assign = {}; L.floors.forEach((f) => { f.left = 0; f.stock = 0; }); L.lobby = 0; L.cash = 0;
+  const cap = SVT.shipLoad(L);
+  L.lift = { phase: "unload", y: 0, load: cap * 0.6, timer: 30, at: 0 };
+  L.lobby = cap * 0.2; SVT.tap("commercial", 0);
+  let ticks = 0;
+  for (; ticks < 400 && !(L.cash > 0); ticks++) SVT.tick(0.05);
+  return { cash: L.cash, secs: ticks * 0.05, trip: SVT.B.WH_TRIP, lift: L.lift.phase };
+});
+console.log("cart does not wait", JSON.stringify(nowait));
+if (!(nowait.cash > 0) || nowait.secs > nowait.trip + 0.11) errors.push("Warehouse cart waited or came back empty while the lift was unloading");
 // upgrade badge: ▲ / ▲▲ / ▲▲▲ for 1 / 10 / 50 affordable levels
 const tri = await page.evaluate(async () => {
   const L = SVT.lab(), out = [];
