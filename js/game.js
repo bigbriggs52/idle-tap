@@ -478,14 +478,15 @@ window.SVT = window.SVT || {};
       }
       // The empty cart reaches the lift and loads there, then is paid back at the warehouse. v0.46.2 (user: "warehouse
       // isn't always picking up money"): it loads as it leaves the lift (55% of the trip, where the picture has it
-      // pull away) instead of the moment it arrives, and if the lift is still pouring money out it waits for the
-      // rest, so it no longer drives off with part of a drop and leaves the rest sitting there for a whole trip.
+      // pull away) instead of the moment it arrives.
       const half = B.WH_TRIP * 0.45;
-      if (!c.loaded && c.left > half) {
+      // v0.47.1: `>=`, so a cart stopped exactly at the halfway mark still loads (it used to drive off empty).
+      if (!c.loaded && c.left > half - 1e-9) {
         if (c.left - half > dt) { c.left -= dt; return earned; }
         dt -= c.left - half; c.left = half;
         const cap = SVT.shipLoad(lab, t);
-        if (lab.lift && lab.lift.phase === "unload" && lab.lobby < cap) return earned;
+        // v0.47.1 (user: "I don't want it to wait. If there is available money to pick up it should pick it up"): no
+        // more waiting for the lift to finish pouring; the cart takes what is there when it arrives.
         // v0.46.4 (user: "warehouse ... not picking up all the time"): one lift drop is often several cart loads (the
         // lift's trip is longer than the cart's), so a full cart left the rest of the pile at the top. The cart takes
         // the whole pile, up to HEAVY loads. v0.46.5 (user: "now it goes slower than it should"): at normal speed.
