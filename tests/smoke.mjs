@@ -272,6 +272,7 @@ await page.click(".bottom-nav >> text=Map");
 await page.waitForTimeout(300);
 const pins = await page.evaluate(() => ({ total: document.querySelectorAll(".pin").length, locked: document.querySelectorAll(".pin.locked").length, open: document.querySelectorAll(".pin.open").length }));
 console.log("pins", JSON.stringify(pins));
+if (pins.total !== 50 || (await page.locator(".map.frontier .pin").count()) !== 20) errors.push("Map: expected 50 pins with 20 on The Frontier (v0.48) " + JSON.stringify(pins));
 await page.screenshot({ path: out + "/06-map.png", fullPage: true });
 await page.click(".pin.open >> nth=1");
 await page.waitForTimeout(300);
@@ -454,7 +455,7 @@ if (!stickyClear.up || stickyClear.x || !stickyClear.home) errors.push("Raid cle
 const viking = await page.evaluate(() => { const R = SVT.RAID, L = SVT.lab(); return { tokens: SVT.vikingTokens(), boats: SVT.boatsUnlocked(), boat: SVT.boatIndex(), stages: R.STAGES, shafts50: R.shafts(50), shafts51: R.shafts(51), t1: R.time(1), t50: R.time(50), t51: R.time(51), t250: R.time(250), loot: R.def(50).products.length, tier: R.def(1).tierOf(50), cost2: R.boatCost(2), cost50: R.boatCost(50), svg: SVT.boatSvg(50).length, names: new Set(SVT.BOATS.map((b) => b.name)).size, omens: R.stage(1).omens.length }; });
 console.log("viking", JSON.stringify(viking));
 if (viking.tokens !== 1 || viking.boats !== 2 || viking.boat !== 2) errors.push("Viking tokens or boats wrong after a clear: " + JSON.stringify(viking));
-if (viking.stages !== 250 || viking.shafts50 !== 50 || viking.shafts51 !== 1 || viking.t1 !== 3000 || Math.abs(viking.t50 - 12000) > 1e-6 || Math.abs(viking.t51 - 12000) > 1e-6 || Math.abs(viking.t250 - 3072000) > 1e-6) errors.push("Raid batches or pacing wrong (v0.45: HARDER 10): " + JSON.stringify(viking));
+if (viking.stages !== 250 || viking.shafts50 !== 50 || viking.shafts51 !== 1 || viking.t1 !== 1500 || Math.abs(viking.t50 - 6000) > 1e-6 || Math.abs(viking.t51 - 6000) > 1e-6 || Math.abs(viking.t250 - 1536000) > 1e-6) errors.push("Raid batches or pacing wrong (v0.48: HARDER 5): " + JSON.stringify(viking));
 if (viking.loot !== 50 || viking.tier !== 4 || viking.cost2 < 1 || viking.cost50 !== 750 || viking.svg < 500 || viking.names !== 50) errors.push("Raid loot, tiers or boats wrong: " + JSON.stringify(viking));
 // v0.35: Viking Hoard. 10,000 relics with fixed rarities; spins spend tokens but boats go by tokens earned; Max and merge.
 const hoard = await page.evaluate(() => {
@@ -744,7 +745,7 @@ const wornEls = await page.locator(".worn").count();
 if (wornEls !== vault.worn) errors.push("Vault: worn items not drawn on the home screen: " + wornEls);
 // pictures: every product has a real icon, and the drawn items use it as a mask
 const icons = await page.evaluate(() => { let n = 0, bad = 0; SVT.LABS.forEach((l) => l.products.forEach((p, i) => { n++; if (!SVT.productSvg(l.id, i).startsWith("url(\"data:image/svg+xml")) bad++; })); const v = Object.values(SVT.PRODUCT_ICON); return { n, bad, sets: Object.keys(SVT.ICONS).length, mapped: v.length, distinct: new Set(v).size }; });
-if (icons.n !== 900 || icons.bad || icons.mapped !== 900 || icons.distinct !== 900 || icons.sets !== 900) errors.push("Vault: every product needs its own icon " + JSON.stringify(icons));
+if (icons.n !== 1500 || icons.bad || icons.mapped !== 1500 || icons.distinct !== 1500 || icons.sets !== 1500) errors.push("Vault: every product needs its own icon " + JSON.stringify(icons));
 const maskOk = await page.evaluate(() => [...document.querySelectorAll(".worn .vault-art-ic")].every((el) => (getComputedStyle(el).webkitMaskImage || getComputedStyle(el).maskImage || "").includes("svg")));
 if (!maskOk) errors.push("Vault: item pictures are not drawn as icon masks");
 await page.screenshot({ path: out + "/19-home-worn.png" });
@@ -860,6 +861,17 @@ const bonus = await page.evaluate(() => {
   const div = SVT.vaultMerge(5, same.slice(0, 3).map((x) => x.id)), sing = SVT.vaultMerge(14, same.slice(3, 6).map((x) => x.id));
   out.tiers = { n: R16.length, rolled: B.ROLLED, div: div && div.rarity, divBoost: div && div.boost, sing: sing && sing.rarity, singBoost: sing && sing.boost,
     topStays: !SVT.vaultMerges().some((m) => m.rar === R16.length - 1), same: same.length, rollTop: SVT.vaultOdds(10, 0).length };
+  // v0.48: a Singularity item binds to Chip for good (+BIND_ADD each, no limit); nothing lower binds
+  const m0 = SVT.vaultMult(), b0 = SVT.vaultBound(), low = v.items.find((x) => x.rar < R16.length - 1);
+  const lowRefused = !SVT.vaultBind(low.id) && !!SVT.vaultItem(low.id);
+  const top = sing || (() => { const x = v.items.find((y) => !SVT.vaultSlotOf(y.id) && y.rar < R16.length - 1); setR(x, R16.length - 1); return x; })();
+  SVT.vaultWear((SVT.vaultSlots().find((sl) => SVT.vaultFits(top, sl.id)) || { id: "x" }).id, top.id);
+  const wasWorn = !!SVT.vaultSlotOf(top.id), wornMult = SVT.vaultMult();
+  const bound = SVT.vaultBind(top.id);
+  const extra = v.items.find((x) => x.rar < R16.length - 1 && !SVT.vaultSlotOf(x.id)); setR(extra, R16.length - 1);
+  const again = SVT.vaultBind(extra.id);
+  out.bind = { lowRefused, bound, again, gone: !SVT.vaultItem(top.id) && !SVT.vaultItem(extra.id), count: SVT.vaultBound() - b0,
+    mult: Math.round((SVT.vaultMult() - (wasWorn ? wornMult - 3 : m0)) * 100) / 100, slotFreed: wasWorn && !SVT.vaultSlotOf(top.id) };
   const needs = SVT.vaultNeeds();
   out.needs = { n: needs.length, allEmptySlots: needs.every((x) => x.slots.every((sl) => !v.show[sl.id])), labsMake: needs.every((x) => x.labs.length && x.labs.every((l) => SVT.vaultLabCats(l.id).includes(x.cat))), feet: SVT.LABS.filter((l) => SVT.vaultLabCats(l.id).includes("feet")).length };
   return out;
@@ -869,7 +881,8 @@ if (!bonus.allHaveBoost || !bonus.mythicBoost) errors.push("Vault: item boosts m
 if (JSON.stringify(bonus.tiers) !== JSON.stringify({ n: 16, rolled: 6, div: "divine", divBoost: 1.75, sing: "singularity", singBoost: 4, topStays: true, same: 6, rollTop: 6 })) errors.push("Vault: merge-only rarities wrong (v0.46) " + JSON.stringify(bonus.tiers));
 if (!bonus.wornMerge || !bonus.wornMerge.worn || !bonus.wornMerge.notListed || !bonus.wornMerge.pickRefused || !bonus.wornMerge.stillThere || !bonus.wornMerge.weakestKeeps) errors.push("Vault: an equipped item could be merged " + JSON.stringify(bonus.wornMerge));
 if (bonus.mult !== bonus.sum || Math.abs(bonus.ratio - bonus.mult) > 1e-6 || !bonus.raidSame || !bonus.capped) errors.push("Vault: bonus multiplier wrong " + JSON.stringify(bonus));
-if (Object.values(bonus.cats).reduce((a, b) => a + b, 0) !== 900 || Object.keys(bonus.cats).length !== 7) errors.push("Vault: not every product has a slot category " + JSON.stringify(bonus.cats));
+if (JSON.stringify(bonus.bind) !== JSON.stringify({ lowRefused: true, bound: true, again: true, gone: true, count: 2, mult: 6, slotFreed: true })) errors.push("Vault: binding to Chip wrong (v0.48) " + JSON.stringify(bonus.bind));
+if (Object.values(bonus.cats).reduce((a, b) => a + b, 0) !== 1500 || Object.keys(bonus.cats).length !== 7) errors.push("Vault: not every product has a slot category " + JSON.stringify(bonus.cats));
 if (JSON.stringify(bonus.catSamples) !== JSON.stringify({ calc: "hand", watch: "wrist", ai: "head", neck: "neck", headphones: "head", server: "floor", shoe: "feet", jacket: "body" })) errors.push("Vault: product categories wrong " + JSON.stringify(bonus.catSamples));
 if (!bonus.handSlot.startsWith("hand") || !bonus.floorSlot.startsWith("floor") || bonus.twice !== null || !bonus.notListedTwice || !bonus.eligibleOk || !bonus.wristOnlyWrist) errors.push("Vault: one-tap equip or per-slot inventory wrong " + JSON.stringify(bonus));
 if (!bonus.merge || !bonus.merge.ok || bonus.merge.count !== 2 || !bonus.merge.listed || !bonus.merge.gone || !bonus.merge.boostOk || !bonus.merge.sameRar || !bonus.mergeWeak || !bonus.mergeBad || !bonus.groupsTyped || !bonus.mixedRefused) errors.push("Vault: merge wrong " + JSON.stringify([bonus.merge, bonus.mergeWeak, bonus.mergeBad, bonus.groupsTyped, bonus.mixedRefused]));

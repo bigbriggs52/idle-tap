@@ -169,6 +169,7 @@ window.SVT = window.SVT || {};
   SVT.vaultRecalc = () => {
     let x = 1;
     for (const k in S.vault.show) { const it = S.vault.items.find((i) => i.id === S.vault.show[k]); if (it && it.boost > 1) x += it.boost - 1; }
+    x += (S.vault.bound || 0) * B.VAULT.BIND_ADD; // v0.48: Singularity items bound to Chip for good
     vaultMult = Math.min(B.VAULT.MAX_BONUS, Math.round(x * 100) / 100);
     return vaultMult;
   };
@@ -998,6 +999,7 @@ window.SVT = window.SVT || {};
     if (!S.hoard) S.hoard = newHoard(); // v0.35 adds the Viking Hoard
     if (!S.hoard.ship) S.hoard.ship = []; // v0.36: relics equipped on the longship
     if (!S.vault.show || typeof S.vault.show !== "object") S.vault.show = {};
+    if (!(S.vault.bound >= 0)) S.vault.bound = 0;
     // v0.19: items can carry an income boost; items from before get theirs rolled now.
     S.vault.items.forEach((it) => { if (it.boost === undefined) { const b = B.VAULT.BONUS[it.rar]; it.boost = Math.random() < b.chance ? b.mult : 1; } });
     SVT.vaultRecalc();

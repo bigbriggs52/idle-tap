@@ -19,9 +19,9 @@ window.SVT = window.SVT || {};
   }
 
   const B = {
-    VERSION: "0.47.1",
+    VERSION: "0.48.0",
     // Release time in UTC, set with each release. Shown after the version in the player's local time.
-    BUILT: "2026-11-14T03:55Z",
+    BUILT: "2026-11-14T05:00Z",
     FLOORS: 30,
     // v0.26: lower caps, because the IPO needs every floor, the lift and the warehouse at max level. The hubs cap at
     // Lv 400: that is the income every lab ends with, so the deep floors must stay affordable against it, and
@@ -162,6 +162,10 @@ window.SVT = window.SVT || {};
         { chance: 1, mult: 1.75 }, { chance: 1, mult: 2 }, { chance: 1, mult: 2.25 }, { chance: 1, mult: 2.5 }, { chance: 1, mult: 2.75 },
         { chance: 1, mult: 3 }, { chance: 1, mult: 3.25 }, { chance: 1, mult: 3.5 }, { chance: 1, mult: 3.75 }, { chance: 1, mult: 4 }],
       MAX_BONUS: Infinity,
+      // v0.48 (user: "a permanent upgrade to bind the item with chip and then do it again. With no max to the amount of
+      // upgrades he can have. Only the highest rarity can bind to chip"): a Singularity item can be bound to Chip. It is
+      // used up, and Chip keeps its +3 (what a worn x4 Singularity adds) for good, freeing the slot. No limit.
+      BIND_ADD: 3,
     },
     // Regular abilities (Common to Rare): "speed" runs the node faster (shorter cycles, a quicker lift and cart),
     // "storage" makes every cycle, lift trip and cart load carry more, "discount" cuts that node's upgrade prices.
@@ -244,7 +248,8 @@ window.SVT = window.SVT || {};
   };
   // Labs 6-30: scale from tests/lab-goals.mjs (about 6% more time per lab), grow 0.6 everywhere.
   const SCALE_6_30 = [3.1, 3.4, 3.5, 3.8, 4.1, 4.3, 4.6, 4.9, 5.2, 5.6, 5.9, 6.3, 6.7, 7.2, 7.6, 8.1, 8.6, 9.1, 9.7, 10, 11, 12, 12, 13, 14];
-  SVT.LABS.slice(5).forEach((l, i) => { B.LAB_DIFF[l.id] = { scale: SCALE_6_30[i], grow: 0.6 }; });
+  // v0.48: labs 31-50 (The Frontier) keep climbing about 6.5% per lab from lab 30's scale.
+  SVT.LABS.slice(5).forEach((l, i) => { B.LAB_DIFF[l.id] = { scale: i < SCALE_6_30.length ? SCALE_6_30[i] : Number((14 * Math.pow(1.065, i - SCALE_6_30.length + 1)).toPrecision(2)), grow: 0.6 }; });
 
   B.tierOf = (n) => SVT.TIERS.findIndex((t) => n >= t.from && n <= t.to);
 

@@ -588,6 +588,14 @@ window.SVT = window.SVT || {};
     weather: ["hood", "#f2c230", "#f2c230", "⛅"], rail: ["conductor", "#1f3a5f", "#1f3a5f", "🚄"], biotech: ["goggles", "#43a047", "#f7f7f7", "🧬"],
     quantum: ["goggles", "#7e57c2", "#ece6ff", "⚛️"], satellite: ["phones", "#455a64", "#78909c", "📡"], energy: ["hardhat", "#fdd835", "#c6e03a", "⚡"],
     holo: ["visor", "#26c6da", "#222244", "🥽"], mars: ["bubble", "#ff8a65", "#e2733b", "🪐"], moon: ["bubble", "#b0bec5", "#dfe3e8", "🌙"],
+    // v0.48: The Frontier (labs 31-50)
+    deepsea: ["bubble", "#00897b", "#0d3b4f", "🐙"], nano: ["goggles", "#90caf9", "#f5f9ff", "🔬"], cloudcity: ["beret", "#81d4fa", "#ffffff", "☁️"],
+    asteroid: ["hardhat", "#8d6e63", "#4e4e5a", "☄️"], neural: ["visor", "#ec407a", "#2a1f3d", "🧠"], chrono: ["tophat", "#8d6e63", "#5d4037", "⏳"],
+    jupiter: ["bubble", "#ffab91", "#b65c3a", "🌀"], dino: ["straw", "#c5a15a", "#556b2f", "🦖"], orbithotel: ["conductor", "#b71c1c", "#f5f0e6", "🏨"],
+    desert: ["hood", "#e0b46c", "#d9a35a", "🏜️"], subway: ["conductor", "#37474f", "#455a64", "🚇"], rainforest: ["straw", "#7cb342", "#2e7d32", "🌳"],
+    magma: ["hardhat", "#ff5722", "#3e2723", "🔥"], antimatter: ["goggles", "#ab47bc", "#ede7f6", "✴️"], elevator: ["cap", "#5c6bc0", "#c5cae9", "🛗"],
+    dyson: ["visor", "#ffca28", "#5d4000", "☀️"], venus: ["bubble", "#ffd54f", "#c8a24a", "🌫️"], titan: ["beanie", "#4dd0e1", "#26425a", "🧊"],
+    wormhole: ["visor", "#7c4dff", "#120a2a", "🌌"], galactic: ["tophat", "#ffd700", "#1a237e", "🏛️"],
   };
   SVT.MANAGER_LOOKS = LOOKS;
   function avatar(m, labId) {
@@ -929,7 +937,9 @@ window.SVT = window.SVT || {};
 
   function mapView() {
     const S = SVT.state();
-    const pins = SVT.LABS.map((l, i) => {
+    // v0.48: labs carry a map number (no number = the first map); The Frontier (labs 31-50) is the second.
+    const pinsOn = (m) => SVT.LABS.map((l, i) => ((l.map || 1) === m ? pin(l, i) : null)).filter(Boolean);
+    const pin = (l, i) => {
       const unlocked = SVT.labUnlocked(l.id), beaten = SVT.labBeaten(S.labs[l.id]), replaying = SVT.labReplaying(S.labs[l.id]);
       const state = beaten ? "open done" : unlocked ? "open" : "locked";
       const active = S.activeLab === l.id;
@@ -944,7 +954,7 @@ window.SVT = window.SVT || {};
       },
         h("span", { class: "pin-dot" }, h("span", { class: "pin-icon", text: l.icon }), !unlocked ? h("span", { class: "pin-lock", text: "🔒" }) : beaten ? h("span", { class: "pin-lock", text: "🏆" }) : replaying ? h("span", { class: "pin-lock", text: "🔁" }) : null),
         h("span", { class: "pin-label", text: (i + 1) + ". " + l.name }));
-    });
+    };
     // Your open labs first, then the labs you have beaten, then the next ones you can open.
     const nextUp = (l) => { const g = SVT.labGate(l.id); return !S.labs[l.id] && g && S.labs[g.from.id]; };
     const rows = (pick) => SVT.LABS.filter(pick).map((l) => {
@@ -965,12 +975,17 @@ window.SVT = window.SVT || {};
         upcoming.length ? [h("h3", { text: "Next to open" }), ...upcoming] : null,
         beatenRows.length ? [h("h3", { text: "Beaten · tap to replay for another 🪙" }), ...beatenRows] : null,
         h("h3", { text: "Islands" }), raidCard(),
-        h("p", { class: "muted small", text: "Each lab is its own company with 30 floors and its own cash. Up to 5 labs are open at a time: Seed funding opens labs 2 to 5, and beating a lab (raising its IPO) opens a new one, all the way to lab 30." })),
+        h("p", { class: "muted small", text: "Each lab is its own company with 30 floors and its own cash. Up to 5 labs are open at a time: Seed funding opens labs 2 to 5, and beating a lab (raising its IPO) opens a new one, all the way to lab " + SVT.LABS.length + " on The Frontier." })),
       h("div", { class: "map-wrap" },
         h("div", { class: "map" },
           h("div", { class: "bay", "aria-hidden": "true" }),
           h("div", { class: "road r1", "aria-hidden": "true" }), h("div", { class: "road r2", "aria-hidden": "true" }), h("div", { class: "road r3", "aria-hidden": "true" }),
-          pins)),
+          pinsOn(1)),
+        h("h3", { class: "map-title", text: "🚀 The Frontier · labs 31 to " + SVT.LABS.length }),
+        h("div", { class: "map frontier" },
+          h("div", { class: "nebula", "aria-hidden": "true" }),
+          h("div", { class: "road r1", "aria-hidden": "true" }), h("div", { class: "road r2", "aria-hidden": "true" }),
+          pinsOn(2))),
       h("footer", { class: "foot", text: "Silicon Valley Tycoon " + buildTag() }));
   }
 
