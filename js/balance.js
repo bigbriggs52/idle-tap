@@ -19,9 +19,9 @@ window.SVT = window.SVT || {};
   }
 
   const B = {
-    VERSION: "0.48.0",
+    VERSION: "0.48.1",
     // Release time in UTC, set with each release. Shown after the version in the player's local time.
-    BUILT: "2026-11-14T05:00Z",
+    BUILT: "2026-11-14T19:45Z",
     FLOORS: 30,
     // v0.26: lower caps, because the IPO needs every floor, the lift and the warehouse at max level. The hubs cap at
     // Lv 400: that is the income every lab ends with, so the deep floors must stay affordable against it, and
@@ -38,7 +38,8 @@ window.SVT = window.SVT || {};
     HUB_MILESTONES,
     FLOOR_CYCLE: 3, // seconds per build cycle; a tap runs one, a manager keeps them going
     WH_TRIP: 4,     // seconds per warehouse trip: cart to the warehouse and back
-    WH_HEAVY: 10,   // v0.46.4: the cart takes up to this many loads at once (v0.46.5: at normal speed)
+    WH_HEAVY: 10,
+    LIFT_HEAVY: 10, // v0.48.1: the lift car takes up to this many loads from the floors in one trip   // v0.46.4: the cart takes up to this many loads at once (v0.46.5: at normal speed)
     OFFLINE_CAP: 2 * 3600,
     START_CASH: 10,
 

@@ -2,6 +2,11 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.48.1 (2026-11-14)
+
+- Fixed the lift skipping floors. Its height adds up in tiny steps, so it could end up a hair above a floor, round past it, and head back up empty, leaving that floor's money behind. It now always stops at the next floor with money waiting.
+- The lift takes the whole pile, like the warehouse cart: up to 10 loads per trip instead of stopping when one load is full. A big pile pours in faster, so a stop never takes longer than filling one load. The lift tag shows ×2.5 and so on when it's carrying more than one load.
+
 ## v0.48.0 (2026-11-14)
 
 - Viking mines are easier. Every stage's target time is halved (batch 1 now runs about 25 minutes to 1.7 hours per stage), and all 250 stage prices were refit to match.

@@ -290,12 +290,27 @@ const liftRun = await page.evaluate(() => {
   SVT.tap("freight", 0); // one tap, one trip; no new trip starts after
   SVT.tick(0.05);
   let maxY = 0, partial = 0;
-  for (let i = 0; i < 200; i++) { SVT.tick(0.05); maxY = Math.max(maxY, L.lift.y); if (L.lift.phase === "load" && L.lift.load > 0 && L.lift.load < cap * 0.9) partial++; }
+  for (let i = 0; i < 400; i++) { SVT.tick(0.05); maxY = Math.max(maxY, L.lift.y); if (L.lift.phase === "load" && L.lift.load > 0 && L.lift.load < cap * 0.9) partial++; }
   return { cap, maxY, partial, f1: L.floors[0].stock / cap, f2: L.floors[1].stock / cap, lobby: L.lobby / cap, phase: L.lift.phase };
 });
 console.log("lift trip", JSON.stringify(liftRun));
-if (liftRun.maxY > 1.001 || Math.abs(liftRun.f1 - 1) > 1e-6 || Math.abs(liftRun.f2 - 1) > 1e-6 || Math.abs(liftRun.lobby - 1) > 1e-6) errors.push("Lift did not stop at the first full floor");
+// v0.48.1 (user: "Lift is now having the same issues not picking up"): the car takes every pile on the way down (up to
+// LIFT_HEAVY loads), so 2 + 1 + 1 loads on floors 1-3 all come up in one trip
+if (liftRun.maxY < 2.999 || liftRun.f1 > 1e-6 || liftRun.f2 > 1e-6 || Math.abs(liftRun.lobby - 4) > 1e-6) errors.push("Lift left money on the floors (v0.48.1) " + JSON.stringify(liftRun));
 if (liftRun.partial < 3) errors.push("Lift loaded instantly instead of filling up");
+// v0.48.1: the car's height adds up in small steps and can sit a hair above a floor (2.9999999999); it must still
+// stop there (it used to round past it and turn back empty)
+const hair = await page.evaluate(() => {
+  const L = SVT.lab();
+  L.assign = {}; L.floors.forEach((f) => { f.left = 0; f.stock = 0; }); L.lobby = 0;
+  const cap = SVT.liftCapacity(L);
+  L.floors[2].stock = cap * 0.5;
+  L.lift = { phase: "down", y: 3 - 1e-12, load: 0, timer: 0, at: 2 };
+  for (let i = 0; i < 200 && L.lift.phase !== "idle"; i++) SVT.tick(0.05);
+  return { left: L.floors[2].stock / cap, lobby: L.lobby / cap };
+});
+console.log("lift hair", JSON.stringify(hair));
+if (hair.left > 1e-9 || Math.abs(hair.lobby - 0.5) > 1e-9) errors.push("Lift skipped a floor it was a hair above (v0.48.1) " + JSON.stringify(hair));
 // one tap = one cycle: a floor builds once and stops; the warehouse ships one trip and stops
 const cyc = await page.evaluate(() => {
   const L = SVT.lab();
