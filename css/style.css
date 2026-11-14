@@ -168,6 +168,14 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--copper); outlin
 .road.r1 { left: 0; right: 0; top: 54%; height: 4px; transform: rotate(-8deg); }
 .road.r2 { left: 38%; top: 0; bottom: 0; width: 4px; transform: rotate(6deg); }
 .road.r3 { left: 0; right: 0; top: 24%; height: 3px; transform: rotate(10deg); }
+/* v0.48: The Frontier, the second map (labs 31-50) */
+.map-title { margin: 16px 0 8px; }
+.map.frontier { background: radial-gradient(circle at 25% 20%, #6a4fc2, transparent 40%), radial-gradient(circle at 80% 75%, #2f6fb3, transparent 40%), linear-gradient(170deg, #1d1a4a, #2b2466 55%, #13203f); }
+.map.frontier::before { content: ""; position: absolute; inset: 0; background-image: radial-gradient(1.5px 1.5px at 12% 18%, #fff, transparent), radial-gradient(1px 1px at 33% 42%, #fff, transparent), radial-gradient(1.5px 1.5px at 71% 12%, #fff, transparent), radial-gradient(1px 1px at 88% 58%, #fff, transparent), radial-gradient(1.5px 1.5px at 52% 77%, #fff, transparent), radial-gradient(1px 1px at 20% 90%, #fff, transparent), radial-gradient(1px 1px at 64% 36%, #fff, transparent); opacity: .8; }
+.map.frontier .nebula { position: absolute; left: 10%; top: 35%; width: 80%; height: 30%; border-radius: 50%; background: radial-gradient(#c17bff55, transparent 70%); }
+.map.frontier .road { background: #ffffff44; }
+.map.frontier .pin-label { color: #fff; text-shadow: 0 0 3px #000, 0 0 3px #000; }
+.map.frontier .pin.soon .pin-label { color: #d6d0ff; }
 .pin { position: absolute; transform: translate(-50%, -50%); border: 0; background: transparent; padding: 0; display: grid; justify-items: center; gap: 2px; cursor: pointer; width: 66px; }
 .pin-dot { position: relative; width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: var(--surface); border: 2px solid var(--line); font-size: 1.1rem; }
 .pin.open .pin-dot { border-color: var(--copper); background: #fff1e6; box-shadow: 0 0 0 4px #d0702f33; }
@@ -1163,6 +1171,12 @@ button:active:not(:disabled) { filter: brightness(.9); transition-duration: 0s; 
 .vault-pick.elsewhere { opacity: .7; }
 .vault-pick.onchip { opacity: .55; cursor: not-allowed; background: #f1f1f1; border-style: dashed; }
 .vault-pick-body { display: grid; gap: 2px; min-width: 0; }
+/* v0.48: binding Singularity items to Chip for good */
+.vault-bindbox { display: grid; gap: 8px; margin-top: 12px; padding: 10px; border-radius: 14px; background: linear-gradient(#f4ecff, #e6d6ff); border: 3px solid #9a6bff; }
+.vault-bindbox h3 { margin: 0; font-size: 1rem; color: #4a2a99; }
+.vault-bindbox p { margin: 0; }
+.vault-bindrow { display: grid; grid-template-columns: 54px 1fr auto; gap: 8px; align-items: center; padding: 6px; border-radius: 12px; border: 3px solid var(--rc); background: #fff; }
+.btn.vault-bind { background: linear-gradient(#b48cff, #8a5cf0); color: #fff; border-color: #6a3fd0; }
 .vault-pick-body b { font-size: .85rem; }
 .vault-pick-body small { font-size: .7rem; font-weight: 700; color: var(--rc); }
 .worn-total { position: absolute; left: 50%; bottom: -22px; translate: -50% 0; z-index: 3; padding: 3px 10px; border-radius: 99px; border: 3px solid #fff; background: linear-gradient(#ffe36a, #f2b100); color: #5a3a00; font: .95rem var(--f-display); box-shadow: 0 3px 0 #9a6a00; cursor: pointer; }

@@ -2,6 +2,12 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.48.0 (2026-11-14)
+
+- Viking mines are easier. Every stage's target time is halved (batch 1 now runs about 25 minutes to 1.7 hours per stage), and all 250 stage prices were refit to match.
+- 20 new labs on a second map, The Frontier (labs 31 to 50): Deep Sea Colony, Nano Foundry, Cloud City, Asteroid Mine, Neural Link Lab, Chrono Lab, Jupiter Station, Dino Park, Orbital Hotel, Desert Citadel, Hyperloop Depot, Rainforest Dome, Magma Forge, Antimatter Lab, Space Elevator, Dyson Swarm, Venus Cloud Station, Titan Port, Wormhole Gate and Galactic HQ. Each has 30 products with their own Vault pictures and themed managers, and each lab is a little harder than the one before.
+- Bind to Chip. A Singularity item (the top rarity) can be bound to Chip from the item card or the Chip tab. The item is used up, Chip keeps +3 income for good, and its slot is free for the next item. There is no limit.
+
 ## v0.47.1 (2026-11-14)
 
 - Fixed the warehouse sometimes not picking up money, with or without managers. If the cart reached the lift while the lift was still unloading, it waited and could then drive back empty. Now it never waits: it takes whatever money is at the top when it gets there and heads straight back.

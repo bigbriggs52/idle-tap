@@ -270,6 +270,23 @@ window.SVT = window.SVT || {};
     SVT.save();
     return item;
   };
+  // ---------- binding (v0.48) ----------
+  // Only the top rarity (Singularity) binds. The item is used up (taken off Chip first if he wore it) and Chip keeps
+  // V.BIND_ADD of income bonus for good. No limit: every Singularity you make can be bound.
+  SVT.vaultBindable = () => S().items.filter((it) => it.rar === RAR.length - 1).sort((a, b) => a.boost - b.boost || a.id - b.id);
+  SVT.vaultBound = () => S().bound || 0;
+  SVT.vaultBind = (id) => {
+    const v = S(), it = SVT.vaultItem(id);
+    if (!it || it.rar !== RAR.length - 1) return false;
+    for (const k in v.show) if (v.show[k] === id) delete v.show[k];
+    v.items = v.items.filter((x) => x !== it);
+    v.bound = (v.bound || 0) + 1;
+    (v.boundLog = v.boundLog || []).push({ name: SVT.itemName(it), at: Date.now() });
+    if (v.boundLog.length > 50) v.boundLog.shift();
+    SVT.vaultRecalc();
+    SVT.save();
+    return true;
+  };
   // Max merge (v0.38, user ask): every possible merge, weakest three first, cascading until nothing is left to merge.
   SVT.vaultMergeAll = () => {
     const made = [];
@@ -474,6 +491,12 @@ window.SVT = window.SVT || {};
     const equip = h("button", { class: "btn small vault-equip" + (worn ? " off" : " fund-cta"), disabled: !worn && !fitsAny,
       onclick: () => { if (worn) SVT.vaultWear(null, it.id); else { const sl = SVT.vaultEquip(it.id); if (sl) SVT.ui.toast("🤖 Chip: " + sl.name + " → " + SVT.itemProduct(it)); } refresh(); },
       text: worn ? "Take off" : "Equip" });
+    let armed = false;
+    const bind = it.rar === RAR.length - 1 ? h("button", { class: "btn small vault-bind", onclick: (e) => {
+      if (!armed) { armed = true; e.currentTarget.textContent = "Tap again: bind for good"; return; }
+      if (SVT.vaultBind(it.id)) SVT.ui.toast("🔗 Bound to Chip: +" + V.BIND_ADD + " income for good (×" + SVT.vaultMult() + ")", "big");
+      refresh();
+    }, text: "🔗 Bind to Chip" }) : null;
     const more = big ? null : h("button", { class: "btn small ghost vault-choose", onclick: () => { details.hidden = !details.hidden; more.textContent = details.hidden ? "Details ▾" : "Details ▴"; }, text: "Details ▾" });
     return h("div", { class: "vault-card r-" + it.rarity + (big ? " big" : "") + (worn ? " wearing" : "") },
       SVT.itemArt(it),
@@ -481,7 +504,7 @@ window.SVT = window.SVT || {};
         h("b", { class: "vault-card-name", text: SVT.itemName(it) }),
         h("span", { class: "vault-card-rar r-" + it.rarity, text: RAR[it.rar].name + (it.rar >= 4 ? " ★" : "") + " · " + boostText(it) }),
         h("span", { class: "vault-card-where", text: worn ? "🤖 On Chip: " + slotOf(worn).name.toLowerCase() : "Goes " + (SVT.itemCat(it) === "floor" ? "on the floor beside Chip" : SVT.itemCat(it) === "hand" ? "in a hand" : "on the " + SVT.itemCat(it)) }),
-        h("div", { class: "vault-equip-row" }, equip, more),
+        h("div", { class: "vault-equip-row" }, equip, bind, more),
         details));
   }
 
@@ -513,11 +536,30 @@ window.SVT = window.SVT || {};
         }));
     }
     shell(h("div", { class: "vault-body" },
-      h("div", { class: "vault-total" }, h("b", { text: "⚡ ×" + total + " lab income" }), h("small", { text: worn.length + " of " + SLOTS.length + " slots worn · bonuses add up · counts in Viking Raid too" })),
+      h("div", { class: "vault-total" }, h("b", { text: "⚡ ×" + total + " lab income" }), h("small", { text: worn.length + " of " + SLOTS.length + " slots worn" + (SVT.vaultBound() ? " · " + SVT.vaultBound() + " bound" : "") + " · bonuses add up · counts in Viking Raid too" })),
       h("button", { class: "btn boats-link", onclick: () => SVT.openBoats(), text: "⛵ Viking tokens 🛡 " + SVT.hoardTokens() + " · sailing " + SVT.BOATS[SVT.boatIndex() - 1].name + " ›" }),
       h("button", { class: "btn fund-cta vault-auto", disabled: !v.items.length, onclick: () => { const n = SVT.vaultAutoEquip(); SVT.ui.toast(n ? "🤖 Chip changed " + n + (n === 1 ? " slot" : " slots") + ": best bonus in every slot." : "🤖 Chip already wears the best of everything."); refresh(); }, text: "⚡ Auto-equip best" }),
       h("div", { class: "vault-slotgrid" }, SLOTS.map(slotCard)),
-      list || h("p", { class: "muted small", text: "Tap a slot to see what fits it, rarest first. Items only go where they belong: hand-helds in a hand, watches on the wrist, headsets and AI on the head, neckwear round the neck, clothing on the body, shoes on the feet, and big things on the floor beside him." })));
+      list || h("p", { class: "muted small", text: "Tap a slot to see what fits it, rarest first. Items only go where they belong: hand-helds in a hand, watches on the wrist, headsets and AI on the head, neckwear round the neck, clothing on the body, shoes on the feet, and big things on the floor beside him." }),
+      bindPanel()));
+  }
+  // v0.48: Chip's permanent upgrades. Bound Singularity items, and the ones you can bind now.
+  function bindPanel() {
+    const { h } = SVT.ui;
+    const n = SVT.vaultBound(), ready = SVT.vaultBindable();
+    let armed = null;
+    return h("div", { class: "vault-bindbox" },
+      h("h3", { text: "🔗 Bound to Chip: " + n + (n ? " · +" + n * V.BIND_ADD + " income for good" : "") }),
+      h("p", { class: "muted small", text: "Bind a " + RAR[RAR.length - 1].name + " item (the top rarity) to Chip and it's used up, but he keeps +" + V.BIND_ADD + " income for good and the slot is free again. No limit: bind every one you make." }),
+      ready.length ? ready.map((it) => h("div", { class: "vault-bindrow r-" + it.rarity },
+        SVT.itemArt(it, "mini"),
+        h("span", { class: "vault-pick-body" }, h("b", { text: SVT.itemName(it) }), h("small", { class: "r-" + it.rarity, text: RAR[it.rar].name + (SVT.vaultSlotOf(it.id) ? " · on Chip now" : "") })),
+        h("button", { class: "btn small fund-cta vault-bind", onclick: (e) => {
+          if (armed !== it.id) { armed = it.id; e.currentTarget.textContent = "Tap again"; return; }
+          if (SVT.vaultBind(it.id)) SVT.ui.toast("🔗 Bound to Chip: +" + V.BIND_ADD + " income for good (×" + SVT.vaultMult() + ")", "big");
+          refresh();
+        }, text: "Bind" })))
+        : h("p", { class: "vault-empty", text: "No " + RAR[RAR.length - 1].name + " items yet. Merge three of a rarity into the next one, all the way up." }));
   }
   const fitHint = (slot) => { const sl = SLOTS.find((x) => x.id === slot); return CATS[sl.cat] + ": roll more at a lab that makes that kind of thing."; };
   function reveal(it) {

@@ -226,5 +226,126 @@ SVT.LABS = [
     teams: ["Moonwalkers", "Rover Techs", "Lunar Engineers", "Mining Engineers", "Lunar Scientists"],
     products: ["Moon map poster", "Lunar sample box", "Retroreflector", "Lunar lander kit", "Moon buggy", "Regolith shovel", "Lunar solar array", "Ice prospector", "Habitat igloo", "Lunar 3D printer", "Helium-3 extractor", "Moon telescope", "Mass driver", "Lunar railway", "Crater power tower", "Moon farm", "Lunar factory", "Far-side radio dish", "Moon hotel", "Lunar spaceport", "Lunar elevator", "Moon mine", "Shielded city dome", "Earth-Moon ferry", "Lunar data center", "Moon fusion plant", "Lunar shipyard", "Lunar university", "Lunar capital", "AI moon overseer"],
   },
-
+  // v0.48 (user: "I think I've only got 2 maps left in the main game. Make a bunch more"): labs 31 to 50 on a second
+  // map, The Frontier (map: 2). Labs without a map are on the first one.
+  {
+    id: "deepsea", name: "Deep Sea Colony", theme: "Undersea living", icon: "🐙", x: 14, y: 88, map: 2,
+    crew: ["Aquanaut", "Sub Pilot", "Pearl Trader"],
+    teams: ["Divers", "Hull Techs", "Pressure Engineers", "Marine Roboticists", "Abyss Scientists"],
+    products: ["Snorkel mask", "Dive watch", "Depth gauge", "Scuba regulator", "Underwater flashlight", "Fish finder sonar", "Dive computer", "Diving bell", "Underwater camera", "Mini submarine", "Bubble habitat", "Kelp farm net", "Pressure door", "Hydrophone array", "Sea-floor drone", "Desalination pod", "Tidal turbine", "Coral printer", "Deep-dive suit", "Undersea cable", "Abyss lantern", "Sea-floor mining crawler", "Glass dome district", "Whale-song translator", "Trench elevator", "Hydrothermal power plant", "Submarine liner", "Ocean-floor city", "Abyss research station", "AI tide keeper"],
+  },
+  {
+    id: "nano", name: "Nano Foundry", theme: "Nanotech", icon: "🔬", x: 38, y: 83, map: 2,
+    crew: ["Cleanroom Tech", "Wafer Courier", "Nano Broker"],
+    teams: ["Lab Techs", "Microscopists", "Materials Engineers", "Nanobot Designers", "Molecular Scientists"],
+    products: ["Magnifying glass", "Pocket microscope", "Petri dish", "Pipette", "Lab centrifuge", "Spectrometer", "Electron microscope", "Graphene sheet", "Carbon nanotube", "Atomic force probe", "Quantum dot ink", "Self-cleaning glass", "Smart dust sensor", "Nano filter", "Molecular printer", "Nanobot swarm", "Shape-shifting fabric", "Nano battery", "Medical nanobot", "Self-healing paint", "Programmable matter", "Nano assembler", "Diamond fiber", "Atom-by-atom 3D printer", "Nano surgeon", "Utility fog", "Grey-goo containment unit", "Molecular factory", "Matter compiler", "AI nano architect"],
+  },
+  {
+    id: "cloudcity", name: "Cloud City", theme: "Sky cities", icon: "☁️", x: 62, y: 88, map: 2,
+    crew: ["Sky Rigger", "Blimp Pilot", "Sky Concierge"],
+    teams: ["Riggers", "Balloon Techs", "Aero Engineers", "Sky Architects", "Atmospheric Scientists"],
+    products: ["Paper kite", "Weather vane", "Barometer", "Hot-air balloon", "Parachute", "Glider", "Blimp", "Wind sock", "Hang glider", "Air taxi", "Sky crane", "Floating platform", "Airship dock", "Cloud seeder", "Wind harvester", "Skybridge", "Aerostat antenna", "Jet pack", "Sky farm", "Floating hotel", "Sky tram", "Anti-gravity pad", "Floating stadium", "Cloud harvester", "Sky mall", "Storm shield", "Stratosphere port", "Flying district", "Cloud capital", "AI sky warden"],
+  },
+  {
+    id: "asteroid", name: "Asteroid Mine", theme: "Space mining", icon: "☄️", x: 86, y: 83, map: 2,
+    crew: ["Rock Driller", "Ore Hauler", "Ore Assayer"],
+    teams: ["Prospectors", "Drill Techs", "Mining Engineers", "Orbital Haulers", "Planetary Geologists"],
+    products: ["Rock hammer", "Gold pan", "Metal detector", "Pickaxe", "Ore cart", "Core drill", "Jackhammer", "Mining helmet", "Space suit", "Asteroid tether", "Ore scanner", "Harpoon lander", "Regolith grinder", "Ice miner", "Ore smelter", "Mining tug", "Mass catcher", "Platinum refinery", "Asteroid tug", "Space forge", "Ore freighter", "Orbital smelter", "Belt outpost", "Asteroid hollow city", "Gravity tractor", "Comet water plant", "Mining mothership", "Asteroid redirector", "Belt capital", "AI ore oracle"],
+  },
+  {
+    id: "neural", name: "Neural Link Lab", theme: "Brain tech", icon: "🧠", x: 86, y: 64, map: 2,
+    crew: ["Neuro Tech", "Signal Runner", "Mind Coach"],
+    teams: ["Lab Assistants", "EEG Techs", "Neuro Engineers", "Interface Designers", "Neuroscientists"],
+    products: ["Mood ring", "Lie detector", "EEG cap", "Biofeedback monitor", "Sleep tracker", "Hearing aid", "Brain trainer", "Focus headband", "Cochlear implant", "Neural stimulator", "Thought typing kit", "Dream journal app", "Mind-controlled arm", "Memory booster", "Neural lace", "Brain scanner", "Emotion reader", "Language uploader", "Skill chip", "Thought messenger", "Shared dream rig", "Mind-to-cloud backup", "Hive-mind hub", "Synthetic senses", "Neural cinema", "Brain-cloud server", "Consciousness mirror", "Telepathy network", "Digital mind", "AI neural twin"],
+  },
+  {
+    id: "chrono", name: "Chrono Lab", theme: "Time & clocks", icon: "⏳", x: 62, y: 69, map: 2,
+    crew: ["Clockmaker", "Time Courier", "Era Guide"],
+    teams: ["Apprentices", "Clock Techs", "Timing Engineers", "Physicists", "Time Theorists"],
+    products: ["Sundial", "Hourglass", "Pocket watch", "Cuckoo clock", "Metronome", "Stopwatch", "Alarm clock", "Grandfather clock", "Quartz watch", "Digital clock", "Atomic clock", "GPS time server", "Time-lapse camera", "Timer chip", "Optical lattice clock", "Time capsule", "Chrono stabilizer", "Slow-motion camera", "Time crystal", "Chronograph satellite", "Pause field", "Time dilation pod", "Paradox detector", "Past viewer", "Future forecaster", "Time loop chamber", "Chrono gate", "Timeline vault", "Time machine", "AI timekeeper"],
+  },
+  {
+    id: "jupiter", name: "Jupiter Station", theme: "Gas giant base", icon: "🌀", x: 38, y: 64, map: 2,
+    crew: ["Storm Chaser", "Probe Wrangler", "Station Purser"],
+    teams: ["Crew Hands", "Probe Techs", "Storm Engineers", "Moon Surveyors", "Planetary Scientists"],
+    products: ["Star chart", "Planet globe", "Telescope", "Radio receiver", "Weather balloon", "Storm tracker", "Space probe", "Radiation badge", "Ion thruster", "Gas scoop", "Floating aerostat", "Lightning harvester", "Magnetosphere shield", "Europa ice drill", "Io volcano probe", "Ganymede base", "Helium skimmer", "Storm-proof station", "Moon shuttle", "Red spot observatory", "Orbital shipyard", "Jovian refinery", "Moon network", "Gravity slingshot port", "Ring habitat", "Callisto city", "Storm power plant", "Jovian capital", "Gas giant ark", "AI storm pilot"],
+  },
+  {
+    id: "dino", name: "Dino Park", theme: "Genetics park", icon: "🦖", x: 14, y: 69, map: 2,
+    crew: ["Gene Keeper", "Paddock Ranger", "Park Guide"],
+    teams: ["Rangers", "Fossil Techs", "Gene Engineers", "Vet Surgeons", "Paleogeneticists"],
+    products: ["Fossil brush", "Amber stone", "Dino egg replica", "Bone saw", "Field microscope", "DNA kit", "Gene sequencer", "Incubator", "Electric fence", "Tracking collar", "Raptor cam", "Gene printer", "Paddock drone", "Hatchery dome", "Dino translator", "Safari jeep", "Clone lab", "Mammoth pen", "Herd tracker", "Gyrosphere ride", "Feathered flyer aviary", "T-rex paddock", "Sea reptile lagoon", "Dino vet bay", "Ice-age valley", "Sabertooth den", "Gene vault", "Lost-world dome", "Living museum", "AI park warden"],
+  },
+  {
+    id: "orbithotel", name: "Orbital Hotel", theme: "Space tourism", icon: "🏨", x: 14, y: 50, map: 2,
+    crew: ["Zero-G Host", "Shuttle Bellhop", "Space Concierge"],
+    teams: ["Stewards", "Cabin Techs", "Life Support Crew", "Hospitality Engineers", "Tourism Planners"],
+    products: ["Room key card", "Space pen", "Freeze-dried meal", "Hotel robot", "Window telescope", "Zero-G cup", "Sleeping pod", "Space suit rental", "Moon postcard printer", "Orbital shuttle", "Spin-gravity ring", "Zero-G pool", "Space spa", "Earth-view lounge", "Space restaurant", "Spacewalk tour", "Moon cruise", "Orbital casino", "Star theater", "Zero-G gym", "Wedding chapel pod", "Honeymoon capsule", "Space concert hall", "Orbital theme park", "Luxury rotating suite", "Grand atrium", "Space cruise liner", "Orbital resort", "Galaxy grand hotel", "AI concierge"],
+  },
+  {
+    id: "desert", name: "Desert Citadel", theme: "Desert tech", icon: "🏜️", x: 38, y: 45, map: 2,
+    crew: ["Dune Engineer", "Caravan Driver", "Oasis Merchant"],
+    teams: ["Nomads", "Solar Techs", "Water Engineers", "Sand Architects", "Climate Scientists"],
+    products: ["Compass", "Water canteen", "Sun hat", "Sand goggles", "Camel saddle", "Solar cooker", "Fog net", "Sand buggy", "Dew collector", "Solar still", "Sand-proof drone", "Sand battery", "Solar tower", "Air water generator", "Dune glider", "Desert greenhouse", "Sand 3D printer", "Salt power plant", "Oasis maker", "Mirage display", "Sandstorm shield", "Solar highway", "Sand-glass city", "Desert hyperloop", "Rain maker", "Sun-to-fuel plant", "Green wall", "Desert ocean", "Citadel of the sun", "AI dune master"],
+  },
+  {
+    id: "subway", name: "Hyperloop Depot", theme: "Underground transit", icon: "🚇", x: 62, y: 50, map: 2,
+    crew: ["Tunnel Engineer", "Pod Dispatcher", "Ticket Master"],
+    teams: ["Tunnel Crews", "Track Techs", "Transit Engineers", "Maglev Designers", "Network Planners"],
+    products: ["Subway token", "Ticket punch", "Signal lantern", "Turnstile", "Rail lantern", "Tunnel map", "Track switch", "Metro car", "Escalator", "Tunnel boring machine", "Smart fare card", "Driverless train", "Platform screen door", "Vacuum tube", "Hyperloop pod", "Linear motor", "Air lock station", "Cargo loop", "City-to-city tube", "Pod switching hub", "Underwater tunnel", "Continental loop", "Personal pod", "Quake-proof tube", "Supersonic loop", "Loop megastation", "Polar express tube", "Global loop", "Planet-core tunnel", "AI loop controller"],
+  },
+  {
+    id: "rainforest", name: "Rainforest Dome", theme: "Eco tech", icon: "🌳", x: 86, y: 45, map: 2,
+    crew: ["Canopy Ranger", "Seed Runner", "Eco Guide"],
+    teams: ["Gardeners", "Botany Techs", "Eco Engineers", "Forest Architects", "Ecologists"],
+    products: ["Seed packet", "Watering can", "Bird whistle", "Bug jar", "Rain gauge", "Trail camera", "Plant moisture meter", "Canopy walkway", "Butterfly house", "Tree sensor", "Seed-planting drone", "Mist irrigator", "Frog monitor", "Rewilding robot", "Vertical forest", "Carbon tree", "Soil sensor net", "Biodome", "Pollinator drone", "Living wall", "Cloud forest maker", "Glowing tree", "Gene bank", "Forest city", "Rain machine", "Rewilded valley", "Ark dome", "Planet seeder", "Gaia engine", "AI forest spirit"],
+  },
+  {
+    id: "magma", name: "Magma Forge", theme: "Volcanic industry", icon: "🔥", x: 86, y: 26, map: 2,
+    crew: ["Lava Smith", "Slag Hauler", "Forge Trader"],
+    teams: ["Smiths", "Furnace Techs", "Heat Engineers", "Alloy Designers", "Volcanologists"],
+    products: ["Horseshoe", "Blacksmith hammer", "Anvil", "Bellows", "Tongs", "Casting mold", "Heat suit", "Kiln", "Steel ingot", "Arc furnace", "Thermal drill", "Lava sampler", "Heat-proof drone", "Magma turbine", "Obsidian blade", "Lava rover", "Super alloy", "Magma probe", "Heat exchanger", "Crucible press", "Lava tunnel", "Volcano power plant", "Magma battery", "Molten salt reactor", "Lava city", "Core forge", "Eruption tamer", "Planet forge", "Heart of the volcano", "AI forge master"],
+  },
+  {
+    id: "antimatter", name: "Antimatter Lab", theme: "Particle physics", icon: "✴️", x: 62, y: 31, map: 2,
+    crew: ["Beam Tech", "Isotope Courier", "Grant Writer"],
+    teams: ["Assistants", "Detector Techs", "Accelerator Engineers", "Particle Physicists", "Theorists"],
+    products: ["Static ball", "Cloud chamber", "Geiger counter", "Van de Graaff", "Cathode ray tube", "Magnet coil", "Cyclotron", "Bubble chamber", "Particle detector", "Superconducting magnet", "Linear accelerator", "Antimatter trap", "Muon tracker", "Neutrino detector", "Collider ring", "Plasma bottle", "Positron gun", "Dark matter detector", "Antimatter battery", "Higgs counter", "Warp bubble test rig", "Antimatter engine", "Quark sorter", "Strange matter vault", "Big-bang simulator", "Particle forge", "Antimatter reactor", "Black hole lab", "Universe simulator", "AI physicist"],
+  },
+  {
+    id: "elevator", name: "Space Elevator", theme: "Orbit access", icon: "🛗", x: 38, y: 26, map: 2,
+    crew: ["Tether Climber", "Cargo Lifter", "Sky Port Agent"],
+    teams: ["Climbers", "Cable Techs", "Tether Engineers", "Orbital Architects", "Space Physicists"],
+    products: ["Climbing rope", "Pulley", "Winch", "Lift button", "Cable reel", "Elevator car", "Counterweight", "Carbon cable", "Tower crane", "Climber robot", "Tether spool", "Laser power beam", "Ocean anchor platform", "Climber pod", "Halfway station", "Debris dodger", "Cargo climber", "Orbital counterweight", "Tether repair bot", "Sky lobby", "Geo station", "Elevator hotel", "Launch ring", "Moon tether", "Orbital ring", "Elevator city", "Twin tethers", "Ring world dock", "Stairway to space", "AI lift captain"],
+  },
+  {
+    id: "dyson", name: "Dyson Swarm", theme: "Star power", icon: "☀️", x: 14, y: 31, map: 2,
+    crew: ["Mirror Tech", "Beam Rider", "Energy Broker"],
+    teams: ["Mirror Crews", "Panel Techs", "Beam Engineers", "Swarm Architects", "Stellar Scientists"],
+    products: ["Magnifying lens", "Solar calculator", "Solar lamp", "Sun tracker", "Solar sail", "Mirror panel", "Light collector", "Photon battery", "Orbital mirror", "Microwave beam", "Solar satellite", "Beam receiver", "Statite", "Swarm factory", "Mirror swarm", "Star lifter", "Sun shade", "Corona probe", "Mercury mine", "Solar foundry", "Swarm ring", "Laser highway", "Stellar engine", "Shell segment", "Matrioshka brain", "Star harness", "Sun bubble", "Dyson sphere", "Kardashev crown", "AI sun keeper"],
+  },
+  {
+    id: "venus", name: "Venus Cloud Station", theme: "Venus floating city", icon: "🌫️", x: 14, y: 12, map: 2,
+    crew: ["Acid Engineer", "Cloud Skiff Pilot", "Station Steward"],
+    teams: ["Crew", "Envelope Techs", "Acid Engineers", "Float Architects", "Atmosphere Scientists"],
+    products: ["Gas mask", "Acid test strip", "Balloon pump", "Heat shield tile", "Envelope patch kit", "Cloud sampler", "Float bladder", "Acid-proof suit", "Sky skiff", "Aerostat module", "Sulfur scrubber", "Cloud farm", "Wind rider", "Venus glider", "Lightning rod tower", "Acid refinery", "Floating dome", "Cloud tram", "Surface probe", "Storm surfer", "Atmosphere cooler", "Cloud city ring", "Venus sunshade", "Sky continent", "Carbon catcher", "Floating capital", "Venus ark", "Terraform cloud", "Morning-star city", "AI cloud mayor"],
+  },
+  {
+    id: "titan", name: "Titan Port", theme: "Saturn moon port", icon: "🧊", x: 38, y: 7, map: 2,
+    crew: ["Methane Pilot", "Ice Hauler", "Port Officer"],
+    teams: ["Dock Hands", "Cryo Techs", "Fuel Engineers", "Ring Navigators", "Moon Scientists"],
+    products: ["Thermos", "Ice skates", "Fuel canister", "Cryo glove", "Ice saw", "Hover sled", "Methane lamp", "Cryo suit", "Lake buoy", "Ice crawler", "Methane drill", "Fuel depot", "Lake submarine", "Ring glider", "Dune walker", "Methane refinery", "Ice harbor", "Cryo vault", "Ring observatory", "Titan airship", "Saturn shuttle", "Moon relay", "Ring mine", "Cryo city", "Fuel megaport", "Lake city", "Saturn shipyard", "Ring station", "Saturn capital", "AI harbor master"],
+  },
+  {
+    id: "wormhole", name: "Wormhole Gate", theme: "Deep space travel", icon: "🌌", x: 62, y: 12, map: 2,
+    crew: ["Gate Keeper", "Jump Pilot", "Star Trader"],
+    teams: ["Cadets", "Gate Techs", "Warp Engineers", "Star Navigators", "Cosmologists"],
+    products: ["Star map", "Radio telescope", "Space buoy", "Navigation beacon", "Star tracker", "Gravity wave detector", "Warp coil", "Jump drive", "Gate ring", "Exotic matter tank", "Wormhole probe", "Gate control room", "Starship", "Galaxy map", "Colony ship", "Alien signal decoder", "Gate network", "Star harbor", "Generation ship", "Interstellar freighter", "Galactic relay", "Star gate city", "Black hole tap", "Time-gate", "Galaxy cruiser", "Cosmic web map", "Universe gate", "Galactic council hall", "Infinity gate", "AI star navigator"],
+  },
+  {
+    id: "galactic", name: "Galactic HQ", theme: "The final frontier", icon: "🏛️", x: 86, y: 7, map: 2,
+    crew: ["Star Admiral", "Fleet Quartermaster", "Galactic Envoy"],
+    teams: ["Recruits", "Fleet Techs", "Starship Engineers", "Galaxy Architects", "Cosmic Scientists"],
+    products: ["Founder's badge", "Mission patch", "Command chair", "Holo comm", "Fleet radio", "Star chart table", "Bridge console", "Shuttle bay", "Fleet scanner", "Diplomatic translator", "Planet terraformer", "Fleet carrier", "Star fortress", "Galactic bank", "Trade hub", "Peace treaty vault", "Star academy", "Galactic senate", "Nebula refinery", "Star nursery", "Galaxy-wide net", "Planet maker", "Sun builder", "Galaxy engine", "Cosmic library", "Multiverse window", "Reality anchor", "Galaxy crown", "Universe HQ", "AI galactic overseer"],
+  },
 ];
