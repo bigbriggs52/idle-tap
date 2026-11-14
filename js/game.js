@@ -414,7 +414,7 @@ window.SVT = window.SVT || {};
       if (L.phase === "idle") {
         if (!SVT.mgrOf(lab, "freight", 0) && !L.go) return;
         if (!nextStop(lab, 0)) { L.go = false; return; }
-        L.go = false; L.phase = "down"; L.at = 0; L.want = 0;
+        L.go = false; L.phase = "down"; L.at = 0;
       } else if (L.phase === "down") {
         const k = nextStop(lab, L.y, L.at);
         if (!k) { L.phase = "up"; continue; }
@@ -426,19 +426,15 @@ window.SVT = window.SVT || {};
         const f = lab.floors[L.at - 1], cap = SVT.liftCapacity(lab, t), rate = SVT.liftLoadRate(lab, t);
         const hyper = SVT.activeAbility(lab, "freight", 0, t);
         if (hyper && hyper.vacuum && f) { L.load += f.stock; f.stock = 0; L.phase = "down"; continue; } // The Hyperloop: the whole crate in one go
-        // v0.48.1 (user: "Lift is now having the same issues not picking up"): like the warehouse cart (v0.46.4), the
-        // car takes the whole pile at each floor, up to LIFT_HEAVY loads, instead of leaving what didn't fit. A big pile
-        // pours in faster, so a stop never takes longer than filling one normal load.
-        const room = cap * B.LIFT_HEAVY - L.load;
-        if (!L.want) L.want = Math.min(room, f ? f.stock : 0); // the pile when the car arrived sets the pour speed
-        const want = Math.min(room, f ? f.stock : 0), fast = Math.max(rate, L.want * rate / cap);
+        // v0.48.2 (user: "Lift goes to slow. I want it to pick up up to the limit"): one load per trip again (v0.48.1's
+        // up-to-10-loads trips are gone); the skipped-floor fix in nextStop stays.
+        const want = Math.min(cap - L.load, f ? f.stock : 0);
         if (want > 1e-9) {
-          const used = Math.min(dt, want / fast), take = Math.min(want, fast * used);
+          const used = Math.min(dt, want / rate), take = Math.min(want, rate * used);
           f.stock -= take; L.load += take; dt -= used;
           if (take < want - 1e-9) return;
         }
-        L.want = 0;
-        L.phase = L.load >= cap * B.LIFT_HEAVY - 1e-9 ? "up" : "down";
+        L.phase = L.load >= cap - 1e-9 ? "up" : "down";
       } else if (L.phase === "up") {
         const need = L.y / speed;
         if (need > dt) { L.y -= speed * dt; return; }

@@ -2,6 +2,10 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.48.2 (2026-11-14)
+
+- The lift is back to carrying one load per trip at normal speed. v0.48.1's up-to-10-loads trips made it too slow. The v0.48.1 fix stays, so the lift still never turns back empty before reaching a floor with money.
+
 ## v0.48.1 (2026-11-14)
 
 - Fixed the lift skipping floors. Its height adds up in tiny steps, so it could end up a hair above a floor, round past it, and head back up empty, leaving that floor's money behind. It now always stops at the next floor with money waiting.

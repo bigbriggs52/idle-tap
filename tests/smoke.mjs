@@ -294,9 +294,9 @@ const liftRun = await page.evaluate(() => {
   return { cap, maxY, partial, f1: L.floors[0].stock / cap, f2: L.floors[1].stock / cap, lobby: L.lobby / cap, phase: L.lift.phase };
 });
 console.log("lift trip", JSON.stringify(liftRun));
-// v0.48.1 (user: "Lift is now having the same issues not picking up"): the car takes every pile on the way down (up to
-// LIFT_HEAVY loads), so 2 + 1 + 1 loads on floors 1-3 all come up in one trip
-if (liftRun.maxY < 2.999 || liftRun.f1 > 1e-6 || liftRun.f2 > 1e-6 || Math.abs(liftRun.lobby - 4) > 1e-6) errors.push("Lift left money on the floors (v0.48.1) " + JSON.stringify(liftRun));
+// v0.48.2 (user: "I want it to pick up up to the limit"): one load per trip: 2 + 1 + 1 loads on floors 1-3, the car
+// fills at floor 1 and comes straight back, leaving the rest for the next trip
+if (liftRun.maxY > 1.001 || Math.abs(liftRun.f1 - 1) > 1e-6 || Math.abs(liftRun.f2 - 1) > 1e-6 || Math.abs(liftRun.lobby - 1) > 1e-6) errors.push("Lift did not stop at the first full floor " + JSON.stringify(liftRun));
 if (liftRun.partial < 3) errors.push("Lift loaded instantly instead of filling up");
 // v0.48.1: the car's height adds up in small steps and can sit a hair above a floor (2.9999999999); it must still
 // stop there (it used to round past it and turn back empty)
