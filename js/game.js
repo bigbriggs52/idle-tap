@@ -395,8 +395,13 @@ window.SVT = window.SVT || {};
   // Average throughput matches B.freightCap.
   SVT.liftCapacity = (lab, t) => B.freightLoad(lab.freight.lvl) * SVT.prestigeMult(lab) * SVT.loadMult(lab, "freight", 0, t);
   SVT.liftLoadRate = (lab, t) => SVT.liftCapacity(lab, t) / B.liftFillTime(lab.freight.lvl) * SVT.speedMult(lab, "freight", 0, t);
-  function nextStop(lab, from) {
-    for (let k = Math.floor(from + 1e-9) + 1; k <= lab.floors.length; k++) if (lab.floors[k - 1].stock > 0) return k;
+  // The next floor below the car with something waiting. v0.48.1 (user: "Lift is now having the same issues not
+  // picking up"): the car's height adds up in small steps, so it could sit at 2.9999999999 just above floor 3, and
+  // the old floor(y + 1e-9) + 1 rounded that past floor 3: the car turned back empty, skipping the floor it was about
+  // to reach. Now the search starts at the floor the car hasn't passed yet (ceil), and after the floor it last
+  // stopped at (`at`, reset at the start of each trip).
+  function nextStop(lab, from, at) {
+    for (let k = Math.max((at || 0) + 1, Math.ceil(from - 1e-6)); k <= lab.floors.length; k++) if (k >= 1 && lab.floors[k - 1].stock > 0) return k;
     return 0;
   }
   function stepLift(lab, dt, t) {
@@ -409,9 +414,9 @@ window.SVT = window.SVT || {};
       if (L.phase === "idle") {
         if (!SVT.mgrOf(lab, "freight", 0) && !L.go) return;
         if (!nextStop(lab, 0)) { L.go = false; return; }
-        L.go = false; L.phase = "down";
+        L.go = false; L.phase = "down"; L.at = 0; L.want = 0;
       } else if (L.phase === "down") {
-        const k = nextStop(lab, L.y);
+        const k = nextStop(lab, L.y, L.at);
         if (!k) { L.phase = "up"; continue; }
         const need = (k - L.y) / speed;
         if (need > dt) { L.y += speed * dt; return; }
@@ -421,13 +426,19 @@ window.SVT = window.SVT || {};
         const f = lab.floors[L.at - 1], cap = SVT.liftCapacity(lab, t), rate = SVT.liftLoadRate(lab, t);
         const hyper = SVT.activeAbility(lab, "freight", 0, t);
         if (hyper && hyper.vacuum && f) { L.load += f.stock; f.stock = 0; L.phase = "down"; continue; } // The Hyperloop: the whole crate in one go
-        const want = Math.min(cap - L.load, f ? f.stock : 0);
+        // v0.48.1 (user: "Lift is now having the same issues not picking up"): like the warehouse cart (v0.46.4), the
+        // car takes the whole pile at each floor, up to LIFT_HEAVY loads, instead of leaving what didn't fit. A big pile
+        // pours in faster, so a stop never takes longer than filling one normal load.
+        const room = cap * B.LIFT_HEAVY - L.load;
+        if (!L.want) L.want = Math.min(room, f ? f.stock : 0); // the pile when the car arrived sets the pour speed
+        const want = Math.min(room, f ? f.stock : 0), fast = Math.max(rate, L.want * rate / cap);
         if (want > 1e-9) {
-          const used = Math.min(dt, want / rate), take = Math.min(want, rate * used);
+          const used = Math.min(dt, want / fast), take = Math.min(want, fast * used);
           f.stock -= take; L.load += take; dt -= used;
           if (take < want - 1e-9) return;
         }
-        L.phase = L.load >= cap - 1e-9 ? "up" : "down";
+        L.want = 0;
+        L.phase = L.load >= cap * B.LIFT_HEAVY - 1e-9 ? "up" : "down";
       } else if (L.phase === "up") {
         const need = L.y / speed;
         if (need > dt) { L.y -= speed * dt; return; }

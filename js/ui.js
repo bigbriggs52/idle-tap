@@ -598,6 +598,8 @@ window.SVT = window.SVT || {};
     wormhole: ["visor", "#7c4dff", "#120a2a", "🌌"], galactic: ["tophat", "#ffd700", "#1a237e", "🏛️"],
   };
   SVT.MANAGER_LOOKS = LOOKS;
+  // v0.48.1: the lift car can carry several loads at once; past one load it shows how many (×2.6).
+  function fullText(load, cap) { if (!(cap > 0)) return "0%"; const r = load / cap; return r > 1.005 ? "×" + (Math.round(r * 10) / 10) : Math.round(100 * r) + "%"; }
   function avatar(m, labId) {
     let hsh = 0;
     for (const ch of m.name) hsh = (hsh * 31 + ch.charCodeAt(0)) >>> 0;
@@ -877,16 +879,15 @@ window.SVT = window.SVT || {};
       const L = lab(), lift = L.lift || { y: 0, load: 0, phase: "idle" };
       toggle(car, "full", lift.load > 0);
       toggle(car, "run", lift.phase !== "idle");
-      const cap = SVT.liftCapacity(L), pct = cap > 0 ? Math.min(100, Math.round(100 * lift.load / cap)) : 0;
       setText(carAmt, fmt(lift.load));
-      setText(carPct, pct + "%");
+      setText(carPct, fullText(lift.load, SVT.liftCapacity(L)));
     });
     const list = h("div", { class: "floors" }, floors, lockedRow());
     // How full the car is against what it can hold.
     const capLoad = h("b"), capRest = h("span");
     const capTag = bind(h("div", { class: "cap-tag" }, "🛗 Lift ", capLoad, capRest), () => {
       const L = lab(), load = L.lift ? L.lift.load : 0, cap = SVT.liftCapacity(L);
-      setText(capLoad, "$" + fmt(load)); setText(capRest, " / $" + fmt(cap) + " · " + (cap > 0 ? Math.min(100, Math.round(100 * load / cap)) : 0) + "% full");
+      setText(capLoad, "$" + fmt(load)); setText(capRest, " / $" + fmt(cap) + " · " + fullText(load, cap) + (load > cap ? "" : " full"));
     });
     return h("section", { class: "building" }, capTag, shaft, list);
   }
