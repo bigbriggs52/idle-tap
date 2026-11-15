@@ -380,8 +380,8 @@ window.SVT = window.SVT || {};
     // Floors selling straight from the floor (Dropshipper, Unicorn) bypass the lift and the warehouse.
     let build = 0, direct = 0;
     floors.forEach((r, i) => { const a = SVT.activeAbility(lab, "floor", i + 1, t); if (a && a.direct) direct += r * a.direct; else build += r; });
-    const freight = B.freightCap(lab.freight.lvl, depth) * P * SVT.nodeMult(lab, "freight", 0, t);
-    const commercial = B.commercialCap(lab.commercial.lvl) * P * SVT.nodeMult(lab, "commercial", 0, t);
+    const freight = B.freightCap(lab.freight.lvl, depth, SVT.isRaid(lab)) * P * SVT.nodeMult(lab, "freight", 0, t);
+    const commercial = B.commercialCap(lab.commercial.lvl, SVT.isRaid(lab)) * P * SVT.nodeMult(lab, "commercial", 0, t);
     const min = Math.min(build, freight, commercial);
     const limit = min === build ? "build" : min === freight ? "freight" : "commercial";
     const income = min * SVT.cashMult(lab, t, true) + direct * SVT.cashMult(lab, t);
@@ -393,7 +393,7 @@ window.SVT = window.SVT || {};
   // Down one floor every 1/speed s, stop at each floor with stock and pour it in at the loading speed until the floor
   // is empty or the car is full, turn back once full or past the last floor, then empty it over UNLOAD_TIME at the top.
   // Average throughput matches B.freightCap.
-  SVT.liftCapacity = (lab, t) => B.freightLoad(lab.freight.lvl) * SVT.prestigeMult(lab) * SVT.loadMult(lab, "freight", 0, t);
+  SVT.liftCapacity = (lab, t) => B.freightLoad(lab.freight.lvl, SVT.isRaid(lab)) * SVT.prestigeMult(lab) * SVT.loadMult(lab, "freight", 0, t);
   SVT.liftLoadRate = (lab, t) => SVT.liftCapacity(lab, t) / B.liftFillTime(lab.freight.lvl) * SVT.speedMult(lab, "freight", 0, t);
   // The next floor below the car with something waiting. v0.48.1 (user: "Lift is now having the same issues not
   // picking up"): the car's height adds up in small steps, so it could sit at 2.9999999999 just above floor 3, and
@@ -509,7 +509,7 @@ window.SVT = window.SVT || {};
     }
     return earned;
   }
-  SVT.shipLoad = (lab, t) => B.commercialCap(lab.commercial.lvl) * SVT.prestigeMult(lab) * SVT.loadMult(lab, "commercial", 0, t) * B.WH_TRIP;
+  SVT.shipLoad = (lab, t) => B.commercialCap(lab.commercial.lvl, SVT.isRaid(lab)) * SVT.prestigeMult(lab) * SVT.loadMult(lab, "commercial", 0, t) * B.WH_TRIP;
   // A trip starts at the warehouse: the worker pushes the empty cart to the lift, loads up, and pushes it back.
   SVT.startShip = (lab) => {
     const c = lab.commercial;

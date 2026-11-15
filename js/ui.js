@@ -380,16 +380,16 @@ window.SVT = window.SVT || {};
       ["Tech unlock bonus", (L) => multText(B.floorMult(L))],
     ];
     if (kind === "freight") return [
-      ["Moves", (L) => "$" + fmt(B.freightCap(L, depth()) * P() * M()) + "/s"],
-      ["Load per trip", (L) => "$" + fmt(B.freightLoad(L) * P() * M())],
+      ["Moves", (L) => "$" + fmt(B.freightCap(L, depth(), inRaid()) * P() * M()) + "/s"],
+      ["Load per trip", (L) => "$" + fmt(B.freightLoad(L, inRaid()) * P() * M())],
       ["Lift speed", (L) => multText(B.freightSpeed(L))],
-      ["Loading speed", (L) => "$" + fmt(B.freightLoad(L) / B.liftFillTime(L) * P() * M()) + "/s"],
+      ["Loading speed", (L) => "$" + fmt(B.freightLoad(L, inRaid()) / B.liftFillTime(L) * P() * M()) + "/s"],
       ["Round trip", (L) => (B.freightTrip(L, depth()) / SVT.speedMult(lab(), kind, n)).toFixed(1) + "s"],
       ["Tech unlock bonus", (L) => multText(B.hubMult(L))],
     ];
     return [
-      ["Ships", (L) => "$" + fmt(B.commercialCap(L) * P() * M()) + "/s"],
-      ["Load per trip", (L) => { const sp = SVT.speedMult(lab(), kind, n); return "$" + fmt(B.commercialCap(L) * P() * M() / sp * B.WH_TRIP) + " / " + +(B.WH_TRIP / sp).toFixed(1) + "s"; }],
+      ["Ships", (L) => "$" + fmt(B.commercialCap(L, inRaid()) * P() * M()) + "/s"],
+      ["Load per trip", (L) => { const sp = SVT.speedMult(lab(), kind, n); return "$" + fmt(B.commercialCap(L, inRaid()) * P() * M() / sp * B.WH_TRIP) + " / " + +(B.WH_TRIP / sp).toFixed(1) + "s"; }],
       ["Tech unlock bonus", (L) => multText(B.hubMult(L))],
     ];
   }

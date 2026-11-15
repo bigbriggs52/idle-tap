@@ -19,9 +19,9 @@ window.SVT = window.SVT || {};
   }
 
   const B = {
-    VERSION: "0.48.2",
+    VERSION: "0.49.0",
     // Release time in UTC, set with each release. Shown after the version in the player's local time.
-    BUILT: "2026-11-14T19:50Z",
+    BUILT: "2026-11-15T03:00Z",
     FLOORS: 30,
     // v0.26: lower caps, because the IPO needs every floor, the lift and the warehouse at max level. The hubs cap at
     // Lv 400: that is the income every lab ends with, so the deep floors must stay affordable against it, and
@@ -184,15 +184,24 @@ window.SVT = window.SVT || {};
   B.hubMult = stepMultiplier(HUB_MILESTONES, B.HUB_STEP);
 
   B.floorOutput = (n, L) => (L > 0 ? B.floorValue(n) * L * B.floorMult(L) : 0);
-  B.freightLoad = (L) => 8 * Math.pow(1.11, L - 1) * B.hubMult(L);
+  // v0.49 (user: "Lift doesn't ever get strong enough to go below level 23"): each floor is worth 6x the one above,
+  // but the hubs grew far slower, so at Lv 400 the lift could carry floors 1-23 and nothing deeper (floor 30 at
+  // Lv 100 out-built it 700,000x). From Lv 300 the hubs gain an extra x1.5M spread over the last 100 levels (x1.15 a
+  // level), so a maxed lift and warehouse carry all 30 floors at Lv 100 with room to spare, and the early and middle
+  // game is unchanged.
+  B.HUB_BOOST = 1.5e6;
+  B.HUB_BOOST_FROM = 300;
+  // Viking Raid mines step 1.3-1.5x per shaft, not 6x, so they don't need it (`raid` true leaves it out).
+  B.hubBoost = (L, raid) => (raid ? 1 : Math.pow(B.HUB_BOOST, Math.max(0, L - B.HUB_BOOST_FROM) / (B.HUB_MAX - B.HUB_BOOST_FROM)));
+  B.freightLoad = (L, raid) => 8 * Math.pow(1.11, L - 1) * B.hubMult(L) * B.hubBoost(L, raid);
   B.freightSpeed = (L) => 1 + 0.02 * (L - 1);
   // The car stops briefly at each floor and pours money in at the loading speed: a full car fills in liftFillTime.
   B.LIFT_STOP = 0.15;
   B.LIFT_UNLOAD = 1;
   B.liftFillTime = (L) => 1.5 / B.freightSpeed(L);
   B.freightTrip = (L, depth) => (2 * depth) / B.freightSpeed(L) + B.LIFT_STOP * depth + B.liftFillTime(L) + B.LIFT_UNLOAD;
-  B.freightCap = (L, depth) => B.freightLoad(L) / B.freightTrip(L, depth);
-  B.commercialCap = (L) => 2 * Math.pow(1.11, L - 1) * B.hubMult(L);
+  B.freightCap = (L, depth, raid) => B.freightLoad(L, raid) / B.freightTrip(L, depth);
+  B.commercialCap = (L, raid) => 2 * Math.pow(1.11, L - 1) * B.hubMult(L) * B.hubBoost(L, raid);
 
   // Cost of one level from L to L+1.
   B.levelCost = (kind, n, L, growth) => {
