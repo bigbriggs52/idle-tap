@@ -2,6 +2,10 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.49.0 (2026-11-14)
+
+- The lift and warehouse can now carry the deepest floors. Each floor makes 6× the one above, but even a maxed lift (Lv 400) could only carry floors 1 to 23, so floors 24 to 30 piled up and added nothing. From Lv 300 the lift and warehouse now get a big extra boost over their last 100 levels, so a maxed pair carries all 30 floors at Lv 100 with room to spare. Up to Lv 300 nothing changes, and Viking mines are unchanged. The late game is faster now because the deep floors finally pay.
+
 ## v0.48.2 (2026-11-14)
 
 - The lift is back to carrying one load per trip at normal speed. v0.48.1's up-to-10-loads trips made it too slow. The v0.48.1 fix stays, so the lift still never turns back empty before reaching a floor with money.

@@ -311,6 +311,17 @@ const hair = await page.evaluate(() => {
 });
 console.log("lift hair", JSON.stringify(hair));
 if (hair.left > 1e-9 || Math.abs(hair.lobby - 0.5) > 1e-9) errors.push("Lift skipped a floor it was a hair above (v0.48.1) " + JSON.stringify(hair));
+// v0.49 (user: "Lift doesn't ever get strong enough to go below level 23"): a maxed lift and warehouse carry all 30
+// floors at Lv 100 on the main map; Viking Raid hubs get no boost
+const deep = await page.evaluate(() => {
+  const B = SVT.B, lab = SVT.newLab("garage");
+  while (lab.floors.length < 30) lab.floors.push({ lvl: 1, stock: 0, left: 0 });
+  lab.floors.forEach((f) => (f.lvl = 100)); lab.freight.lvl = 400; lab.commercial.lvl = 400;
+  const r = SVT.rates(lab);
+  return { limit: r.limit, lift: r.freight / r.build, wh: r.commercial / r.build, raid: B.hubBoost(450, true), mid: B.hubBoost(300), top: B.hubBoost(400) };
+});
+console.log("deep floors", JSON.stringify(deep));
+if (deep.limit !== "build" || deep.lift < 1 || deep.wh < 1 || deep.raid !== 1 || deep.mid !== 1 || Math.abs(deep.top / 1.5e6 - 1) > 1e-9) errors.push("Maxed hubs can't carry 30 floors (v0.49) " + JSON.stringify(deep));
 // one tap = one cycle: a floor builds once and stops; the warehouse ships one trip and stops
 const cyc = await page.evaluate(() => {
   const L = SVT.lab();
