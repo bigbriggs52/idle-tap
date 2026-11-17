@@ -19,9 +19,9 @@ window.SVT = window.SVT || {};
   }
 
   const B = {
-    VERSION: "0.49.1",
+    VERSION: "0.50.0",
     // Release time in UTC, set with each release. Shown after the version in the player's local time.
-    BUILT: "2026-11-17T15:10Z",
+    BUILT: "2026-11-17T17:30Z",
     FLOORS: 30,
     // v0.26: lower caps, because the IPO needs every floor, the lift and the warehouse at max level. The hubs cap at
     // Lv 400: that is the income every lab ends with, so the deep floors must stay affordable against it, and
@@ -166,6 +166,11 @@ window.SVT = window.SVT || {};
       // upgrades he can have. Only the highest rarity can bind to chip"): a Singularity item can be bound to Chip. It is
       // used up, and Chip keeps its +3 (what a worn x4 Singularity adds) for good, freeing the slot. No limit.
       BIND_ADD: 3,
+      // v0.50 (user: "Allow selling of rarity tokens to a vendor ... 500 coins for divine 100 for legendary and figure
+      // out the math for everything else"): the vendor buys any item for wild coins. Divine (three Mythics merged) pays
+      // more than the three Mythics would, and each merge tier above it pays about 3.2x the one below, so merging up
+      // before selling always pays.
+      SELL: [1, 3, 10, 30, 100, 150, 500, 1600, 5000, 16000, 50000, 160000, 500000, 1600000, 5000000, 16000000],
     },
     // Regular abilities (Common to Rare): "speed" runs the node faster (shorter cycles, a quicker lift and cart),
     // "storage" makes every cycle, lift trip and cart load carry more, "discount" cuts that node's upgrade prices.

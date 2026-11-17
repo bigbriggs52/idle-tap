@@ -373,7 +373,10 @@ window.SVT = window.SVT || {};
   };
 
   // Rates in $/s (what each node could move if running).
-  SVT.rates = (lab, t) => {
+  // `real` (v0.50, used by Max all): the warehouse at what it really ships. The cart takes up to WH_HEAVY loads a
+  // trip (v0.46.4), so it moves up to WH_HEAVY times its listed capacity, and the lift's round trip (down to the
+  // deepest floor at its speed, a stop at every floor, filling up, and the drop-off at the top) is what it can bring.
+  SVT.rates = (lab, t, real) => {
     t = t || now();
     const P = SVT.prestigeMult(lab), depth = lab.floors.length;
     const floors = lab.floors.map((f, i) => B.floorOutput(i + 1, f.lvl) * P * SVT.nodeMult(lab, "floor", i + 1, t));
@@ -381,7 +384,7 @@ window.SVT = window.SVT || {};
     let build = 0, direct = 0;
     floors.forEach((r, i) => { const a = SVT.activeAbility(lab, "floor", i + 1, t); if (a && a.direct) direct += r * a.direct; else build += r; });
     const freight = B.freightCap(lab.freight.lvl, depth, SVT.isRaid(lab)) * P * SVT.nodeMult(lab, "freight", 0, t);
-    const commercial = B.commercialCap(lab.commercial.lvl, SVT.isRaid(lab)) * P * SVT.nodeMult(lab, "commercial", 0, t);
+    const commercial = B.commercialCap(lab.commercial.lvl, SVT.isRaid(lab)) * P * SVT.nodeMult(lab, "commercial", 0, t) * (real ? B.WH_HEAVY : 1);
     const min = Math.min(build, freight, commercial);
     const limit = min === build ? "build" : min === freight ? "freight" : "commercial";
     const income = min * SVT.cashMult(lab, t, true) + direct * SVT.cashMult(lab, t);
@@ -771,9 +774,12 @@ window.SVT = window.SVT || {};
   // included (SVT.rates), with manager abilities left out (a running Speed ability made the lift look fast for a
   // moment). The warehouse is never bought while it already ships at least what the lift brings up, and the lift is
   // never bought while it already beats both the floors and the warehouse, even when Max all is only spending down.
+  // v0.50 (user: "Max upgrade on lift is still having the lift be overall slower than the warehouse"): the warehouse
+  // counts at what it really ships (up to WH_HEAVY loads a trip), so the lift keeps getting levels until its whole
+  // round trip keeps up with the cart, not just with the cart's listed load.
   SVT.bestUpgrade = (lab, t) => {
     t = (t || now()) + 1e9; // far past every running ability: steady-state rates
-    const r0 = SVT.rates(lab, t), base = r0.income;
+    const r0 = SVT.rates(lab, t, true), base = r0.income;
     let best = null;
     for (const [kind, n] of SVT.upgradeOrder(lab)) {
       if (kind === "commercial" && r0.commercial >= r0.freight) continue;
@@ -782,7 +788,7 @@ window.SVT = window.SVT || {};
       if (!q) continue;
       const node = SVT.nodeOf(lab, kind, n);
       node.lvl += q.count;
-      const gain = SVT.rates(lab, t).income - base;
+      const gain = SVT.rates(lab, t, true).income - base;
       node.lvl -= q.count;
       const score = gain / q.cost;
       if (!best || score > best.score) best = { kind, n, q, gain, score, base };
