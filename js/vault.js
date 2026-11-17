@@ -287,6 +287,20 @@ window.SVT = window.SVT || {};
     SVT.save();
     return true;
   };
+  // ---------- vendor (v0.50) ----------
+  // Sell an item for wild coins (V.SELL by rarity). A worn item comes off Chip first.
+  SVT.vaultSellPrice = (it) => (it ? V.SELL[it.rar] || 0 : 0);
+  SVT.vaultSell = (id) => {
+    const v = S(), it = SVT.vaultItem(id);
+    if (!it) return 0;
+    const pay = SVT.vaultSellPrice(it);
+    for (const k in v.show) if (v.show[k] === id) delete v.show[k];
+    v.items = v.items.filter((x) => x !== it);
+    v.wild = (v.wild || 0) + pay;
+    SVT.vaultRecalc();
+    SVT.save();
+    return pay;
+  };
   // Max merge (v0.38, user ask): every possible merge, weakest three first, cascading until nothing is left to merge.
   SVT.vaultMergeAll = () => {
     const made = [];
@@ -479,6 +493,7 @@ window.SVT = window.SVT || {};
   const refresh = () => { if (SVT.render) SVT.render(); openVault(); };
   // An item card: picture, name, rarity and bonus, where it goes on Chip, and one Equip / Take off button. The full
   // six-part code sits behind "Details".
+  const fmtCoins = (n) => (n >= 1e6 ? +(n / 1e6).toFixed(1) + "M" : n >= 1e4 ? Math.round(n / 1e3) + "K" : String(n));
   function itemCard(it, big) {
     const { h } = SVT.ui;
     const code = SVT.itemCode(it);
@@ -497,6 +512,13 @@ window.SVT = window.SVT || {};
       if (SVT.vaultBind(it.id)) SVT.ui.toast("🔗 Bound to Chip: +" + V.BIND_ADD + " income for good (×" + SVT.vaultMult() + ")", "big");
       refresh();
     }, text: "🔗 Bind to Chip" }) : null;
+    let sellArmed = false;
+    const sell = h("button", { class: "btn small ghost vault-sell", onclick: (e) => {
+      if (!sellArmed) { sellArmed = true; e.currentTarget.textContent = "Tap again: sell for 🪙 " + fmtCoins(SVT.vaultSellPrice(it)); return; }
+      const pay = SVT.vaultSell(it.id);
+      if (pay) SVT.ui.toast("🏪 Sold " + SVT.itemName(it) + " for 🪙 " + fmtCoins(pay) + " wild coins");
+      refresh();
+    }, text: "🏪 Sell 🪙 " + fmtCoins(SVT.vaultSellPrice(it)) });
     const more = big ? null : h("button", { class: "btn small ghost vault-choose", onclick: () => { details.hidden = !details.hidden; more.textContent = details.hidden ? "Details ▾" : "Details ▴"; }, text: "Details ▾" });
     return h("div", { class: "vault-card r-" + it.rarity + (big ? " big" : "") + (worn ? " wearing" : "") },
       SVT.itemArt(it),
@@ -504,7 +526,7 @@ window.SVT = window.SVT || {};
         h("b", { class: "vault-card-name", text: SVT.itemName(it) }),
         h("span", { class: "vault-card-rar r-" + it.rarity, text: RAR[it.rar].name + (it.rar >= 4 ? " ★" : "") + " · " + boostText(it) }),
         h("span", { class: "vault-card-where", text: worn ? "🤖 On Chip: " + slotOf(worn).name.toLowerCase() : "Goes " + (SVT.itemCat(it) === "floor" ? "on the floor beside Chip" : SVT.itemCat(it) === "hand" ? "in a hand" : "on the " + SVT.itemCat(it)) }),
-        h("div", { class: "vault-equip-row" }, equip, bind, more),
+        h("div", { class: "vault-equip-row" }, equip, bind, sell, more),
         details));
   }
 
@@ -611,6 +633,7 @@ window.SVT = window.SVT || {};
         h("h3", { text: "🔀 Merge (" + merges.length + ")" }),
         merges.length ? h("button", { class: "btn fund-cta vault-merge-all", onclick: () => { const made = SVT.vaultMergeAll(); mergePick = null; SVT.ui.toast("🔀 " + made.length + (made.length === 1 ? " merge" : " merges") + ": " + made.map((it) => RAR[it.rar].name).filter((x, i, a) => a.indexOf(x) === i).join(", "), "big"); if (made.length) reveal(made.sort((a, b) => b.rar - a.rar || b.id - a.id)[0]); else refresh(); }, text: "🔀 Max merge · " + merges.reduce((n, m) => n + Math.floor(m.count / 3), 0) + " now" }) : null,
         merges.length ? merges.map(mergeRow) : h("p", { class: "muted small", text: "Three items of the same type and rarity merge into one of the next rarity: a random item of that same type from one of their labs. Items on Chip don't count: take them off first." })) : null,
+      v.items.length ? h("p", { class: "muted small vault-vendor", text: "🏪 The vendor buys any item for wild coins: " + RAR.map((r, i) => r.name + " " + fmtCoins(V.SELL[i])).filter((x, i) => i <= 6 || i === RAR.length - 1).join(", ").replace(/, ([^,]*)$/, ", … $1") + ". Tap Sell twice on an item." }) : null,
       byLab.map((l) => h("div", { class: "vault-shelf" },
         h("h3", { text: l.icon + " " + l.name }),
         v.items.filter((x) => x.lab === l.id).sort((a, b) => b.rar - a.rar || b.id - a.id).map((x) => itemCard(x))))));

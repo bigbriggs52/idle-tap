@@ -2,6 +2,11 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.50.0 (2026-11-17)
+
+- A vendor in the Vault buys any item for wild coins: Common 1, Uncommon 3, Rare 10, Epic 30, Legendary 100, Mythic 150, Divine 500, then about 3.2× per rarity up to Singularity at 16M. Each merged rarity sells for more than the three items that made it, so merging up before selling always pays. Tap 🏪 Sell twice on an item; a worn item comes off Chip first.
+- Max all now judges the lift against what the warehouse really ships. The cart carries up to 10 loads a trip, so it moves up to 10× its listed load. The lift's speed counts its whole round trip: going down to the deepest floor, a stop at each floor, filling up, and the drop-off at the top. Max all keeps buying lift levels until the lift keeps up with the cart (or with the floors, whichever is lower), and doesn't buy the warehouse while the lift is slower.
+
 ## v0.49.1 (2026-11-17)
 
 - Max all no longer upgrades the warehouse while the lift is the slower of the two. The lift's speed is measured with its full trip down to the deepest floor, and manager abilities that are running at that moment don't count, so a short Speed boost can't make the lift look fast.
