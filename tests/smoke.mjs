@@ -944,6 +944,11 @@ const bonus = await page.evaluate(() => {
   return out;
 });
 console.log("bonus", JSON.stringify(bonus));
+// v0.50.3: the item shelves go by rarity, rarest first
+const shelves = await page.evaluate(async () => { SVT.openGallery(); await new Promise((r) => setTimeout(r, 300));
+  const idx = [...document.querySelectorAll(".vault-rarshelf h3")].map((e) => SVT.B.VAULT.RARITIES.findIndex((r) => e.classList.contains("r-" + r.id)));
+  SVT.closeVault(); return { n: idx.length, desc: idx.every((x, i) => x >= 0 && (!i || x < idx[i - 1])) }; });
+if (!(shelves.n >= 2) || !shelves.desc) errors.push("Vault shelves not sorted by rarity (v0.50.3) " + JSON.stringify(shelves));
 if (!bonus.allHaveBoost || !bonus.mythicBoost) errors.push("Vault: item boosts missing");
 if (JSON.stringify(bonus.tiers) !== JSON.stringify({ n: 16, rolled: 6, div: "divine", divBoost: 1.75, sing: "singularity", singBoost: 4, topStays: true, same: 6, rollTop: 6 })) errors.push("Vault: merge-only rarities wrong (v0.46) " + JSON.stringify(bonus.tiers));
 if (!bonus.wornMerge || !bonus.wornMerge.worn || !bonus.wornMerge.notListed || !bonus.wornMerge.pickRefused || !bonus.wornMerge.stillThere || !bonus.wornMerge.weakestKeeps) errors.push("Vault: an equipped item could be merged " + JSON.stringify(bonus.wornMerge));

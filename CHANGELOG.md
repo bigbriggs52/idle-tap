@@ -2,6 +2,10 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.50.3 (2026-11-17)
+
+- The Vault's item list is sorted by rarity now, rarest first, instead of by lab. Each rarity gets its own shelf with a count, the strongest bonus comes first on each shelf, and every card says which lab the item came from. (Chip's bonus comes from the rarity alone, never from the lab.)
+
 ## v0.50.2 (2026-11-17)
 
 - Merged rarities sell for less, so rolling cheap items and merging them up to sell can't make free coins: Divine 100, then 3× per rarity (Celestial 300, Cosmic 900 … Singularity about 2M).
