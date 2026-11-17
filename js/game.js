@@ -766,11 +766,18 @@ window.SVT = window.SVT || {};
     return q.count > 0 && lab.cash >= q.cost ? q : null;
   };
   // The best next buy right now: the node whose next bundle adds the most $/s per dollar spent.
+  // v0.49.1 (user: "quit upgrading the warehouse if the lift is still going to be slower because it has to go down
+  // farther"): the hubs are compared on what they really move, the lift's round trip down to the deepest floor
+  // included (SVT.rates), with manager abilities left out (a running Speed ability made the lift look fast for a
+  // moment). The warehouse is never bought while it already ships at least what the lift brings up, and the lift is
+  // never bought while it already beats both the floors and the warehouse, even when Max all is only spending down.
   SVT.bestUpgrade = (lab, t) => {
-    t = t || now();
-    const base = SVT.rates(lab, t).income;
+    t = (t || now()) + 1e9; // far past every running ability: steady-state rates
+    const r0 = SVT.rates(lab, t), base = r0.income;
     let best = null;
     for (const [kind, n] of SVT.upgradeOrder(lab)) {
+      if (kind === "commercial" && r0.commercial >= r0.freight) continue;
+      if (kind === "freight" && r0.freight >= r0.commercial && r0.freight >= r0.build) continue;
       const q = SVT.upgradeChunk(lab, kind, n);
       if (!q) continue;
       const node = SVT.nodeOf(lab, kind, n);

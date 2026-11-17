@@ -2,6 +2,11 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.49.1 (2026-11-17)
+
+- Max all no longer upgrades the warehouse while the lift is the slower of the two. The lift's speed is measured with its full trip down to the deepest floor, and manager abilities that are running at that moment don't count, so a short Speed boost can't make the lift look fast.
+- A maxed upgrade now just says MAX on its Level button, with no triangles.
+
 ## v0.49.0 (2026-11-14)
 
 - The lift and warehouse can now carry the deepest floors. Each floor makes 6× the one above, but even a maxed lift (Lv 400) could only carry floors 1 to 23, so floors 24 to 30 piled up and added nothing. From Lv 300 the lift and warehouse now get a big extra boost over their last 100 levels, so a maxed pair carries all 30 floors at Lv 100 with room to spare. Up to Lv 300 nothing changes, and Viking mines are unchanged. The late game is faster now because the deep floors finally pay.
