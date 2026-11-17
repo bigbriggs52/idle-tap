@@ -795,12 +795,23 @@ window.SVT = window.SVT || {};
     }
     return best;
   };
+  SVT.cheapestUpgrade = (lab) => {
+    let best = null;
+    for (const [kind, n] of SVT.upgradeOrder(lab)) {
+      const q = SVT.upgradeChunk(lab, kind, n);
+      if (q && (!best || q.cost < best.q.cost)) best = { kind, n, q };
+    }
+    return best;
+  };
   SVT.upgradeAll = () => {
     const lab = SVT.lab(), t = now();
     let levels = 0, spent = 0, nodes = 0;
     const order = [];
     for (let step = 0; step < SVT.UPGRADE_MAX_STEPS; step++) {
-      const b = SVT.bestUpgrade(lab, t);
+      // v0.50.1 (user: "buys everything that it can until there's no more money that can be actually spent at all"):
+      // the lift-first order still decides what comes first, but once it has nothing left to buy (the lift is maxed
+      // or too dear), the cheapest affordable upgrade anywhere is bought, so no spendable cash is left over.
+      const b = SVT.bestUpgrade(lab, t) || SVT.cheapestUpgrade(lab);
       // v0.46.1 (user: "If I click max all I want it to max as much as it can until I have no money left"): it keeps
       // buying the best-value upgrade until nothing is affordable (v0.45 stopped early to save for the next shaft).
       if (!b || !SVT.upgradeBy(lab, b.kind, b.n, b.q)) break;

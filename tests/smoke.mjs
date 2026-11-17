@@ -241,6 +241,14 @@ const maxes = await page.evaluate(() => {
     let c = 1; while (c <= SVT.maxLevel(D, "commercial") - 1) { D.commercial.lvl = c; const r = SVT.rates(D); if (r.commercial >= r.freight) break; c++; }
     D.cash = 1e300; const r = SVT.rates(D), b = SVT.bestUpgrade(D);
     return { whFaster: r.commercial >= r.freight, whMaxed: D.commercial.lvl >= SVT.maxLevel(D, "commercial"), pick: b && b.kind }; })();
+  // v0.50.1: Max all spends every last affordable level, even the warehouse the lift-first rule skips
+  out.spendAll = (() => { const D = SVT.newLab("garage"), keep = SVT.state().labs, ka = SVT.state().activeLab;
+    while (D.floors.length < 30) D.floors.push({ lvl: 1, stock: 0, left: 0 });
+    D.floors.forEach((f) => (f.lvl = SVT.maxLevel(D, "floor"))); D.freight.lvl = SVT.maxLevel(D, "freight"); D.commercial.lvl = 1;
+    D.cash = 1e300; SVT.state().labs = { [D.id]: D }; SVT.state().activeLab = D.id;
+    const r = SVT.upgradeAll(), left = SVT.upgradeOrder(D).filter(([k, n]) => SVT.upgradeChunk(D, k, n)).length;
+    SVT.state().labs = keep; SVT.state().activeLab = ka;
+    return { bought: r.levels > 0, left, whMaxed: D.commercial.lvl === SVT.maxLevel(D, "commercial") }; })();
   // v0.50: the cart really ships up to WH_HEAVY loads a trip, so with the lift between the cart's listed load and
   // what it really moves (and the floors still ahead), Max all buys the lift, not the warehouse
   out.realLift = (() => { const D = SVT.newLab("garage");
@@ -258,6 +266,7 @@ if (!(maxes.floor.seats >= 1) || maxes.floor.q !== maxes.floor.got || !(maxes.fl
 if (!(maxes.lift.got > 1) || !maxes.lift.assigned || !maxes.lift.bestSeated || maxes.lift.again !== 0 || !maxes.noCash) errors.push("Hire max (lift) wrong: " + JSON.stringify(maxes.lift));
 if (!(maxes.all.levels > 0) || maxes.all.sum !== maxes.all.levels || !maxes.all.buyKept || maxes.all.again !== 0 || maxes.all.canQ < 1 || !maxes.all.firstIsLimit || !(maxes.all.firstGain > 0) || !(maxes.all.income1 > maxes.all.income0)) errors.push("Max all wrong (v0.40.2: best upgrade for the backlog): " + JSON.stringify(maxes.all));
 if (!maxes.slowLift.whFaster || maxes.slowLift.whMaxed || maxes.slowLift.pick === "commercial") errors.push("Max all bought the warehouse while the lift was slower (v0.49.1) " + JSON.stringify(maxes.slowLift));
+if (JSON.stringify(maxes.spendAll) !== JSON.stringify({ bought: true, left: 0, whMaxed: true })) errors.push("Max all left affordable upgrades unbought (v0.50.1) " + JSON.stringify(maxes.spendAll));
 if (JSON.stringify(maxes.realLift) !== JSON.stringify({ between: true, floorsAhead: true, pick: "freight" })) errors.push("Max all should keep buying the lift until it keeps up with what the cart really ships (v0.50) " + JSON.stringify(maxes.realLift));
 // v0.49.1: a maxed node says MAX with no ▲ badge, however much cash there is
 const maxBadge = await page.evaluate(async () => { const L = SVT.lab(), keep = [L.freight.lvl, L.cash]; L.freight.lvl = SVT.maxLevel(L, "freight"); L.cash = 1e300; SVT.setView("lab");
@@ -928,7 +937,7 @@ const bonus = await page.evaluate(() => {
   SVT.vaultWear((SVT.vaultSlots().find((sl) => SVT.vaultFits(sl6, sl.id)) || { id: "x" }).id, sl6.id);
   const w0 = v.wild || 0, p4 = SVT.vaultSell(sl4.id), p6 = SVT.vaultSell(sl6.id);
   out.sell = { p4, p6, wild: (v.wild || 0) - w0, gone: !SVT.vaultItem(sl4.id) && !SVT.vaultItem(sl6.id) && !SVT.vaultSlotOf(sl6.id), none: SVT.vaultSell(-1),
-    rising: B.SELL.every((x, i) => !i || x > B.SELL[i - 1]), mergePays: B.SELL.every((x, i) => i < 6 || x > 3 * B.SELL[i - 1]) };
+    rising: B.SELL.every((x, i) => !i || x >= B.SELL[i - 1]), noLoop: B.STAKES.every((k) => B.ODDS[k].reduce((a, p, i) => a + p * B.SELL[i], 0) < k), mergePays: B.SELL.every((x, i) => i < 3 || x > 3 * B.SELL[i - 1]) };
   const needs = SVT.vaultNeeds();
   out.needs = { n: needs.length, allEmptySlots: needs.every((x) => x.slots.every((sl) => !v.show[sl.id])), labsMake: needs.every((x) => x.labs.length && x.labs.every((l) => SVT.vaultLabCats(l.id).includes(x.cat))), feet: SVT.LABS.filter((l) => SVT.vaultLabCats(l.id).includes("feet")).length };
   return out;
@@ -939,7 +948,7 @@ if (JSON.stringify(bonus.tiers) !== JSON.stringify({ n: 16, rolled: 6, div: "div
 if (!bonus.wornMerge || !bonus.wornMerge.worn || !bonus.wornMerge.notListed || !bonus.wornMerge.pickRefused || !bonus.wornMerge.stillThere || !bonus.wornMerge.weakestKeeps) errors.push("Vault: an equipped item could be merged " + JSON.stringify(bonus.wornMerge));
 if (bonus.mult !== bonus.sum || Math.abs(bonus.ratio - bonus.mult) > 1e-6 || !bonus.raidSame || !bonus.capped) errors.push("Vault: bonus multiplier wrong " + JSON.stringify(bonus));
 if (JSON.stringify(bonus.bind) !== JSON.stringify({ lowRefused: true, bound: true, again: true, gone: true, count: 2, mult: 6, slotFreed: true })) errors.push("Vault: binding to Chip wrong (v0.48) " + JSON.stringify(bonus.bind));
-if (JSON.stringify(bonus.sell) !== JSON.stringify({ p4: 100, p6: 500, wild: 600, gone: true, none: 0, rising: true, mergePays: true })) errors.push("Vault: selling to the vendor wrong (v0.50) " + JSON.stringify(bonus.sell));
+if (JSON.stringify(bonus.sell) !== JSON.stringify({ p4: 15, p6: 500, wild: 515, gone: true, none: 0, rising: true, noLoop: true, mergePays: true })) errors.push("Vault: selling to the vendor wrong (v0.50) " + JSON.stringify(bonus.sell));
 if (Object.values(bonus.cats).reduce((a, b) => a + b, 0) !== 1500 || Object.keys(bonus.cats).length !== 7) errors.push("Vault: not every product has a slot category " + JSON.stringify(bonus.cats));
 if (JSON.stringify(bonus.catSamples) !== JSON.stringify({ calc: "hand", watch: "wrist", ai: "head", neck: "neck", headphones: "head", server: "floor", shoe: "feet", jacket: "body" })) errors.push("Vault: product categories wrong " + JSON.stringify(bonus.catSamples));
 if (!bonus.handSlot.startsWith("hand") || !bonus.floorSlot.startsWith("floor") || bonus.twice !== null || !bonus.notListedTwice || !bonus.eligibleOk || !bonus.wristOnlyWrist) errors.push("Vault: one-tap equip or per-slot inventory wrong " + JSON.stringify(bonus));

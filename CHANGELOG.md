@@ -2,6 +2,11 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.50.1 (2026-11-17)
+
+- Max all now spends every coin it can. It still upgrades the lift first while the lift is slower, but once the lift is maxed or too expensive it keeps buying the cheapest upgrade left anywhere, warehouse included, until nothing is affordable.
+- Items you can roll now sell for less, so rolling and selling can't make free coins: Common 0, Uncommon 0, Rare 1, Epic 4, Legendary 15, Mythic 50. Divine and up are unchanged (Divine 500).
+
 ## v0.50.0 (2026-11-17)
 
 - A vendor in the Vault buys any item for wild coins: Common 1, Uncommon 3, Rare 10, Epic 30, Legendary 100, Mythic 150, Divine 500, then about 3.2× per rarity up to Singularity at 16M. Each merged rarity sells for more than the three items that made it, so merging up before selling always pays. Tap 🏪 Sell twice on an item; a worn item comes off Chip first.
