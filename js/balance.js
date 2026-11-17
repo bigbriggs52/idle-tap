@@ -19,9 +19,9 @@ window.SVT = window.SVT || {};
   }
 
   const B = {
-    VERSION: "0.50.1",
+    VERSION: "0.50.2",
     // Release time in UTC, set with each release. Shown after the version in the player's local time.
-    BUILT: "2026-11-17T19:55Z",
+    BUILT: "2026-11-17T19:50Z",
     FLOORS: 30,
     // v0.26: lower caps, because the IPO needs every floor, the lift and the warehouse at max level. The hubs cap at
     // Lv 400: that is the income every lab ends with, so the deep floors must stay affordable against it, and
@@ -172,7 +172,9 @@ window.SVT = window.SVT || {};
       // before selling always pays. v0.50.1 (user picked "Lower rollable prices"): the six rarities a roll can give
       // sell for less than any stake pays on average (stake 1 gets back ~0.75 coins, stake 10 ~5.4), so rolling and
       // selling can't make coins.
-      SELL: [0, 0, 1, 4, 15, 50, 500, 1600, 5000, 16000, 50000, 160000, 500000, 1600000, 5000000, 16000000],
+      // v0.50.2 (user picked "Divine 100, then x3 per tier"): rolling cheap items and merging them up to Divine cost
+      // about 120-230 coins a Divine, so 500 made free coins. Now three of a tier sell for exactly one of the next.
+      SELL: [0, 0, 1, 4, 15, 50, 100, 300, 900, 2700, 8100, 24300, 72900, 218700, 656100, 1968300],
     },
     // Regular abilities (Common to Rare): "speed" runs the node faster (shorter cycles, a quicker lift and cart),
     // "storage" makes every cycle, lift trip and cart load carry more, "discount" cuts that node's upgrade prices.

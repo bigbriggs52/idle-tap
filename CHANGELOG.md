@@ -2,6 +2,10 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.50.2 (2026-11-17)
+
+- Merged rarities sell for less, so rolling cheap items and merging them up to sell can't make free coins: Divine 100, then 3× per rarity (Celestial 300, Cosmic 900 … Singularity about 2M).
+
 ## v0.50.1 (2026-11-17)
 
 - Max all now spends every coin it can. It still upgrades the lift first while the lift is slower, but once the lift is maxed or too expensive it keeps buying the cheapest upgrade left anywhere, warehouse included, until nothing is affordable.

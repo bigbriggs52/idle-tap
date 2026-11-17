@@ -937,7 +937,8 @@ const bonus = await page.evaluate(() => {
   SVT.vaultWear((SVT.vaultSlots().find((sl) => SVT.vaultFits(sl6, sl.id)) || { id: "x" }).id, sl6.id);
   const w0 = v.wild || 0, p4 = SVT.vaultSell(sl4.id), p6 = SVT.vaultSell(sl6.id);
   out.sell = { p4, p6, wild: (v.wild || 0) - w0, gone: !SVT.vaultItem(sl4.id) && !SVT.vaultItem(sl6.id) && !SVT.vaultSlotOf(sl6.id), none: SVT.vaultSell(-1),
-    rising: B.SELL.every((x, i) => !i || x >= B.SELL[i - 1]), noLoop: B.STAKES.every((k) => B.ODDS[k].reduce((a, p, i) => a + p * B.SELL[i], 0) < k), mergePays: B.SELL.every((x, i) => i < 3 || x > 3 * B.SELL[i - 1]) };
+    rising: B.SELL.every((x, i) => !i || x >= B.SELL[i - 1]), noLoop: B.STAKES.every((k) => B.ODDS[k].reduce((a, p, i) => a + p * B.SELL[i], 0) < k), mergePays: B.SELL.every((x, i) => i < 7 || x === 3 * B.SELL[i - 1]),
+    noMergeLoop: B.SELL[6] / Math.pow(3, 6) < Math.min(...B.STAKES.map((k) => k / B.ODDS[k].reduce((a, p, i) => a + p * Math.pow(3, i), 0))) };
   const needs = SVT.vaultNeeds();
   out.needs = { n: needs.length, allEmptySlots: needs.every((x) => x.slots.every((sl) => !v.show[sl.id])), labsMake: needs.every((x) => x.labs.length && x.labs.every((l) => SVT.vaultLabCats(l.id).includes(x.cat))), feet: SVT.LABS.filter((l) => SVT.vaultLabCats(l.id).includes("feet")).length };
   return out;
@@ -948,7 +949,7 @@ if (JSON.stringify(bonus.tiers) !== JSON.stringify({ n: 16, rolled: 6, div: "div
 if (!bonus.wornMerge || !bonus.wornMerge.worn || !bonus.wornMerge.notListed || !bonus.wornMerge.pickRefused || !bonus.wornMerge.stillThere || !bonus.wornMerge.weakestKeeps) errors.push("Vault: an equipped item could be merged " + JSON.stringify(bonus.wornMerge));
 if (bonus.mult !== bonus.sum || Math.abs(bonus.ratio - bonus.mult) > 1e-6 || !bonus.raidSame || !bonus.capped) errors.push("Vault: bonus multiplier wrong " + JSON.stringify(bonus));
 if (JSON.stringify(bonus.bind) !== JSON.stringify({ lowRefused: true, bound: true, again: true, gone: true, count: 2, mult: 6, slotFreed: true })) errors.push("Vault: binding to Chip wrong (v0.48) " + JSON.stringify(bonus.bind));
-if (JSON.stringify(bonus.sell) !== JSON.stringify({ p4: 15, p6: 500, wild: 515, gone: true, none: 0, rising: true, noLoop: true, mergePays: true })) errors.push("Vault: selling to the vendor wrong (v0.50) " + JSON.stringify(bonus.sell));
+if (JSON.stringify(bonus.sell) !== JSON.stringify({ p4: 15, p6: 100, wild: 115, gone: true, none: 0, rising: true, noLoop: true, mergePays: true, noMergeLoop: true })) errors.push("Vault: selling to the vendor wrong (v0.50) " + JSON.stringify(bonus.sell));
 if (Object.values(bonus.cats).reduce((a, b) => a + b, 0) !== 1500 || Object.keys(bonus.cats).length !== 7) errors.push("Vault: not every product has a slot category " + JSON.stringify(bonus.cats));
 if (JSON.stringify(bonus.catSamples) !== JSON.stringify({ calc: "hand", watch: "wrist", ai: "head", neck: "neck", headphones: "head", server: "floor", shoe: "feet", jacket: "body" })) errors.push("Vault: product categories wrong " + JSON.stringify(bonus.catSamples));
 if (!bonus.handSlot.startsWith("hand") || !bonus.floorSlot.startsWith("floor") || bonus.twice !== null || !bonus.notListedTwice || !bonus.eligibleOk || !bonus.wristOnlyWrist) errors.push("Vault: one-tap equip or per-slot inventory wrong " + JSON.stringify(bonus));
