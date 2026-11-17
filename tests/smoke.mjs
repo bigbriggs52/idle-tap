@@ -232,6 +232,15 @@ const maxes = await page.evaluate(() => {
     const lim = SVT.rates(L).limit, b = SVT.bestUpgrade(L); const o = { limit: lim, pick: b && b.kind, gain: b && b.gain };
     L.floors = keep.f; L.freight = keep.fr; L.commercial = keep.c; L.cash = keep.cash; return o; })();
   out.backup = backup;
+  // v0.49.1: the warehouse is never bought while it already ships what the lift brings up (old: zero-gain spend-down
+  // bought it once the floors and the lift were maxed)
+  // a 30-floor lab: the lift's long trip down makes it the slower hub even at max level
+  out.slowLift = (() => { const D = SVT.newLab("garage");
+    while (D.floors.length < 30) D.floors.push({ lvl: 1, stock: 0, left: 0 });
+    D.floors.forEach((f) => (f.lvl = SVT.maxLevel(D, "floor"))); D.freight.lvl = SVT.maxLevel(D, "freight");
+    let c = 1; while (c <= SVT.maxLevel(D, "commercial") - 1) { D.commercial.lvl = c; const r = SVT.rates(D); if (r.commercial >= r.freight) break; c++; }
+    D.cash = 1e300; const r = SVT.rates(D), b = SVT.bestUpgrade(D);
+    return { whFaster: r.commercial >= r.freight, whMaxed: D.commercial.lvl >= SVT.maxLevel(D, "commercial"), pick: b && b.kind }; })();
   return out;
 });
 console.log("maxes", JSON.stringify(maxes));
@@ -240,6 +249,12 @@ console.log("maxes", JSON.stringify(maxes));
 if (!(maxes.floor.seats >= 1) || maxes.floor.q !== maxes.floor.got || !(maxes.floor.got > maxes.floor.seats) || !(maxes.floor.got < 25) || maxes.floor.owned !== maxes.floor.got || maxes.floor.filled !== 0 || maxes.floor.again !== 0) errors.push("Hire max (floors) wrong: " + JSON.stringify(maxes.floor));
 if (!(maxes.lift.got > 1) || !maxes.lift.assigned || !maxes.lift.bestSeated || maxes.lift.again !== 0 || !maxes.noCash) errors.push("Hire max (lift) wrong: " + JSON.stringify(maxes.lift));
 if (!(maxes.all.levels > 0) || maxes.all.sum !== maxes.all.levels || !maxes.all.buyKept || maxes.all.again !== 0 || maxes.all.canQ < 1 || !maxes.all.firstIsLimit || !(maxes.all.firstGain > 0) || !(maxes.all.income1 > maxes.all.income0)) errors.push("Max all wrong (v0.40.2: best upgrade for the backlog): " + JSON.stringify(maxes.all));
+if (!maxes.slowLift.whFaster || maxes.slowLift.whMaxed || maxes.slowLift.pick === "commercial") errors.push("Max all bought the warehouse while the lift was slower (v0.49.1) " + JSON.stringify(maxes.slowLift));
+// v0.49.1: a maxed node says MAX with no ▲ badge, however much cash there is
+const maxBadge = await page.evaluate(async () => { const L = SVT.lab(), keep = [L.freight.lvl, L.cash]; L.freight.lvl = SVT.maxLevel(L, "freight"); L.cash = 1e300; SVT.setView("lab");
+  await new Promise((r) => setTimeout(r, 500)); const b = document.querySelector(".lift-tower .lvl-btn");
+  const o = { tri: b.dataset.tri, afford: b.classList.contains("afford"), text: b.querySelector("b").textContent }; L.freight.lvl = keep[0]; L.cash = keep[1]; return o; });
+if (maxBadge.tri !== "0" || maxBadge.afford || maxBadge.text !== "MAX") errors.push("Maxed upgrade still shows triangles (v0.49.1) " + JSON.stringify(maxBadge));
 if (maxes.backup.limit !== "freight" || maxes.backup.pick !== "freight" || !(maxes.backup.gain > 0)) errors.push("Max all should pick the lift when the floors back up: " + JSON.stringify(maxes.backup));
 await page.evaluate(() => SVT.setView("lab")); await page.waitForTimeout(300);
 if (!(await page.locator(".jump-btn.max-all").count())) errors.push("Max all button missing");

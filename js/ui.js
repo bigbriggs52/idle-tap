@@ -648,7 +648,9 @@ window.SVT = window.SVT || {};
     const el = h("button", { class: "lvl-btn", onclick: (e) => { e.stopPropagation(); openNode(kind, n); } },
       h("span", { text: "Level" }), num, badge, deal);
     bind(el, () => {
-      const L = lab(), lv = SVT.levelOf(L, kind, n), max = lv >= SVT.finalLevel(L, kind);
+      // v0.49.1 (user: "the triangles after it's maxed out should go away ... They should just say max"): a node at its
+      // level cap shows MAX and no badge (the old test gave a maxed node ▲▲▲, since 0 levels "afforded" all 0 left).
+      const L = lab(), lv = SVT.levelOf(L, kind, n), max = lv >= SVT.maxLevel(L, kind);
       const d = SVT.discount(L, kind, n);
       toggle(el, "deal", d > 0);
       if (d > 0) setText(deal, "−" + Math.round(d * 100) + "%");
@@ -656,7 +658,7 @@ window.SVT = window.SVT || {};
       // ▲ affords 1 level, ▲▲ affords up to the next ×10 level, ▲▲▲ up to the next multiple of 50 (where Max lands).
       const m = max ? null : B.bulk(kind, n, lv, Infinity, L.cash, SVT.discount(L, kind, n), SVT.costScale(L, kind, n), SVT.maxLevel(L, kind), SVT.growthOf(L, kind));
       const can = m && L.cash >= m.cost ? m.count : 0, room = SVT.maxLevel(lab(), kind) - lv;
-      const tri = can >= Math.min(room, SVT.stepTo(lv, 50)) ? 3 : can >= Math.min(room, SVT.stepTo(lv, 10)) ? 2 : can >= 1 ? 1 : 0;
+      const tri = max || room <= 0 || can < 1 ? 0 : can >= Math.min(room, SVT.stepTo(lv, 50)) ? 3 : can >= Math.min(room, SVT.stepTo(lv, 10)) ? 2 : 1;
       toggle(el, "afford", tri > 0);
       setText(badge, "▲".repeat(tri || 1));
       el.dataset.tri = tri;
