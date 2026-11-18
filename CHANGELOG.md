@@ -2,6 +2,10 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.51.1 (2026-11-18)
+
+- Starting a Viking stage now says that your cash reset and that the money you see is the stage's starting stake (enough to take shaft 1 to Lv 25), not money carried over from the last stage.
+
 ## v0.51.0 (2026-11-18)
 
 - Viking mines are paced across the whole stage now. Before, opening shaft 2 took 80–97% of a stage's time and the rest went by in a rush, because each deeper shaft earned 6× the one above but cost only 1.3–1.5× more.
