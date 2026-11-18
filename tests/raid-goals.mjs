@@ -10,7 +10,7 @@ const R = SVT.RAID, scales = [];
 const plainBoost = SVT.boostMult; SVT.boostMult = (l, t) => plainBoost(l, t) * (SVT.isRaid(l) ? R.SIM_BOOST : 1);
 const clear = (s) => {
   const lab = SVT.newLab("raid");
-  lab.stage = s;
+  lab.stage = s; lab.cash = SVT.raidStartCash(lab);
   return play(SVT, lab, (l) => SVT.raidProgress(l).p >= 1, R.time(s) * 20).t;
 };
 const FROM = +(process.env.FROM || 1), TO = +(process.env.TO || R.STAGES);
@@ -24,6 +24,6 @@ for (let s = FROM; s <= TO; s++) {
     k *= T / t;
   }
   scales.push(Number(k.toPrecision(2)));
-  console.error("stage", s, st.name, st.floors + " shafts", "shafts Lv " + st.max.floor + " hubs Lv " + st.max.freight, (T / 60).toFixed(1) + " min target", (t / 60).toFixed(1) + " min sim");
+  console.error("stage", s, st.name, st.floors + " shafts", "shafts Lv " + st.max.floor + " hubs Lv " + st.max.freight, (T / 60).toFixed(1) + " min target", (t / 60).toFixed(1) + " min sim", "scale " + Number(k.toPrecision(2)));
 }
 console.log(FROM + "-" + TO + ": " + scales.join(", "));

@@ -376,7 +376,7 @@ window.SVT = window.SVT || {};
       ["Output", (L) => "$" + fmt(B.floorOutput(n, L) * P() * M()) + "/s"],
       ["Per cycle", (L) => { const sp = SVT.speedMult(lab(), kind, n); return "$" + fmt(B.floorOutput(n, L) * P() * M() / sp * B.FLOOR_CYCLE) + " / " + +(B.FLOOR_CYCLE / sp).toFixed(1) + "s"; }],
       ["Team", (L) => teamSize(L) + " " + teamName(n)],
-      ["Value per product", () => "$" + fmt(B.floorValue(n) * P())],
+      ["Value per product", () => "$" + fmt(B.floorValue(n) * SVT.shaftValue(lab(), n) * P())],
       ["Tech unlock bonus", (L) => multText(B.floorMult(L))],
     ];
     if (kind === "freight") return [

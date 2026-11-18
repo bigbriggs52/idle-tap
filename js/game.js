@@ -244,6 +244,7 @@ window.SVT = window.SVT || {};
     if (!(s >= 1 && s <= SVT.raidNext())) return false;
     const lab = newLab("raid");
     lab.stage = s; lab.won = false;
+    lab.cash = SVT.raidStartCash(lab);
     S.labs.raid = lab;
     S.activeLab = "raid";
     emit("switch");
@@ -313,7 +314,11 @@ window.SVT = window.SVT || {};
   // Viking Raid income also carries the longship bonus from equipped Hoard relics (v0.36, js/hoard.js).
   // v0.36.1 (user ask): Rush, Vault and longship boosts no longer inflate what every node carries; they multiply the
   // cash at the warehouse instead (a x3 boost turns a $20 delivery into $60). Omens still change node loads.
-  const worldMult = (lab, kind) => (SVT.isRaid(lab) ? SVT.raidStage(lab).mult[kind] : 1);
+  const worldMult = (lab, kind, n) => (SVT.isRaid(lab) ? SVT.raidStage(lab).mult[kind] * (kind === "floor" ? SVT.shaftValue(lab, n) : 1) : 1);
+  // v0.51 (user: "After 2nd mine is open it's pretty much too easy"): Viking shafts used the labs' 6x per floor but
+  // cost only 1.3-1.5x more each, so every new shaft paid for the rest at once. Now each is worth RAID.valueStep x
+  // the one above, the same step as its price.
+  SVT.shaftValue = (lab, n) => (SVT.isRaid(lab) && n > 1 && SVT.RAID.valueStep ? Math.pow(SVT.RAID.valueStep(lab.stage) / 6, n - 1) : 1);
   SVT.boostMult = (lab, t) => SVT.rushMult(t) * SVT.bugsMult(t) * vaultMult * (SVT.isRaid(lab) && SVT.hoardMult ? SVT.hoardMult() : 1);
   // Passives of the node's super manager (always on while assigned): speed, load and that node's price cut.
   SVT.passives = (lab, kind, n) => {
@@ -352,7 +357,7 @@ window.SVT = window.SVT || {};
   // How much more each cycle, trip or cart carries: passive load x active load x world multipliers.
   SVT.loadMult = (lab, kind, n, t) => {
     const a = SVT.activeAbility(lab, kind, n, t);
-    return SVT.passives(lab, kind, n).load * (a ? a.load : 1) * worldMult(lab, kind);
+    return SVT.passives(lab, kind, n).load * (a ? a.load : 1) * worldMult(lab, kind, n);
   };
   // Throughput multiplier of a node: speed x load.
   SVT.nodeMult = (lab, kind, n, t) => SVT.speedMult(lab, kind, n, t) * SVT.loadMult(lab, kind, n, t);
@@ -642,10 +647,13 @@ window.SVT = window.SVT || {};
     return { n, cost: SVT.isRaid(lab) ? SVT.raidUnlock(lab, n) : B.unlockCost(n) * SVT.costScale(lab, "floor", n), blocked, round: blocked ? B.ROUNDS[wall] : null };
   };
   // Viking Raid (v0.33.3, user's call: opening mines was far cheaper than upgrading them or hiring): a new shaft costs
-  // as much as taking the shaft above it from Lv 1 to the stage's max level.
+  // as much as taking the shaft above it from Lv 1 to the stage's max level. v0.51: to RAID.UNLOCK_LV only.
+  // v0.51 (user: "Viking mine takes too long to get the 2nd shaft open"): a stage starts with the price of taking
+  // shaft 1 to RAID.START_LV, so the slow first minutes from $10 are skipped.
+  SVT.raidStartCash = (lab) => Math.max(B.START_CASH, B.bulk("floor", 1, 1, SVT.RAID.START_LV - 1, 0, 0, SVT.costScale(lab, "floor", 1), SVT.maxLevel(lab, "floor"), SVT.growthOf(lab, "floor")).cost);
   SVT.raidUnlock = (lab, n) => {
-    const m = Math.max(1, n - 1), cap = SVT.maxLevel(lab, "floor");
-    return B.bulk("floor", m, 1, cap - 1, 0, 0, SVT.costScale(lab, "floor", m), cap, SVT.growthOf(lab, "floor")).cost;
+    const m = Math.max(1, n - 1), cap = SVT.maxLevel(lab, "floor"), to = Math.min(cap, SVT.RAID.UNLOCK_LV || cap);
+    return B.bulk("floor", m, 1, to - 1, 0, 0, SVT.costScale(lab, "floor", m), cap, SVT.growthOf(lab, "floor")).cost;
   };
 
   SVT.unlockFloor = () => {

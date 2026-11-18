@@ -2,6 +2,14 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.51.0 (2026-11-18)
+
+- Viking mines are paced across the whole stage now. Before, opening shaft 2 took 80–97% of a stage's time and the rest went by in a rush, because each deeper shaft earned 6× the one above but cost only 1.3–1.5× more.
+  - Each Viking shaft now earns 1.3–1.5× the one above, the same step as its price.
+  - A new shaft opens once you can pay for taking the shaft above it to Lv 10 (it was Lv 100).
+  - Every stage starts with enough cash to take shaft 1 to Lv 25.
+  - All 250 stages were re-tuned to the same target times as before. Shaft 2 now opens in the first few minutes on early stages, and in about the first fifth to third of later ones.
+
 ## v0.50.3 (2026-11-17)
 
 - The Vault's item list is sorted by rarity now, rarest first, instead of by lab. Each rarity gets its own shelf with a count, the strongest bonus comes first on each shelf, and every card says which lab the item came from. (Chip's bonus comes from the rarity alone, never from the lab.)
