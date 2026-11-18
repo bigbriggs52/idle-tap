@@ -248,6 +248,8 @@ window.SVT = window.SVT || {};
     S.labs.raid = lab;
     S.activeLab = "raid";
     emit("switch");
+    // v0.51.1 (user: "It kept my money in the Viking mine to the next one"): it doesn't; say what the cash is.
+    if (SVT.toast) SVT.toast("⚔️ Fresh stage: your cash reset. You start with a $" + SVT.fmt(lab.cash) + " stake, enough to take shaft 1 to Lv " + SVT.RAID.START_LV + ".", "big");
     save();
     return true;
   };
