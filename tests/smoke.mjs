@@ -514,6 +514,13 @@ if (!stickyClear.up || stickyClear.x || !stickyClear.home) errors.push("Raid cle
 const viking = await page.evaluate(() => { const R = SVT.RAID, L = SVT.lab(); return { tokens: SVT.vikingTokens(), boats: SVT.boatsUnlocked(), boat: SVT.boatIndex(), stages: R.STAGES, shafts50: R.shafts(50), shafts51: R.shafts(51), t1: R.time(1), t50: R.time(50), t51: R.time(51), t250: R.time(250), loot: R.def(50).products.length, tier: R.def(1).tierOf(50), cost2: R.boatCost(2), cost50: R.boatCost(50), svg: SVT.boatSvg(50).length, names: new Set(SVT.BOATS.map((b) => b.name)).size, omens: R.stage(1).omens.length }; });
 console.log("viking", JSON.stringify(viking));
 if (viking.tokens !== 1 || viking.boats !== 2 || viking.boat !== 2) errors.push("Viking tokens or boats wrong after a clear: " + JSON.stringify(viking));
+// v0.51: a Viking shaft is worth the price step more than the one above (not 6x), shaft n+1 opens for shaft n's
+// Lv 1 -> UNLOCK_LV price, and a stage starts with shaft 1's Lv 1 -> START_LV price
+const vpace = await page.evaluate(() => { const R = SVT.RAID, lab = SVT.newLab("raid"); lab.stage = 10; lab.floors.push({ lvl: 1, stock: 0, left: 0 });
+  const B = SVT.B, cap = SVT.maxLevel(lab, "floor"), q = (n, to) => B.bulk("floor", n, 1, to - 1, 0, 0, SVT.costScale(lab, "floor", n), cap, SVT.growthOf(lab, "floor")).cost;
+  const r = SVT.rates(lab, SVT.now() + 1e9);
+  return { step: +(r.floors[1] / r.floors[0]).toFixed(4), want: +R.shaftStep(10).toFixed(4), unlock: Math.abs(SVT.raidUnlock(lab, 3) / q(2, R.UNLOCK_LV) - 1) < 1e-9, start: Math.abs(SVT.raidStartCash(lab) / q(1, R.START_LV) - 1) < 1e-9, main: SVT.shaftValue(SVT.newLab("garage"), 5) }; });
+if (vpace.step !== vpace.want || !vpace.unlock || !vpace.start || vpace.main !== 1) errors.push("Viking shaft pacing wrong (v0.51) " + JSON.stringify(vpace));
 if (viking.stages !== 250 || viking.shafts50 !== 50 || viking.shafts51 !== 1 || viking.t1 !== 1500 || Math.abs(viking.t50 - 6000) > 1e-6 || Math.abs(viking.t51 - 6000) > 1e-6 || Math.abs(viking.t250 - 1536000) > 1e-6) errors.push("Raid batches or pacing wrong (v0.48: HARDER 5): " + JSON.stringify(viking));
 if (viking.loot !== 50 || viking.tier !== 4 || viking.cost2 < 1 || viking.cost50 !== 750 || viking.svg < 500 || viking.names !== 50) errors.push("Raid loot, tiers or boats wrong: " + JSON.stringify(viking));
 // v0.35: Viking Hoard. 10,000 relics with fixed rarities; spins spend tokens but boats go by tokens earned; Max and merge.
