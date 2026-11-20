@@ -678,7 +678,8 @@ await page.screenshot({ path: out + "/14-home.png" });
 // v0.37: six bubbles (Map, Viking Raid, Hoard, Rush, Bug Hunt, Vault) plus Play and Settings
 const tiles = await page.locator(".bubble, .play-btn, .gear-btn").count();
 console.log("home tiles", tiles);
-if (tiles !== 8) errors.push("Home screen missing or wrong tile count: " + tiles);
+// v0.53: seventh bubble, Heroes (Headhunter Slots)
+if (tiles !== 9) errors.push("Home screen missing or wrong tile count: " + tiles);
 await page.click(".play-btn", { force: true }); await page.waitForTimeout(200);
 if (!(await page.locator(".lab-view").isVisible())) errors.push("Play did not open the lab");
 await page.click(".bottom-nav .nav-btn.center"); await page.waitForTimeout(200);
@@ -730,7 +731,7 @@ await page.screenshot({ path: out + "/18-home-boosted.png" });
 // v0.37: Bug Hunt, the second mini game: home bubble, a run tapped on pointerdown, results, a boost that stacks with Rush
 await page.evaluate(() => SVT.setView("home")); await page.waitForTimeout(200);
 const homeBubbles = await page.evaluate(() => [...document.querySelectorAll(".bubble")].map((b) => b.getAttribute("aria-label")).join(","));
-if (homeBubbles !== "Map,Viking Raid,Hoard,Rush,Bug Hunt,Vault") errors.push("Home bubbles wrong: " + homeBubbles);
+if (homeBubbles !== "Map,Viking Raid,Hoard,Heroes,Rush,Bug Hunt,Vault") errors.push("Home bubbles wrong: " + homeBubbles);
 await page.click(".bubble.b-bugs", { force: true }); await page.waitForTimeout(300);
 await page.screenshot({ path: out + "/21-bugs-start.png" });
 await page.click(".bugs-play");

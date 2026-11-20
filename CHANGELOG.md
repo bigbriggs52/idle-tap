@@ -2,6 +2,16 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.53.0 (2026-11-20)
+- Super managers and **Headhunter Slots** (new 🦸 Heroes bubble on the home screen). One spin hires one super manager. The six reels are Area (Floor 48%, Lift 24%, Warehouse 24%, Wild 4%), Rarity (Common to Mythic), Power, Perk, Stars (1 to 5) and Face.
+- Spins cost 💠 Hero coins. Basic costs 500, Pro 1,500 and Elite 5,000, and the pricier spins have better rarity odds (Mythic 0.3%, 1% and 4%). Legendary or better is guaranteed within 40 spins. 🎰 Jackpot: a 5-star Rare or better gives the spin back. Hold keeps the last spin's area and power, perk or face for the next spin, for +50% a spin.
+- Hero coins: 500 to start, 25 for each funding round, 100 more for an IPO, and 10 for each new Viking stage.
+- Powers are superhero-style cheats that last 30 s (Common) to 3 min (Mythic and up), with a 15-minute rest after each use. Floors: Time Warp, Clone Army, Midas Touch (sell straight from the floor) and Overdrive. Lift: Lightning Lift, Super Strength, Black Hole (swallows each floor's whole pile) and Teleporter (everything beams to the top every few seconds). Warehouse: Flash, Bottomless Cart, Gold Rush and Money Magnet. Wild: Hyper Mode and Giant Mode, which work in any seat. There is no Cost Cutter.
+- 12 perks are always on while a super manager is seated: Caffeinated, Strongman, Rainmaker, Workaholic, Early Bird (uses its power by itself), Chain Reaction (fires every ready manager in the lab), Coffee Addict, Lucky Break, Viking Blood, Headhunter, Gamer and Night Owl. Rarity and stars make powers and perks stronger.
+- Super managers are kept for good. Seat one from any manager seat (tap the seat, then pick it under 🦸 Super managers); it takes the seat from the normal manager there. They keep their seats through funding rounds and go back to the team when a lab is beaten. Their seat glows while the power runs.
+- Merge: three super managers of one rarity become one random super manager of the next rarity, up to Ascended. Use Merge 3 or Max merge on the Team tab, which uses the Vault's rarity drop-downs.
+- Cheat code for testing: type "money" in ⚙ Settings for +5,000 Hero coins. It works any number of times.
+
 ## v0.52.3 (2026-11-20)
 - Coins flying from a floor's crate to the lift now leave from the bottom of the crate, so they no longer cover the stored-money number.
 - Every lab now has its own themed animation on each floor's back wall: cars rising on a lift and spinning wheels in the car plants, a grill with flipping patties and steam in Robo Kitchen, notes and guitars in the studio, launching rockets in space labs, falling snow and waddling penguins in the polar labs, and so on for all 70 labs and the Viking raid. They move while the floor works, and even floors mirror the layout.

@@ -225,7 +225,8 @@ window.SVT = window.SVT || {};
   const crewTitle = (role) => ((def().crew || [])[CREW_IDX[role]]) || B.ROLE_NAMES[role];
   const secs = (x) => (x >= 60 && x % 60 === 0 ? x / 60 + " min" : x + " s");
   function effectText(m) {
-    const ab = SVT.ability(m.role, m.ability), st = SVT.abilityStats(m);
+    const ab = SVT.abilityOf(m), st = SVT.abilityStats(m);
+    if (m.sup) return ab.icon + " " + ab.name + ": " + ab.text + " for " + secs(st.active) + " · " + secs(Math.round(st.cooldown)) + " rest. " + ab.perkIcon + " " + ab.perkName + ": " + ab.passiveText + ".";
     if (ab.kind === "special") return ab.icon + " " + secs(st.active) + " · " + secs(st.cooldown) + " cooldown. " + ab.text + " Passive: " + ab.passiveText + ".";
     const K = B.ABILITY_KINDS[ab.kind];
     const what = ab.kind === "speed" ? "×" + st.mult + " speed" + (m.role === "floor" ? " (builds)" : m.role === "freight" ? " (travels and loads)" : " (loads and ships)") : ab.kind === "storage" ? "×" + st.mult + " load" : "−" + Math.round(st.off * 100) + "% upgrades";
@@ -292,6 +293,7 @@ window.SVT = window.SVT || {};
         top = mgrCard(current, { assigned: true, buttons: [h("button", { class: "btn unassign", onclick: () => { SVT.unassign(current.id); reopen(); }, text: "Unassign" }), use] });
       } else top = h("li", { class: "mcard empty-slot" }, h("div", { class: "portrait" }, h("span", { class: "plus", text: "+" })), h("div", { class: "minfo" }, h("b", { text: "Nobody yet" }), h("span", { class: "muted", text: "Assign one below or hire a new one." })));
       parts.push(h("div", { class: "sec-label", text: "Assigned manager:" }), h("ul", { class: "mlist" }, top));
+      if (SVT.superPicker) parts.push(SVT.superPicker(kind, n, reopen, mgrCard)); // v0.53: seat a super manager here
     } else {
       parts.push(h("div", { class: "filters", role: "tablist" }, ["floor", "freight", "commercial"].map((ro) =>
         h("button", { class: "filter" + (ro === role ? " on" : ""), role: "tab", "aria-selected": ro === role ? "true" : "false", onclick: () => openManagers(ro, null, 0),
@@ -609,6 +611,7 @@ window.SVT = window.SVT || {};
   // v0.48.1: the lift car can carry several loads at once; past one load it shows how many (×2.6).
   function fullText(load, cap) { if (!(cap > 0)) return "0%"; const r = load / cap; return r > 1.005 ? "×" + (Math.round(r * 10) / 10) : Math.round(100 * r) + "%"; }
   function avatar(m, labId) {
+    if (m.sup && SVT.superAvatar) return SVT.superAvatar(m); // v0.53: super managers have hero faces
     let hsh = 0;
     for (const ch of m.name) hsh = (hsh * 31 + ch.charCodeAt(0)) >>> 0;
     const id = labId || lab().id;
@@ -629,9 +632,10 @@ window.SVT = window.SVT || {};
     bind(el, () => {
       const m = SVT.mgrOf(lab(), kind, n);
       const key = m ? m.id : "none";
+      if (m && m.sup) toggle(el, "live", m.activeUntil > SVT.now()); // v0.53: a super's seat flares while its power runs
       if (key === shown) return;
       shown = key;
-      el.className = "seat" + (m ? " r-" + m.rank : " empty");
+      el.className = "seat" + (m ? " r-" + m.rank + (m.sup ? " sup" : "") : " empty");
       el.setAttribute("aria-label", m ? m.name + ", " + SVT.rank(m.rank).name + " " + B.ROLE_NAMES[kind] : "Manager: hire or choose a " + B.ROLE_NAMES[kind]);
       el.replaceChildren(m ? avatar(m) : h("span", { class: "plus", text: "+" }));
     });
@@ -644,7 +648,7 @@ window.SVT = window.SVT || {};
       const m = SVT.mgrOf(lab(), kind, n);
       el.hidden = !m;
       if (el.hidden) return;
-      const t = SVT.now(), live = m.activeUntil > t, cd = !live && m.cdUntil > t, ab = SVT.ability(kind, m.ability);
+      const t = SVT.now(), live = m.activeUntil > t, cd = !live && m.cdUntil > t, ab = SVT.abilityOf(m);
       setText(el, live ? SVT.fmtTime(m.activeUntil - t) : cd ? SVT.fmtTime(m.cdUntil - t) : ab.icon || B.ABILITY_KINDS[ab.kind].icon);
       setDisabled(el, live || cd); toggle(el, "live", live); toggle(el, "ready", !live && !cd);
     });
@@ -1273,7 +1277,8 @@ window.SVT = window.SVT || {};
         h("div", { class: "side left" },
           bubble("b-map", "🗺", "Map", () => setView("map")),
           bubble("b-raid", "⚔️", "Viking Raid", openRaid, raidReady),
-          bubble("b-hoard", "🎰", "Hoard", () => SVT.openHoard(), SVT.hoardTokens() > 0)),
+          bubble("b-hoard", "🎰", "Hoard", () => SVT.openHoard(), SVT.hoardTokens() > 0),
+          bubble("b-heroes", "🦸", "Heroes", () => SVT.openSupers(), SVT.superCanSpin && SVT.superCanSpin())),
         h("div", { class: "hero" }, sign,
           h("button", { class: "hero-boat", "aria-label": "Chip's boat: " + SVT.BOATS[SVT.boatIndex() - 1].name, html: SVT.boatSvg(SVT.boatIndex()), onclick: openBoats }),
           h("div", { class: "hero-bot", html: SVT.mascot("hold") }), wornItems(),
@@ -1320,6 +1325,7 @@ window.SVT = window.SVT || {};
     window.scrollTo(0, y);
   }
   SVT.render = render;
+  SVT.closeSheet = closeSheet;
 
   function update() {
     for (let i = 0; i < binds.length; i++) {
@@ -1392,6 +1398,7 @@ window.SVT = window.SVT || {};
       h("p", null, h("b", { text: "Silicon Valley Tycoon " + buildTag() })),
       h("button", { class: "btn", onclick: checkUpdate, text: "🔄 Check for update" }),
       duoBtn(),
+      SVT.cheatBox ? SVT.cheatBox() : null,
       viking(),
       h("p", { class: "muted", text: "Tap floors, the lift and the warehouse to work them. Tap a dashed seat to hire a manager to automate it and keep earning while you're away (up to 2 hours). Income is limited by the slowest of build, freight and commercial, marked Slowest. Tap a blue Level button for stats and upgrades, and hold Upgrade to keep buying." }),
       h("p", { class: "muted", text: "Every 5 levels unlocks new tech (+10% on floors, +2% on hubs). Levels 10, 25, 50, 100 and beyond are big milestones." }),
