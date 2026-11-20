@@ -281,13 +281,15 @@ window.SVT = window.SVT || {};
 
   SVT.slotKey = (kind, n) => (kind === "floor" ? "floor:" + n : kind);
   SVT.slotName = (key) => (key.startsWith("floor:") ? "Floor " + key.slice(6) : key === "freight" ? "Lift" : "Warehouse");
-  SVT.mgrOf = (lab, kind, n) => {
-    // v0.53: a super manager seated here (js/supers.js) runs the seat ahead of any normal manager.
-    const sup = SVT.superAt ? SVT.superAt(lab, SVT.slotKey(kind, n)) : null;
-    if (sup) return sup;
+  // v0.53.2 (user: assigning a regular manager kicked the super manager off): a seat holds a regular manager AND a
+  // super manager side by side. regularOf is the regular one; SVT.superAt the super one; mgrOf whichever runs the
+  // seat (regular first), which is what keeps a node working on its own.
+  SVT.regularOf = (lab, kind, n) => {
     const id = lab.assign[SVT.slotKey(kind, n)];
     return id ? lab.managers[id] || null : null;
   };
+  const superAtNode = (lab, kind, n) => (SVT.superAt ? SVT.superAt(lab, SVT.slotKey(kind, n)) : null);
+  SVT.mgrOf = (lab, kind, n) => SVT.regularOf(lab, kind, n) || superAtNode(lab, kind, n);
   SVT.slotOfMgr = (lab, id) => Object.keys(lab.assign).find((k) => lab.assign[k] === id) || null;
   // Owned managers for a role, best rarity first, then newest.
   const RANK_ORDER = {};
@@ -324,7 +326,7 @@ window.SVT = window.SVT || {};
   };
   // The super manager on a node, if any: { ab, m, live }.
   const superOn = (lab, kind, n, t) => {
-    const m = SVT.mgrOf(lab, kind, n);
+    const m = superAtNode(lab, kind, n) || SVT.regularOf(lab, kind, n);
     return SVT.isSuper(m) ? { ab: SVT.abilityOf(m), m, live: SVT.isActive(m, t) } : null;
   };
   // Lab-wide multipliers from outside the manager system: omens in Viking Raid, Rush and Vault bonuses in the labs.
@@ -359,8 +361,14 @@ window.SVT = window.SVT || {};
   // "special" with id, icon and its effects (speed, load, direct = sell from the floor at x cash, cash = x on
   // deliveries, vacuum = the lift empties crates in one go, warp = seconds between floor-to-surface jumps, off =
   // lab-wide price cut).
+  // v0.53.2: the regular manager's ability and the super manager's power can run at once; their effects multiply.
   SVT.activeAbility = (lab, kind, n, t) => {
-    const m = SVT.mgrOf(lab, kind, n);
+    const a = oneAbility(SVT.regularOf(lab, kind, n), t), b = oneAbility(superAtNode(lab, kind, n), t);
+    if (!a || !b) return a || b;
+    return Object.assign({}, b, { speed: a.speed * b.speed, load: a.load * b.load, cash: a.cash * b.cash, direct: Math.max(a.direct, b.direct),
+      vacuum: a.vacuum || b.vacuum, warp: a.warp && b.warp ? Math.min(a.warp, b.warp) : a.warp || b.warp, off: Math.max(a.off, b.off), mult: a.mult * b.mult });
+  };
+  function oneAbility(m, t) {
     if (!SVT.isActive(m, t)) return null;
     const ab = SVT.abilityOf(m);
     if (ab.kind === "special") {
@@ -370,7 +378,7 @@ window.SVT = window.SVT || {};
     const st = SVT.statsOf(m, ab);
     return { kind: ab.kind, id: ab.id, name: ab.name, icon: B.ABILITY_KINDS[ab.kind].icon, mult: ab.kind === "discount" ? st.off : st.mult,
       speed: ab.kind === "speed" ? st.mult : 1, load: ab.kind === "storage" ? st.mult : 1, direct: 0, cash: 1, vacuum: false, warp: 0, off: ab.kind === "discount" ? st.off : 0 };
-  };
+  }
   // How much faster the node runs: passive speed x active speed. Cycles, trips and animations all follow it.
   SVT.speedMult = (lab, kind, n, t) => {
     const a = SVT.activeAbility(lab, kind, n, t);
@@ -764,7 +772,7 @@ window.SVT = window.SVT || {};
     if (hired.length) {
       if (role === "floor") SVT.autoAssign();
       else {
-        const best = SVT.owned(lab, role)[0], cur = SVT.mgrOf(lab, role, 0);
+        const best = SVT.owned(lab, role)[0], cur = SVT.regularOf(lab, role, 0);
         const busy = cur && (cur.activeUntil > t || cur.cdUntil > t);
         if (best && (!cur || (!busy && RANK_ORDER[best.rank] < RANK_ORDER[cur.rank]))) SVT.assign(best.id, role, 0);
       }
@@ -901,7 +909,6 @@ window.SVT = window.SVT || {};
     let moved = 0, i = 0;
     for (let n = lab.floors.length; n >= 1; n--) {
       const key = SVT.slotKey("floor", n), cur = lab.managers[lab.assign[key]];
-      if (SVT.superAt && SVT.superAt(lab, key)) continue; // v0.53: a seated super manager keeps its floor
       if (cur && busy(cur)) continue; // leave a cooling-down manager on its floor
       const m = pool[i++];
       if (!m) { if (cur) { delete lab.assign[key]; moved++; } continue; }
@@ -926,9 +933,10 @@ window.SVT = window.SVT || {};
   };
   // v0.31.2: managers cannot be sold (user rule); benched managers simply wait in the Owned list.
 
-  SVT.activate = (kind, n, labArg, chained) => {
+  // `sup` true uses the seat's super manager, otherwise its regular manager (v0.53.2: they sit side by side).
+  SVT.activate = (kind, n, labArg, chained, sup) => {
     const lab = labArg || SVT.lab();
-    const m = SVT.mgrOf(lab, kind, n);
+    const m = sup ? superAtNode(lab, kind, n) : SVT.regularOf(lab, kind, n);
     const t = now();
     if (!m || m.cdUntil > t || m.activeUntil > t) return false;
     const st = SVT.abilityStats(m); // v0.30: the tier (or the super manager's special) sets both timers
@@ -938,8 +946,10 @@ window.SVT = window.SVT || {};
     const pas = (m.sup && SVT.abilityOf(m).passive) || {};
     if (pas.lucky && Math.random() < pas.lucky) { m.cdUntil = m.activeUntil; m.lucky = t; }
     if (pas.chain && !chained) {
-      SVT.activate("freight", 0, lab, true); SVT.activate("commercial", 0, lab, true);
-      lab.floors.forEach((f, i) => SVT.activate("floor", i + 1, lab, true));
+      [false, true].forEach((s) => {
+        SVT.activate("freight", 0, lab, true, s); SVT.activate("commercial", 0, lab, true, s);
+        lab.floors.forEach((f, i) => SVT.activate("floor", i + 1, lab, true, s));
+      });
     }
     emit("ability", { kind, n, lab: lab.id, sup: m.sup ? m : null, chained: !!chained });
     emit("change");
