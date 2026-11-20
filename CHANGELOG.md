@@ -4,6 +4,8 @@ Every update gets a version number. The game shows its version in Settings and a
 
 ## v0.52.2 (2026-11-20)
 
+- Less lag on Hire max and Max all. Each hire or level used to redraw the whole screen (25 redraws for one Hire max, and hundreds of unlock pop-ups for one Max all), and Max all re-measured the whole lab for every option on every step. Now the screen redraws once at the end with one pop-up, and Max all works about 10× faster with the same results.
+- Managers cost more: the first hire is $500 (was $250), still +80% for each one after.
 - The Vault's Items tab has a drop-down for every rarity, Singularity at the top down to Common, including rarities you don't own yet. They start folded; tap one to open it.
 - Inside each drop-down, items are grouped by type (hand, wrist, head, neck, body, feet, floor), with the biggest bonus first.
 - The merge list is folded too, with Max merge still showing above it, so the rarity drop-downs are near the top.
