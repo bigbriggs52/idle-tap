@@ -139,8 +139,7 @@ window.SVT = window.SVT || {};
     const key = SVT.slotKey(kind, n);
     const old = SVT.superAt(lab, key);
     if (old) SVT.superUnseat(old.id, true);
-    // The normal manager there goes back to the bench (its timers stay on it).
-    if (lab.assign[key]) delete lab.assign[key];
+    // v0.53.2: the regular manager there stays; the two work the seat side by side.
     (z.seats[lab.id] = z.seats[lab.id] || {})[key] = id;
     m.at = { lab: lab.id, key };
     SVT.save();
@@ -175,7 +174,7 @@ window.SVT = window.SVT || {};
     SVT.supersIn(lab).forEach((m) => {
       if (!SVT.superDef(m).passive.auto || m.activeUntil > t || m.cdUntil > t) return;
       const [kind, n] = kindOfKey(m.at.key);
-      SVT.activate(kind, n, lab);
+      SVT.activate(kind, n, lab, false, true);
     });
   };
 
