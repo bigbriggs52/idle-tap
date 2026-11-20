@@ -2,6 +2,12 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.52.0 (2026-11-20)
+
+- 20 new labs, 51 to 70, on a third map called Legends: Candy Lab, Robo Kitchen, Pirate Cove, Pyramid Works, Atlantis, Castle Keep, Dragon Forge, Wizard Tower, Circus of Wonders, Future Museum, Mega Mall, Skyport, Mega Harbor, Safari Lodge, Polar Station, Crystal Caves, Monster Garage, Mount Olympus, Dream Factory and Multiverse Hub.
+- Each new lab has 30 products of its own, each with its own Vault picture (2,100 in all), and its own manager look.
+- Prices keep climbing about 6.5% per lab, the same as on The Frontier.
+
 ## v0.51.1 (2026-11-18)
 
 - Starting a Viking stage now says that your cash reset and that the money you see is the stage's starting stake (enough to take shaft 1 to Lv 25), not money carried over from the last stage.
