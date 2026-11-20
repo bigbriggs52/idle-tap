@@ -596,6 +596,14 @@ window.SVT = window.SVT || {};
     magma: ["hardhat", "#ff5722", "#3e2723", "🔥"], antimatter: ["goggles", "#ab47bc", "#ede7f6", "✴️"], elevator: ["cap", "#5c6bc0", "#c5cae9", "🛗"],
     dyson: ["visor", "#ffca28", "#5d4000", "☀️"], venus: ["bubble", "#ffd54f", "#c8a24a", "🌫️"], titan: ["beanie", "#4dd0e1", "#26425a", "🧊"],
     wormhole: ["visor", "#7c4dff", "#120a2a", "🌌"], galactic: ["tophat", "#ffd700", "#1a237e", "🏛️"],
+    // v0.52: Legends (labs 51-70)
+    candy: ["beret", "#ff80ab", "#fce4ec", "🍭"], kitchen: ["tophat", "#ffffff", "#eceff1", "🍳"], pirate: ["tophat", "#212121", "#b71c1c", "🏴‍☠️"],
+    pyramid: ["hood", "#f9a825", "#fff3c4", "🔺"], atlantis: ["bubble", "#26a69a", "#004d61", "🔱"], castle: ["hardhat", "#9e9e9e", "#5d4037", "🏰"],
+    dragon: ["hardhat", "#c62828", "#3e2723", "🐉"], wizard: ["tophat", "#5e35b1", "#311b92", "🧙"], circus: ["tophat", "#e53935", "#ffeb3b", "🎪"],
+    museum: ["cap", "#6d4c41", "#d7ccc8", "🏺"], mall: ["cap", "#ec407a", "#ffffff", "🛍️"], airport: ["conductor", "#1565c0", "#e3f2fd", "✈️"],
+    harbor: ["beanie", "#0d47a1", "#ff7043", "🚢"], safari: ["straw", "#a1887f", "#c5b358", "🦁"], polar: ["beanie", "#e53935", "#e3f2fd", "🐧"],
+    crystal: ["hardhat", "#4dd0e1", "#4a148c", "💎"], racing: ["visor", "#d50000", "#212121", "🏎️"], olympus: ["hood", "#ffd700", "#fafafa", "🏔️"],
+    dreams: ["beanie", "#9575cd", "#1a237e", "💤"], multiverse: ["visor", "#00e5ff", "#1b0033", "🌐"],
   };
   SVT.MANAGER_LOOKS = LOOKS;
   // v0.48.1: the lift car can carry several loads at once; past one load it shows how many (×2.6).
@@ -978,17 +986,23 @@ window.SVT = window.SVT || {};
         upcoming.length ? [h("h3", { text: "Next to open" }), ...upcoming] : null,
         beatenRows.length ? [h("h3", { text: "Beaten · tap to replay for another 🪙" }), ...beatenRows] : null,
         h("h3", { text: "Islands" }), raidCard(),
-        h("p", { class: "muted small", text: "Each lab is its own company with 30 floors and its own cash. Up to 5 labs are open at a time: Seed funding opens labs 2 to 5, and beating a lab (raising its IPO) opens a new one, all the way to lab " + SVT.LABS.length + " on The Frontier." })),
+        h("p", { class: "muted small", text: "Each lab is its own company with 30 floors and its own cash. Up to 5 labs are open at a time: Seed funding opens labs 2 to 5, and beating a lab (raising its IPO) opens a new one, all the way to lab " + SVT.LABS.length + " in Legends." })),
       h("div", { class: "map-wrap" },
         h("div", { class: "map" },
           h("div", { class: "bay", "aria-hidden": "true" }),
           h("div", { class: "road r1", "aria-hidden": "true" }), h("div", { class: "road r2", "aria-hidden": "true" }), h("div", { class: "road r3", "aria-hidden": "true" }),
           pinsOn(1)),
-        h("h3", { class: "map-title", text: "🚀 The Frontier · labs 31 to " + SVT.LABS.length }),
+        h("h3", { class: "map-title", text: "🚀 The Frontier · labs 31 to 50" }),
         h("div", { class: "map frontier" },
           h("div", { class: "nebula", "aria-hidden": "true" }),
           h("div", { class: "road r1", "aria-hidden": "true" }), h("div", { class: "road r2", "aria-hidden": "true" }),
-          pinsOn(2))),
+          pinsOn(2)),
+        // v0.52: Legends, the third map (labs 51-70)
+        h("h3", { class: "map-title", text: "🏰 Legends · labs 51 to " + SVT.LABS.length }),
+        h("div", { class: "map legends" },
+          h("div", { class: "sea", "aria-hidden": "true" }),
+          h("div", { class: "road r1", "aria-hidden": "true" }), h("div", { class: "road r2", "aria-hidden": "true" }),
+          pinsOn(3))),
       h("footer", { class: "foot", text: "Silicon Valley Tycoon " + buildTag() }));
   }
 

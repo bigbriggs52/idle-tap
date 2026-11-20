@@ -305,7 +305,7 @@ await page.click(".bottom-nav >> text=Map");
 await page.waitForTimeout(300);
 const pins = await page.evaluate(() => ({ total: document.querySelectorAll(".pin").length, locked: document.querySelectorAll(".pin.locked").length, open: document.querySelectorAll(".pin.open").length }));
 console.log("pins", JSON.stringify(pins));
-if (pins.total !== 50 || (await page.locator(".map.frontier .pin").count()) !== 20) errors.push("Map: expected 50 pins with 20 on The Frontier (v0.48) " + JSON.stringify(pins));
+if (pins.total !== 70 || (await page.locator(".map.frontier .pin").count()) !== 20 || (await page.locator(".map.legends .pin").count()) !== 20) errors.push("Map: expected 70 pins, 20 on The Frontier and 20 in Legends (v0.52) " + JSON.stringify(pins));
 await page.screenshot({ path: out + "/06-map.png", fullPage: true });
 await page.click(".pin.open >> nth=1");
 await page.waitForTimeout(300);
@@ -811,7 +811,7 @@ const wornEls = await page.locator(".worn").count();
 if (wornEls !== vault.worn) errors.push("Vault: worn items not drawn on the home screen: " + wornEls);
 // pictures: every product has a real icon, and the drawn items use it as a mask
 const icons = await page.evaluate(() => { let n = 0, bad = 0; SVT.LABS.forEach((l) => l.products.forEach((p, i) => { n++; if (!SVT.productSvg(l.id, i).startsWith("url(\"data:image/svg+xml")) bad++; })); const v = Object.values(SVT.PRODUCT_ICON); return { n, bad, sets: Object.keys(SVT.ICONS).length, mapped: v.length, distinct: new Set(v).size }; });
-if (icons.n !== 1500 || icons.bad || icons.mapped !== 1500 || icons.distinct !== 1500 || icons.sets !== 1500) errors.push("Vault: every product needs its own icon " + JSON.stringify(icons));
+if (icons.n !== 2100 || icons.bad || icons.mapped !== 2100 || icons.distinct !== 2100 || icons.sets !== 2100) errors.push("Vault: every product needs its own icon " + JSON.stringify(icons));
 const maskOk = await page.evaluate(() => [...document.querySelectorAll(".worn .vault-art-ic")].every((el) => (getComputedStyle(el).webkitMaskImage || getComputedStyle(el).maskImage || "").includes("svg")));
 if (!maskOk) errors.push("Vault: item pictures are not drawn as icon masks");
 await page.screenshot({ path: out + "/19-home-worn.png" });
@@ -962,7 +962,7 @@ if (!bonus.wornMerge || !bonus.wornMerge.worn || !bonus.wornMerge.notListed || !
 if (bonus.mult !== bonus.sum || Math.abs(bonus.ratio - bonus.mult) > 1e-6 || !bonus.raidSame || !bonus.capped) errors.push("Vault: bonus multiplier wrong " + JSON.stringify(bonus));
 if (JSON.stringify(bonus.bind) !== JSON.stringify({ lowRefused: true, bound: true, again: true, gone: true, count: 2, mult: 6, slotFreed: true })) errors.push("Vault: binding to Chip wrong (v0.48) " + JSON.stringify(bonus.bind));
 if (JSON.stringify(bonus.sell) !== JSON.stringify({ p4: 15, p6: 100, wild: 115, gone: true, none: 0, rising: true, noLoop: true, mergePays: true, noMergeLoop: true })) errors.push("Vault: selling to the vendor wrong (v0.50) " + JSON.stringify(bonus.sell));
-if (Object.values(bonus.cats).reduce((a, b) => a + b, 0) !== 1500 || Object.keys(bonus.cats).length !== 7) errors.push("Vault: not every product has a slot category " + JSON.stringify(bonus.cats));
+if (Object.values(bonus.cats).reduce((a, b) => a + b, 0) !== 2100 || Object.keys(bonus.cats).length !== 7) errors.push("Vault: not every product has a slot category " + JSON.stringify(bonus.cats));
 if (JSON.stringify(bonus.catSamples) !== JSON.stringify({ calc: "hand", watch: "wrist", ai: "head", neck: "neck", headphones: "head", server: "floor", shoe: "feet", jacket: "body" })) errors.push("Vault: product categories wrong " + JSON.stringify(bonus.catSamples));
 if (!bonus.handSlot.startsWith("hand") || !bonus.floorSlot.startsWith("floor") || bonus.twice !== null || !bonus.notListedTwice || !bonus.eligibleOk || !bonus.wristOnlyWrist) errors.push("Vault: one-tap equip or per-slot inventory wrong " + JSON.stringify(bonus));
 if (!bonus.merge || !bonus.merge.ok || bonus.merge.count !== 2 || !bonus.merge.listed || !bonus.merge.gone || !bonus.merge.boostOk || !bonus.merge.sameRar || !bonus.mergeWeak || !bonus.mergeBad || !bonus.groupsTyped || !bonus.mixedRefused) errors.push("Vault: merge wrong " + JSON.stringify([bonus.merge, bonus.mergeWeak, bonus.mergeBad, bonus.groupsTyped, bonus.mixedRefused]));

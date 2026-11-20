@@ -176,6 +176,11 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--copper); outlin
 .map.frontier .road { background: #ffffff44; }
 .map.frontier .pin-label { color: #fff; text-shadow: 0 0 3px #000, 0 0 3px #000; }
 .map.frontier .pin.soon .pin-label { color: #d6d0ff; }
+/* v0.52: Legends, the third map (labs 51-70): a storybook land with a sea */
+.map.legends { background: radial-gradient(circle at 20% 25%, #ffe08a, transparent 35%), radial-gradient(circle at 80% 70%, #9be38b, transparent 40%), linear-gradient(160deg, #d9b45a, #8fbf5a 55%, #4f8a4a); }
+.map.legends .sea { position: absolute; right: -10%; top: -10%; width: 45%; height: 45%; border-radius: 50%; background: radial-gradient(#4aa3d8, #2f78b3 70%, transparent 71%); opacity: .85; }
+.map.legends .road { background: #7a5a2a88; }
+.map.legends .pin-label { color: #fff; text-shadow: 0 0 3px #000, 0 0 3px #000; }
 .pin { position: absolute; transform: translate(-50%, -50%); border: 0; background: transparent; padding: 0; display: grid; justify-items: center; gap: 2px; cursor: pointer; width: 66px; }
 .pin-dot { position: relative; width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: var(--surface); border: 2px solid var(--line); font-size: 1.1rem; }
 .pin.open .pin-dot { border-color: var(--copper); background: #fff1e6; box-shadow: 0 0 0 4px #d0702f33; }
