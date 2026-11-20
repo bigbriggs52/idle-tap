@@ -33,12 +33,11 @@ const r = await page.evaluate(() => {
   for (let i = 0; i < 60; i++) SVT.superSpin(0); // fresh ones of every area after the big merge
   // seat + power
   const lab = SVT.lab(), m = SVT.superList().find((x) => x.area === "commercial");
-  const reg = SVT.hire("commercial"); if (reg) SVT.assign(reg.id, "commercial", 0);
-  out.seat = SVT.superSeat(m.id, "commercial", 0) && SVT.superAt(lab, "commercial") === m && (!reg || SVT.regularOf(lab, "commercial", 0) === reg); // v0.53.2: side by side
+  out.seat = SVT.superSeat(m.id, "commercial", 0) && SVT.mgrOf(lab, "commercial", 0) === m;
   out.wrongSeat = SVT.superSeat(SVT.superList().find((x) => x.area === "freight").id, "commercial", 0) === false;
-  out.used = SVT.activate("commercial", 0, null, false, true) && !!SVT.activeAbility(lab, "commercial", 0);
+  out.used = SVT.activate("commercial", 0) && !!SVT.activeAbility(lab, "commercial", 0);
   out.cooldown = m.cdUntil - m.activeUntil;
-  out.unseat = SVT.unassign(m.id) && !SVT.superAt(lab, "commercial");
+  out.unseat = SVT.unassign(m.id) && !SVT.mgrOf(lab, "commercial", 0);
   return out;
 });
 console.log(JSON.stringify(r));

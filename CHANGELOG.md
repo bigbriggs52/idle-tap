@@ -2,10 +2,8 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
-## v0.53.2 (2026-11-20)
-- A super manager and a regular manager now share a seat. Assigning a regular manager no longer takes the super manager off, and seating a super manager no longer benches the regular one. Both work at the same time, and when both powers run their boosts multiply.
-- A seat with both shows the regular manager's face with the super manager's face as a small badge, and two buttons: ⚡ for the regular manager and the pink one for the super manager's power.
-- The Super managers tab shows the seat's super manager on top, with Unseat and Use. The Regular managers tab shows the regular one.
+## v0.53.3 (2026-11-20)
+- One manager per seat again (v0.53.2's shared seat is undone). Tapping Assign on a regular manager now swaps out the super manager on that seat, and Seat here on a super manager swaps out the regular one. Before, assigning a regular manager to a seat with a super manager did nothing you could see.
 
 ## v0.53.1 (2026-11-20)
 - The manager panel has two tabs: 🦸 Super managers on the left and 👔 Regular managers on the right. Regular is selected every time you open it. Super lists the super managers that fit the seat, with Seat here, and a Headhunter Slots button at the bottom.

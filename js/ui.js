@@ -263,7 +263,7 @@ window.SVT = window.SVT || {};
     const L = lab();
     const here = kind ? SVT.slotKey(kind, n) : null;
     const reopen = () => openManagers(role, kind, n, null, null, mgrTab);
-    const current = kind ? SVT.regularOf(L, kind, n) : null; // v0.53.2: the super manager has its own seat (Super tab)
+    const current = kind ? SVT.mgrOf(L, kind, n) : null;
     // Free managers first, then managers busy elsewhere (greyed out at the bottom). Within each, grouped by ability
     // type (speed, storage, then price) with the best rarity at the top of each group. SVT.owned is already in
     // rarity order, so the index keeps that inside a group.
@@ -328,7 +328,7 @@ window.SVT = window.SVT || {};
       if (!m) return;
       // Hiring from a slot's panel puts the new manager straight to work there, unless a rarer one already works it
       // or (v0.31.2) the one there is mid-ability: then the new hire waits on the bench.
-      const cur = here ? SVT.regularOf(lab(), kind, n) : null;
+      const cur = here ? SVT.mgrOf(lab(), kind, n) : null;
       const live = !!cur && SVT.isActive(cur);
       const put = here && !live && (!cur || SVT.RANK_ORDER[m.rank] <= SVT.RANK_ORDER[cur.rank]);
       if (put) SVT.assign(m.id, kind, n);
@@ -361,16 +361,7 @@ window.SVT = window.SVT || {};
       tabBtn("super", "🦸", "Super managers " + supN), tabBtn("regular", "👔", "Regular managers " + SVT.owned(L, role).length));
     let body = [tabs].concat(parts), foot = h("div", { class: "panel-foot hire-row" }, hire, hireMax);
     if (mgrTab === "super") {
-      let supTop = null;
-      const sc = here && SVT.superAt(L, here);
-      if (sc) {
-        const use = bind(h("button", { class: "btn ability", onclick: () => SVT.activate(kind, n, null, false, true) }), (e) => {
-          const t = SVT.now(), ready = !(sc.activeUntil > t) && !(sc.cdUntil > t);
-          setText(e, ready ? sc && SVT.abilityOf(sc).icon + " Use" : SVT.abilityOf(sc).icon); setDisabled(e, !ready);
-        });
-        supTop = mgrCard(sc, { assigned: true, buttons: [h("button", { class: "btn unassign", onclick: () => { SVT.superUnseat(sc.id); reopen(); }, text: "Unseat" }), use] });
-      } else if (here) supTop = h("li", { class: "mcard empty-slot" }, h("div", { class: "portrait" }, h("span", { class: "plus", text: "+" })), h("div", { class: "minfo" }, h("b", { text: "No super manager yet" }), h("span", { class: "muted", text: "Seat one below. Your regular manager keeps working too." })));
-      const sup = here ? [h("div", { class: "sec-label", text: "Super manager on this seat:" }), h("ul", { class: "mlist" }, supTop), SVT.superPicker(kind, n, reopen, mgrCard)]
+      const sup = here ? parts.slice(0, 2).concat(SVT.superPicker(kind, n, reopen, mgrCard))
         : [parts[0], h("div", { class: "sh-list" }, SVT.superList().filter((m) => SVT.superFits(m, role)).sort((a, b) => b.rar - a.rar || b.stars - a.stars).map((m) => SVT.superCard(m))),
           supN ? h("p", { class: "muted small", text: "Tap a seat on the lab screen to seat one." }) : h("p", { class: "muted small", text: "No super managers for this role yet." })];
       body = [tabs].concat(sup);
@@ -654,24 +645,22 @@ window.SVT = window.SVT || {};
     const el = h("button", { class: "seat empty", onclick: (e) => { e.stopPropagation(); openManagers(kind, kind, n); } });
     let shown = null;
     bind(el, () => {
-      const m = SVT.mgrOf(lab(), kind, n), sp = SVT.superAt(lab(), SVT.slotKey(kind, n));
-      const key = (m ? m.id : "none") + "|" + (sp ? sp.id : "");
-      toggle(el, "live", !!sp && sp.activeUntil > SVT.now()); // v0.53: the seat flares while a super's power runs
+      const m = SVT.mgrOf(lab(), kind, n);
+      const key = m ? m.id : "none";
+      if (m && m.sup) toggle(el, "live", m.activeUntil > SVT.now()); // v0.53: a super's seat flares while its power runs
       if (key === shown) return;
       shown = key;
-      el.className = "seat" + (m ? " r-" + m.rank + (m.sup ? " sup" : "") : " empty") + (sp && m !== sp ? " has-sup" : "");
-      el.setAttribute("aria-label", m ? m.name + ", " + SVT.rank(m.rank).name + " " + B.ROLE_NAMES[kind] + (sp && m !== sp ? ", with super manager " + sp.name : "") : "Manager: hire or choose a " + B.ROLE_NAMES[kind]);
-      // v0.53.2: a regular manager and a super manager share the seat; the super shows as a badge on the corner.
-      el.replaceChildren(...[m ? avatar(m) : h("span", { class: "plus", text: "+" }), sp && m !== sp ? h("span", { class: "seat-sup r-" + sp.rank, "aria-hidden": "true", text: SVT.SUPER_DATA.FACES[sp.face] || "🦸" }) : null].filter(Boolean));
+      el.className = "seat" + (m ? " r-" + m.rank + (m.sup ? " sup" : "") : " empty");
+      el.setAttribute("aria-label", m ? m.name + ", " + SVT.rank(m.rank).name + " " + B.ROLE_NAMES[kind] : "Manager: hire or choose a " + B.ROLE_NAMES[kind]);
+      el.replaceChildren(m ? avatar(m) : h("span", { class: "plus", text: "+" }));
     });
     return el;
   }
   // Ability button beside the seat: ⚡ when ready, a countdown while active or cooling down.
-  // v0.53.2: two buttons when a seat has both: the regular manager's ⚡ and the super manager's power.
-  function boostBtn(kind, n, sup) {
-    const el = h("button", { class: "boost" + (sup ? " boost-sup" : ""), "aria-label": sup ? "Use super manager power" : "Use manager ability", onclick: (e) => { e.stopPropagation(); SVT.activate(kind, n, null, false, !!sup); } });
+  function boostBtn(kind, n) {
+    const el = h("button", { class: "boost", "aria-label": "Use manager ability", onclick: (e) => { e.stopPropagation(); SVT.activate(kind, n); } });
     bind(el, () => {
-      const m = sup ? SVT.superAt(lab(), SVT.slotKey(kind, n)) : SVT.regularOf(lab(), kind, n);
+      const m = SVT.mgrOf(lab(), kind, n);
       el.hidden = !m;
       if (el.hidden) return;
       const t = SVT.now(), live = m.activeUntil > t, cd = !live && m.cdUntil > t, ab = SVT.abilityOf(m);
@@ -743,7 +732,7 @@ window.SVT = window.SVT || {};
       h("div", { class: "window" },
         h("div", { class: "dock", "aria-hidden": "true" }), h("div", { class: "lbox in", "aria-hidden": "true" }), h("div", { class: "lbox out", "aria-hidden": "true" }),
         h("div", { class: "lift-shaft", "aria-hidden": "true" }, h("div", { class: "lift-car" }, h("span", { class: "lbox ride" })))),
-      h("div", { class: "tower-foot" }, h("div", { class: "door" }, seat("freight", 0), boostBtn("freight", 0), boostBtn("freight", 0, true)), levelBtn("freight", 0)),
+      h("div", { class: "tower-foot" }, h("div", { class: "door" }, seat("freight", 0), boostBtn("freight", 0)), levelBtn("freight", 0)),
       bind(h("div", { class: "tap-hint", text: "Tap" }), (e) => { e.hidden = SVT.running(lab(), "freight", 0) || (lab().lift && lab().lift.phase !== "idle"); })));
     bind(lift, (e) => toggle(e, "run", SVT.running(lab(), "freight", 0) || (lab().lift && lab().lift.phase !== "idle")));
     abilityBind(lift, "freight", 0);
@@ -757,7 +746,7 @@ window.SVT = window.SVT || {};
       workTimer("commercial", 0, "Shipping"),
       // v0.36.1: boosts pay out here, so the warehouse wears the current multiplier
       bind(h("div", { class: "cap-tag wh-boost", title: "Boosts multiply every delivery" }), (e) => { const m = SVT.boostMult(lab(), SVT.now()); e.hidden = !(m > 1); if (m > 1) setText(e, "⚡ ×" + (Math.round(m * 100) / 100)); }),
-      h("div", { class: "tower-foot" }, levelBtn("commercial", 0), h("div", { class: "door" }, seat("commercial", 0), boostBtn("commercial", 0), boostBtn("commercial", 0, true))),
+      h("div", { class: "tower-foot" }, levelBtn("commercial", 0), h("div", { class: "door" }, seat("commercial", 0), boostBtn("commercial", 0))),
       bind(h("div", { class: "tap-hint", text: "Tap" }), (e) => { e.hidden = SVT.running(lab(), "commercial", 0); })), "commercial", 0);
     // The warehouse trip on the road: a worker pushes the empty cart from the warehouse to the lift, loads the money
     // there, and pushes it back to the warehouse to unload. Its position follows the real trip.
@@ -922,7 +911,7 @@ window.SVT = window.SVT || {};
       themeFx(n),
       productionLine(n),
       rack(n),
-      h("div", { class: "seat-wrap" }, seat("floor", n), boostBtn("floor", n), boostBtn("floor", n, true)),
+      h("div", { class: "seat-wrap" }, seat("floor", n), boostBtn("floor", n)),
       h("button", { class: "fname-tag", onclick: (e) => { e.stopPropagation(); openNode("floor", n); } }, productName(n), n === 1 ? bottleneckPill("build") : null),
       workTimer("floor", n, "Building"),
       levelBtn("floor", n),
