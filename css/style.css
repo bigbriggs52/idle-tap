@@ -543,11 +543,13 @@ table.stats td.next.up { color: var(--good); font-weight: 700; }
 
 /* money flying from a floor's crate into the lift while it loads there */
 .floor[data-floor] { position: relative; }
-.floor .fly { position: absolute; left: 22px; top: 52%; width: 0; height: 0; pointer-events: none; z-index: 4; }
+/* v0.52.3 (user: coins "block the number of stored money"): they leave from the crate at the bottom of the rack,
+   below the amount, and fly out of its left side into the shaft. */
+.floor .fly { position: absolute; left: 10px; top: auto; bottom: 22px; width: 0; height: 0; pointer-events: none; z-index: 4; }
 .floor .fly .coin { position: absolute; opacity: 0; width: 14px; height: 14px; font-size: .5rem; }
 .floor.loading .fly .coin { animation: to-lift .4s ease-in infinite; animation-delay: calc(var(--i) * .13s); }
 .floor.loading .rack { border-color: var(--legendary); box-shadow: 0 0 8px #ffd24a; }
-@keyframes to-lift { 0% { opacity: 1; transform: translate(0, 0) scale(1); } 100% { opacity: 0; transform: translate(-46px, 4px) scale(.6); } }
+@keyframes to-lift { 0% { opacity: 1; transform: translate(0, 0) scale(1); } 100% { opacity: 0; transform: translate(-40px, -2px) scale(.6); } }
 .floor-scene .seat { width: 40px; height: 40px; }
 .boost { right: -16px; top: -12px; min-width: 22px; height: 22px; font-size: .58rem; }
 .boost.ready { font-size: .72rem; }
@@ -1593,3 +1595,82 @@ details.vault-rarshelf[open] > summary { margin-bottom: 6px; }
 details.vault-mergebox > summary { cursor: pointer; font: 1.05rem var(--f-display); padding: 4px 0; }
 details.vault-rarshelf { padding-top: 2px; padding-bottom: 2px; margin-top: 0; margin-bottom: 0; }
 details.vault-rarshelf:not([open]) > summary { padding: 2px 0; }
+
+/* ===== v0.52.3: themed floor scenes (cars on a lift, a grill, notes...) on each floor's back wall =====
+   Sprites sit in .fx and use the fx-* keyframes; like the line they only move while the floor is working. */
+.floor[data-floor] .fx { position: absolute; left: 116px; right: 82px; top: 14px; bottom: 34px; pointer-events: none; z-index: 1; overflow: hidden; }
+.fx .fxs { position: absolute; display: block; line-height: 1; font-size: 20px; font-style: normal; filter: drop-shadow(0 1px 0 #0003); }
+.fx .fxs i { display: block; font-style: normal; transform-origin: 50% 100%; animation: var(--fxa) var(--fxt, 1.2s) ease-in-out infinite; animation-delay: var(--d, 0s); animation-play-state: paused; }
+.fx .fxs.run-across { left: 0 !important; right: 0; animation: fx-across var(--fxt, 4s) linear infinite; animation-delay: var(--d, 0s); animation-play-state: paused; }
+.fx .fxs.run-across i { animation: none; display: inline-block; }
+.run .fx .fxs, .run .fx .fxs i { animation-play-state: running; }
+.fx-swing { --fxa: fx-swing; --fxt: .7s; } .fx-swing i { transform-origin: 20% 90%; }
+.fx-hop { --fxa: fx-hop; --fxt: .8s; }
+.fx-blink { --fxa: fx-blink; --fxt: 1s; }
+.fx-wiggle { --fxa: fx-wiggle; --fxt: .5s; }
+.fx-rise { --fxa: fx-rise; --fxt: 1.6s; } .fx-rise i { animation-timing-function: ease-out; }
+.fx-fall { --fxa: fx-fall; --fxt: 1.1s; } .fx-fall i { animation-timing-function: ease-in; }
+.fx-flip { --fxa: fx-flip; --fxt: 1.4s; }
+.fx-flipup { --fxa: fx-flipup; --fxt: 1.3s; } .fx-flipup i { transform-origin: 50% 50%; }
+.fx-spin, .fx-spinr, .fx-spinslow { --fxa: fx-spin; --fxt: 1.6s; } .fx-spin i, .fx-spinr i, .fx-spinslow i { transform-origin: 50% 50%; animation-timing-function: linear; }
+.fx-spinr { --fxa: fx-spinr; } .fx-spinslow { --fxt: 6s; }
+.fx-pulse { --fxa: fx-pulse; --fxt: .9s; } .fx-pulse i { transform-origin: 50% 50%; }
+.fx-bob, .fx-hover { --fxa: fx-bob; --fxt: 1.6s; } .fx-hover { --fxt: .9s; }
+.fx-walk { --fxa: fx-walk; --fxt: 3.2s; } .fx-walk i { animation-timing-function: linear; }
+.fx-moonhop { --fxa: fx-moonhop; --fxt: 2.2s; }
+.fx-launch { --fxa: fx-launch; --fxt: 2.6s; } .fx-launch i { animation-timing-function: cubic-bezier(.5, 0, .9, .6); }
+.fx-takeoff { --fxa: fx-takeoff; --fxt: 3s; } .fx-takeoff i { animation-timing-function: ease-in; }
+.fx-orbit { --fxa: fx-orbit; --fxt: 3s; } .fx-orbit i { transform-origin: 50% 50%; animation-timing-function: linear; }
+.fx-flicker { --fxa: fx-flicker; --fxt: .35s; }
+.fx-grow { --fxa: fx-grow; --fxt: 2.4s; }
+.fx-sway, .fx-rock { --fxa: fx-sway; --fxt: 1.8s; } .fx-rock { --fxt: 2.4s; }
+.fx-snap { --fxa: fx-snap; --fxt: 1s; } .fx-snap i { transform-origin: 10% 60%; }
+.fx-saw, .fx-stitch { --fxa: fx-saw; --fxt: .45s; }
+.fx-yoyo { --fxa: fx-yoyo; --fxt: 1.2s; }
+.fx-lift { --fxa: fx-lift; --fxt: 2.8s; }
+.fx-breath { --fxa: fx-breath; --fxt: .9s; } .fx-breath i { transform-origin: 0 50%; }
+.fx-drive { --fxt: 4.5s; } .fx-zoom { --fxt: 1.6s; } .fx-swim { --fxt: 6s; } .fx-drift { --fxt: 9s; }
+.fx-swim i, .fx-drive i, .fx-zoom i, .fx-drift i { transform: scaleX(-1); } /* emoji face left; flip so they head right */
+@keyframes fx-across { from { transform: translateX(-12%); } to { transform: translateX(104%); } }
+@keyframes fx-swing { 0%, 100% { transform: rotate(-35deg); } 50% { transform: rotate(25deg); } }
+@keyframes fx-hop { 0%, 100% { transform: translateY(0) scale(1.08, .92); } 45% { transform: translateY(-12px) scale(.95, 1.05); } }
+@keyframes fx-blink { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .25; transform: scale(.85); } }
+@keyframes fx-wiggle { 0%, 100% { transform: rotate(-12deg); } 50% { transform: rotate(12deg); } }
+@keyframes fx-rise { 0% { transform: translateY(6px) scale(.6); opacity: 0; } 25% { opacity: 1; } 100% { transform: translateY(-22px) scale(1); opacity: 0; } }
+@keyframes fx-fall { 0% { transform: translateY(-6px); opacity: 0; } 20% { opacity: 1; } 100% { transform: translateY(26px); opacity: 0; } }
+@keyframes fx-flip { 0%, 30% { transform: perspective(60px) rotateY(0); } 60%, 100% { transform: perspective(60px) rotateY(180deg); } }
+@keyframes fx-flipup { 0%, 15%, 100% { transform: translateY(0) rotate(0); } 55% { transform: translateY(-16px) rotate(180deg); } 85% { transform: translateY(0) rotate(360deg); } }
+@keyframes fx-spin { to { transform: rotate(360deg); } }
+@keyframes fx-spinr { to { transform: rotate(-360deg); } }
+@keyframes fx-pulse { 0%, 100% { transform: scale(.9); } 30% { transform: scale(1.25); } 50% { transform: scale(1); } }
+@keyframes fx-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+@keyframes fx-walk { 0% { transform: translateX(-14px) scaleX(-1); } 49% { transform: translateX(14px) scaleX(-1); } 50% { transform: translateX(14px) scaleX(1); } 99% { transform: translateX(-14px) scaleX(1); } 100% { transform: translateX(-14px) scaleX(-1); } }
+@keyframes fx-moonhop { 0%, 100% { transform: translate(-8px, 0); } 50% { transform: translate(8px, -18px) rotate(10deg); } }
+@keyframes fx-launch { 0%, 20% { transform: translateY(0); opacity: 1; } 22% { transform: translate(1px, 0); } 24% { transform: translate(-1px, 0); } 85% { transform: translateY(-46px); opacity: 1; } 86%, 100% { transform: translateY(0); opacity: 0; } }
+@keyframes fx-takeoff { 0% { transform: translate(-20px, 0) rotate(0); opacity: 1; } 50% { transform: translate(20px, 0) rotate(-10deg); } 90% { transform: translate(60px, -36px) rotate(-25deg); opacity: 1; } 91%, 100% { opacity: 0; } }
+@keyframes fx-orbit { from { transform: rotate(0) translateX(12px) rotate(0); } to { transform: rotate(360deg) translateX(12px) rotate(-360deg); } }
+@keyframes fx-flicker { 0%, 100% { transform: scale(1, 1); } 50% { transform: scale(.88, 1.2); } }
+@keyframes fx-grow { 0% { transform: scale(.2); } 70%, 90% { transform: scale(1.1); } 100% { transform: scale(.2); opacity: 0; } }
+@keyframes fx-sway { 0%, 100% { transform: rotate(-8deg); } 50% { transform: rotate(8deg); } }
+@keyframes fx-snap { 0%, 60%, 100% { transform: rotate(0); } 70% { transform: rotate(-25deg); } 80% { transform: rotate(0); } }
+@keyframes fx-saw { 0%, 100% { transform: translateX(-5px); } 50% { transform: translateX(5px); } }
+@keyframes fx-yoyo { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(16px); } }
+@keyframes fx-lift { 0%, 15% { transform: translateY(0); } 45%, 70% { transform: translateY(-14px); } 72% { transform: translateY(-14px) rotate(-3deg); } 74% { transform: translateY(-14px) rotate(3deg); } 76% { transform: translateY(-14px); } 100% { transform: translateY(0); } }
+@keyframes fx-breath { 0%, 100% { transform: scaleX(.4); opacity: .3; } 50% { transform: scaleX(1.3); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .fx .fxs, .fx .fxs i { animation: none !important; } }
+
+/* v0.52.3 (user: the Vault rarity drop-down "is the style I want for all drop downs"): every fold-out in the game
+   (map regions, Islands, beaten labs, Select mine, Chip's needs, merges, rarities) shares that look. */
+details.fold > summary { cursor: pointer; font: 1.05rem var(--f-display); padding: 4px 0; color: var(--rc, inherit); list-style: revert; }
+details.fold[open] > summary { margin-bottom: 6px; }
+details.fold.loc-beaten > summary, details.fold.map-fold > summary { padding: 8px 0; }
+details.map-fold { margin: 4px 0; }
+details.map-fold > .map { margin-top: 2px; }
+details.fold.vault-needs { background: none; border: 0; padding: 0; border-radius: 0; }
+details.fold.vault-needs > summary { color: #7a4f00; }
+details.fold.vault-lab-select { width: auto; padding: 0; border: 0; background: none; font: inherit; }
+details.fold.vault-lab-select > summary { color: #8e44ad; }
+.vault-lab-opts { display: grid; gap: 6px; }
+.vault-lab-opt { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 12px; border: 3px solid #dcc8ff; background: #fff; font: 700 .9rem var(--f-display); color: var(--ink); cursor: pointer; text-align: left; }
+.vault-lab-opt b { font-size: .8rem; color: #5a4a7a; white-space: nowrap; }
+.vault-lab-opt.on { border-color: #8e44ad; background: #f6eeff; }

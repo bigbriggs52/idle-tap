@@ -310,6 +310,9 @@ await page.click(".bottom-nav >> text=Map");
 await page.waitForTimeout(300);
 const pins = await page.evaluate(() => ({ total: document.querySelectorAll(".pin").length, locked: document.querySelectorAll(".pin.locked").length, open: document.querySelectorAll(".pin.open").length }));
 console.log("pins", JSON.stringify(pins));
+// v0.52.3: each map region and the Islands fold in the rarity drop-down style; only the current lab's region starts open
+const folds = await page.evaluate(() => ({ regions: [...document.querySelectorAll("details.fold.map-fold")].map((d) => d.dataset.region + (d.open ? "+" : "-")).join(), allFold: [...document.querySelectorAll(".map-view details")].every((x) => x.classList.contains("fold")) }));
+if (folds.regions !== "isles-,1+,2-,3-" || !folds.allFold) errors.push("Map: region drop-downs wrong (v0.52.3) " + JSON.stringify(folds));
 if (pins.total !== 70 || (await page.locator(".map.frontier .pin").count()) !== 20 || (await page.locator(".map.legends .pin").count()) !== 20) errors.push("Map: expected 70 pins, 20 on The Frontier and 20 in Legends (v0.52) " + JSON.stringify(pins));
 await page.screenshot({ path: out + "/06-map.png", fullPage: true });
 await page.click(".pin.open >> nth=1");
@@ -460,6 +463,7 @@ await page.screenshot({ path: out + "/15-map-beaten.png" });
 // Viking Raid: island card on the map, stage sheet, a stage with no abilities, clearing opens the next stage
 await page.evaluate(() => SVT.setView("map"));
 await page.waitForTimeout(200);
+await page.click("details.map-fold[data-region=isles] > summary"); // v0.52.3: the Islands fold
 await page.click(".loc.island");
 await page.waitForTimeout(300);
 await page.screenshot({ path: out + "/10-raid-stages.png" });
@@ -855,8 +859,12 @@ await page.evaluate(() => SVT.openVault()); await page.waitForTimeout(200);
 if (!(await page.locator(".vault-lab.any").isVisible())) errors.push("Vault: random lab option missing");
 // v0.52.1: Random mine or Select mine; Select mine opens a drop-down of the mines with coins
 await page.click(".vault-lab.pick"); await page.waitForTimeout(150);
-const pickDrop = await page.evaluate(() => { const sel = document.querySelector(".vault-lab-select"); return { sel: !!sel, opts: sel ? sel.options.length : 0, labs: SVT.LABS.filter((l) => SVT.vaultSpendable(l.id) > 0).length, rows: document.querySelectorAll(".vault-labs > .vault-lab").length }; });
+const pickDrop = await page.evaluate(() => { const sel = document.querySelector("details.fold.vault-lab-select[open]"); return { sel: !!sel, opts: sel ? sel.querySelectorAll(".vault-lab-opt").length : 0, labs: SVT.LABS.filter((l) => SVT.vaultSpendable(l.id) > 0).length, rows: document.querySelectorAll(".vault-labs > .vault-lab").length }; });
 if (!pickDrop.sel || pickDrop.opts !== pickDrop.labs || pickDrop.rows !== 0) errors.push("Vault: Select mine should open a drop-down of the mines (v0.52.1) " + JSON.stringify(pickDrop));
+// v0.52.3: picking a mine closes the fold and shows it in the summary; every drop-down shares the .fold style
+const pick2 = await page.evaluate(async () => { const b = document.querySelectorAll(".vault-lab-opt")[1] || document.querySelector(".vault-lab-opt"); const name = b.querySelector("span").textContent; b.click(); await new Promise((r) => setTimeout(r, 150));
+  const d = document.querySelector("details.vault-lab-select"); return { closed: !!d && !d.open, named: !!d && d.querySelector("summary").textContent.includes(name), allFold: [...document.querySelectorAll("#vault details")].every((x) => x.classList.contains("fold")) }; });
+if (!pick2.closed || !pick2.named || !pick2.allFold) errors.push("Vault: picking a mine from the fold went wrong (v0.52.3) " + JSON.stringify(pick2));
 await page.click(".vault-lab.any"); await page.click(".vault-stake >> nth=1"); await page.click(".vault-bulk"); await page.waitForTimeout(200);
 const bulkBtn = await page.locator(".vault-roll").textContent();
 if (!bulkBtn.startsWith("Roll Max · 6 × 3 coins")) errors.push("Vault: Max button text wrong: " + bulkBtn);
@@ -935,8 +943,8 @@ const bonus = await page.evaluate(() => {
   const R16 = B.RARITIES, free = v.items.filter((x) => !SVT.vaultSlotOf(x.id)), cat0 = SVT.itemCat(free.find((x) => free.filter((y) => SVT.itemCat(y) === SVT.itemCat(x)).length >= 6) || free[0]);
   const same = free.filter((x) => SVT.itemCat(x) === cat0).slice(0, 6);
   const setR = (x, r) => { x.rar = r; x.rarity = R16[r].id; };
-  same.slice(0, 3).forEach((x) => setR(x, 5)); same.slice(3, 6).forEach((x) => setR(x, 14));
-  const div = SVT.vaultMerge(5, same.slice(0, 3).map((x) => x.id)), sing = SVT.vaultMerge(14, same.slice(3, 6).map((x) => x.id));
+  same.slice(0, 3).forEach((x) => setR(x, 5)); same.slice(3, 6).forEach((x) => setR(x, 9));
+  const div = SVT.vaultMerge(5, same.slice(0, 3).map((x) => x.id)), sing = SVT.vaultMerge(9, same.slice(3, 6).map((x) => x.id));
   out.tiers = { n: R16.length, rolled: B.ROLLED, div: div && div.rarity, divBoost: div && div.boost, sing: sing && sing.rarity, singBoost: sing && sing.boost,
     topStays: !SVT.vaultMerges().some((m) => m.rar === R16.length - 1), same: same.length, rollTop: SVT.vaultOdds(10, 0).length };
   // v0.48: a Singularity item binds to Chip for good (+BIND_ADD each, no limit); nothing lower binds
@@ -949,7 +957,7 @@ const bonus = await page.evaluate(() => {
   const extra = v.items.find((x) => x.rar < R16.length - 1 && !SVT.vaultSlotOf(x.id)); setR(extra, R16.length - 1);
   const again = SVT.vaultBind(extra.id);
   out.bind = { lowRefused, bound, again, gone: !SVT.vaultItem(top.id) && !SVT.vaultItem(extra.id), count: SVT.vaultBound() - b0,
-    mult: Math.round((SVT.vaultMult() - (wasWorn ? wornMult - 3 : m0)) * 100) / 100, slotFreed: wasWorn && !SVT.vaultSlotOf(top.id) };
+    mult: Math.round((SVT.vaultMult() - (wasWorn ? wornMult - 1.75 : m0)) * 100) / 100, slotFreed: wasWorn && !SVT.vaultSlotOf(top.id) };
   // v0.50: the vendor buys items for wild coins (Legendary 100, Divine 500); a worn item comes off first
   const sl4 = v.items.find((x) => !SVT.vaultSlotOf(x.id)); setR(sl4, 4);
   const sl6 = v.items.find((x) => x !== sl4 && !SVT.vaultSlotOf(x.id)); setR(sl6, 6);
@@ -972,12 +980,17 @@ const shelves = await page.evaluate(async () => { SVT.openGallery(); await new P
   const types = full ? [...full.querySelectorAll(".vault-type")].map((e) => e.textContent) : [];
   const empty = ds.some((d) => !d.querySelector(".vault-card"));
   SVT.closeVault(); return { n: idx.length, desc: idx.every((x, i) => x >= 0 && (!i || x < idx[i - 1])), closed: ds.length && !ds.some((d) => d !== full && d.open), types: types.length, uniqueTypes: new Set(types).size, empty }; });
-if (shelves.n !== 16 || !shelves.desc || !shelves.closed || !(shelves.types >= 1) || shelves.types !== shelves.uniqueTypes || !shelves.empty) errors.push("Vault: rarity drop-downs wrong (v0.52.2) " + JSON.stringify(shelves));
+if (shelves.n !== 11 || !shelves.desc || !shelves.closed || !(shelves.types >= 1) || shelves.types !== shelves.uniqueTypes || !shelves.empty) errors.push("Vault: rarity drop-downs wrong (v0.52.2) " + JSON.stringify(shelves));
 if (!bonus.allHaveBoost || !bonus.mythicBoost) errors.push("Vault: item boosts missing");
-if (JSON.stringify(bonus.tiers) !== JSON.stringify({ n: 16, rolled: 6, div: "divine", divBoost: 1.75, sing: "singularity", singBoost: 4, topStays: true, same: 6, rollTop: 6 })) errors.push("Vault: merge-only rarities wrong (v0.46) " + JSON.stringify(bonus.tiers));
+if (JSON.stringify(bonus.tiers) !== JSON.stringify({ n: 11, rolled: 6, div: "divine", divBoost: 1.75, sing: "ascended", singBoost: 2.75, topStays: true, same: 6, rollTop: 6 })) errors.push("Vault: merge-only rarities wrong (v0.46) " + JSON.stringify(bonus.tiers));
 if (!bonus.wornMerge || !bonus.wornMerge.worn || !bonus.wornMerge.notListed || !bonus.wornMerge.pickRefused || !bonus.wornMerge.stillThere || !bonus.wornMerge.weakestKeeps) errors.push("Vault: an equipped item could be merged " + JSON.stringify(bonus.wornMerge));
 if (bonus.mult !== bonus.sum || Math.abs(bonus.ratio - bonus.mult) > 1e-6 || !bonus.raidSame || !bonus.capped) errors.push("Vault: bonus multiplier wrong " + JSON.stringify(bonus));
-if (JSON.stringify(bonus.bind) !== JSON.stringify({ lowRefused: true, bound: true, again: true, gone: true, count: 2, mult: 6, slotFreed: true })) errors.push("Vault: binding to Chip wrong (v0.48) " + JSON.stringify(bonus.bind));
+if (JSON.stringify(bonus.bind) !== JSON.stringify({ lowRefused: true, bound: true, again: true, gone: true, count: 2, mult: 3.5, slotFreed: true })) errors.push("Vault: binding to Chip wrong (v0.48) " + JSON.stringify(bonus.bind));
+// v0.52.3: rarities above Ascended are gone; old saves turn those items into Ascended and keep old Singularity binds at +3
+const cut = await page.evaluate(() => { const S = SVT.state(), v = S.vault, it = v.items.find((x) => !SVT.vaultSlotOf(x.id));
+  it.rar = 15; it.rarity = "singularity"; it.boost = 4; v.r11 = false; const b = v.bound, bo = v.boundOld || 0; SVT.save(); SVT.load(); const v2 = SVT.state().vault, it2 = v2.items.find((x) => x.id === it.id);
+  return { rar: it2.rar, id: it2.rarity, boost: it2.boost, over: v2.items.filter((x) => x.rar > 10).length, boundOld: v2.boundOld - bo === b, bound: v2.bound, top: SVT.B.VAULT.RARITIES.at(-1).id }; });
+if (JSON.stringify(cut) !== JSON.stringify({ rar: 10, id: "ascended", boost: 2.75, over: 0, boundOld: true, bound: 0, top: "ascended" })) errors.push("Vault: rarity cut migration wrong (v0.52.3) " + JSON.stringify(cut));
 if (JSON.stringify(bonus.sell) !== JSON.stringify({ p4: 15, p6: 100, wild: 115, gone: true, none: 0, rising: true, noLoop: true, mergePays: true, noMergeLoop: true })) errors.push("Vault: selling to the vendor wrong (v0.50) " + JSON.stringify(bonus.sell));
 if (Object.values(bonus.cats).reduce((a, b) => a + b, 0) !== 2100 || Object.keys(bonus.cats).length !== 7) errors.push("Vault: not every product has a slot category " + JSON.stringify(bonus.cats));
 if (JSON.stringify(bonus.catSamples) !== JSON.stringify({ calc: "hand", watch: "wrist", ai: "head", neck: "neck", headphones: "head", server: "floor", shoe: "feet", jacket: "body" })) errors.push("Vault: product categories wrong " + JSON.stringify(bonus.catSamples));

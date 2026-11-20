@@ -19,9 +19,9 @@ window.SVT = window.SVT || {};
   }
 
   const B = {
-    VERSION: "0.52.2",
+    VERSION: "0.52.3",
     // Release time in UTC, set with each release. Shown after the version in the player's local time.
-    BUILT: "2026-11-20T07:15Z",
+    BUILT: "2026-11-20T07:18Z",
     FLOORS: 30,
     // v0.26: lower caps, because the IPO needs every floor, the lift and the warehouse at max level. The hubs cap at
     // Lv 400: that is the income every lab ends with, so the deep floors must stay affordable against it, and
@@ -132,17 +132,13 @@ window.SVT = window.SVT || {};
         { id: "legendary", name: "Legendary", mods: 3 },
         { id: "mythic", name: "Mythic", mods: 3 },
         // v0.46 (user: "add in another 10 rarities after mythic with merging allowed"): merge-only, never rolled.
-        // Three of one rarity merge into one of the next, all the way up to Singularity.
+        // Three of one rarity merge into one of the next. v0.52.3 (user: "Get rid of every rarity above ascended. Too
+        // many"): the five above Ascended (Transcendent..Singularity) are gone; saved ones became Ascended.
         { id: "divine", name: "Divine", mods: 3 },
         { id: "celestial", name: "Celestial", mods: 3 },
         { id: "cosmic", name: "Cosmic", mods: 3 },
         { id: "eternal", name: "Eternal", mods: 3 },
         { id: "ascended", name: "Ascended", mods: 3 },
-        { id: "transcendent", name: "Transcendent", mods: 3 },
-        { id: "primordial", name: "Primordial", mods: 3 },
-        { id: "infinite", name: "Infinite", mods: 3 },
-        { id: "omega", name: "Omega", mods: 3 },
-        { id: "singularity", name: "Singularity", mods: 3 },
       ],
       ROLLED: 6, // rarities a roll can give (Common..Mythic); the rest come only from merging
       STAKES: [1, 3, 5, 10],
@@ -158,14 +154,16 @@ window.SVT = window.SVT || {};
       // multiplier }. Worn bonuses add up (x1.2 and x1.5 make x1.7). v0.45 (user: "shouldn't this be more than 3x" with
       // 9 of 9 slots at x1.5): no cap any more, so 9 Mythic items make x5.5. Counts in Viking Raid too (v0.33).
       BONUS: [{ chance: 0.2, mult: 1.05 }, { chance: 0.35, mult: 1.1 }, { chance: 0.5, mult: 1.15 }, { chance: 0.7, mult: 1.25 }, { chance: 1, mult: 1.35 }, { chance: 1, mult: 1.5 },
-        // the 10 merge-only rarities: +0.25 each, Divine x1.75 up to Singularity x4
-        { chance: 1, mult: 1.75 }, { chance: 1, mult: 2 }, { chance: 1, mult: 2.25 }, { chance: 1, mult: 2.5 }, { chance: 1, mult: 2.75 },
-        { chance: 1, mult: 3 }, { chance: 1, mult: 3.25 }, { chance: 1, mult: 3.5 }, { chance: 1, mult: 3.75 }, { chance: 1, mult: 4 }],
+        // the merge-only rarities: +0.25 each, Divine x1.75 up to Ascended x2.75
+        { chance: 1, mult: 1.75 }, { chance: 1, mult: 2 }, { chance: 1, mult: 2.25 }, { chance: 1, mult: 2.5 }, { chance: 1, mult: 2.75 }],
       MAX_BONUS: Infinity,
       // v0.48 (user: "a permanent upgrade to bind the item with chip and then do it again. With no max to the amount of
       // upgrades he can have. Only the highest rarity can bind to chip"): a Singularity item can be bound to Chip. It is
       // used up, and Chip keeps its +3 (what a worn x4 Singularity adds) for good, freeing the slot. No limit.
-      BIND_ADD: 3,
+      // v0.52.3: Ascended is the top now, so a bind adds +1.75 (what a worn x2.75 Ascended adds). Singularity binds made
+      // before keep their +3 (BIND_OLD, counted in vault.boundOld).
+      BIND_ADD: 1.75,
+      BIND_OLD: 3,
       // v0.50 (user: "Allow selling of rarity tokens to a vendor ... 500 coins for divine 100 for legendary and figure
       // out the math for everything else"): the vendor buys any item for wild coins. Divine (three Mythics merged) pays
       // more than the three Mythics would, and each merge tier above it pays about 3.2x the one below, so merging up
@@ -174,7 +172,7 @@ window.SVT = window.SVT || {};
       // selling can't make coins.
       // v0.50.2 (user picked "Divine 100, then x3 per tier"): rolling cheap items and merging them up to Divine cost
       // about 120-230 coins a Divine, so 500 made free coins. Now three of a tier sell for exactly one of the next.
-      SELL: [0, 0, 1, 4, 15, 50, 100, 300, 900, 2700, 8100, 24300, 72900, 218700, 656100, 1968300],
+      SELL: [0, 0, 1, 4, 15, 50, 100, 300, 900, 2700, 8100],
     },
     // Regular abilities (Common to Rare): "speed" runs the node faster (shorter cycles, a quicker lift and cart),
     // "storage" makes every cycle, lift trip and cart load carry more, "discount" cuts that node's upgrade prices.
