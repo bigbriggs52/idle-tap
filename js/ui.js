@@ -946,6 +946,7 @@ window.SVT = window.SVT || {};
       jumpBtns());
   }
 
+  let beatenOpen = false;
   function mapView() {
     const S = SVT.state();
     // v0.48: labs carry a map number (no number = the first map); The Frontier (labs 31-50) is the second.
@@ -984,7 +985,10 @@ window.SVT = window.SVT || {};
       h("div", { class: "loc-list" }, h("h3", { text: "Your labs (" + active.length + " of " + SVT.OPEN_LABS + " open)" }), active,
         replayRows.length ? [h("h3", { text: "Replaying (bonus slot)" }), ...replayRows] : null,
         upcoming.length ? [h("h3", { text: "Next to open" }), ...upcoming] : null,
-        beatenRows.length ? [h("h3", { text: "Beaten · tap to replay for another 🪙" }), ...beatenRows] : null,
+        // v0.52.1 (user: "beaten labs can be hidden under a drop down menu so when I go to pick a lab I don't have to scroll"):
+        // folded away by default; the open/closed choice is kept while you stay in the game.
+        beatenRows.length ? h("details", { class: "loc-beaten", open: beatenOpen ? "" : null, ontoggle: (e) => { beatenOpen = e.currentTarget.open; } },
+          h("summary", { text: "🏆 Beaten labs (" + beatenRows.length + ") · tap to replay for another 🪙" }), ...beatenRows) : null,
         h("h3", { text: "Islands" }), raidCard(),
         h("p", { class: "muted small", text: "Each lab is its own company with 30 floors and its own cash. Up to 5 labs are open at a time: Seed funding opens labs 2 to 5, and beating a lab (raising its IPO) opens a new one, all the way to lab " + SVT.LABS.length + " in Legends." })),
       h("div", { class: "map-wrap" },

@@ -374,8 +374,9 @@ window.SVT = window.SVT || {};
     const { h } = SVT.ui;
     const needs = SVT.vaultNeeds();
     if (!needs.length) return h("p", { class: "muted small vault-needs-none", text: "🤖 Every one of Chip's slots is filled. Keep rolling for rarer items and bigger bonuses." });
-    return h("div", { class: "vault-needs" },
-      h("b", { text: "🎯 Chip still needs: " }),
+    // v0.52.1: folded so the lab choice and the roll button sit near the top
+    return h("details", { class: "vault-needs" },
+      h("summary", { text: "🎯 Chip still needs " + needs.length + (needs.length === 1 ? " thing" : " things") + " · tap to see where they come from" }),
       needs.map((n) => h("div", { class: "vault-need" },
         h("span", { class: "vault-need-what", text: n.icon + " " + n.name.toLowerCase() + (n.slots.length > 1 ? " (" + n.slots.length + " slots)" : "") }),
         h("span", { class: "vault-need-labs" },
@@ -390,6 +391,7 @@ window.SVT = window.SVT || {};
     return h("div", { class: "vault-odds" }, RAR.slice(0, V.ROLLED).map((r, i) => h("div", { class: "vault-odd r-" + r.id }, h("b", { text: r.name }), h("span", { text: pct(p[i]) }))));
   }
 
+  let lastPick = null;
   function openVault() {
     const { h } = SVT.ui;
     busy = false;
@@ -413,12 +415,18 @@ window.SVT = window.SVT || {};
       SVT.vaultWild() ? h("p", { class: "muted small", text: "🪙 " + SVT.vaultWild() + " wild " + (SVT.vaultWild() === 1 ? "coin rolls" : "coins roll") + " at any open lab (a lab's own coins go first)." }) : null,
       needsBlock(),
       labs.length
+        // v0.52.1 (user: "Make it so it's random mine or select mine. Select mine will open up the mines in a drop
+        // down"): two choices instead of a long list of labs; Select mine shows a drop-down of the labs you can roll at.
         ? h("div", { class: "vault-labs" },
-          h("button", { class: "vault-lab any" + (labPick === ANY ? " on" : ""), onclick: () => { labPick = ANY; openVault(); } },
-            h("span", { text: "🎲 Random lab" }), h("b", { text: "🪙 " + SVT.vaultCoins() + " · every roll picks a lab" })),
-          labs.map((l) => h("button", { class: "vault-lab" + (l.id === labPick ? " on" : ""), onclick: () => { labPick = l.id; openVault(); } },
-          h("span", { text: l.icon + " " + l.name }), h("b", { text: "🪙 " + (v.coins[l.id] || 0) + (SVT.vaultWild() ? " +" + SVT.vaultWild() + " wild" : "") }),
-          h("span", { class: "vault-lab-cats", "aria-label": "Makes: " + SVT.vaultLabCats(l.id).map((c) => CATS[c]).join(", ") }, SVT.vaultLabCats(l.id).map((c) => h("i", { class: "vault-cat-ic" + (needCats.includes(c) ? " need" : ""), title: CATS[c], text: catIcon(c) }))))))
+          h("div", { class: "vault-mode" },
+            h("button", { class: "vault-lab any" + (labPick === ANY ? " on" : ""), onclick: () => { labPick = ANY; openVault(); } },
+              h("span", { text: "🎲 Random mine" }), h("b", { text: "🪙 " + SVT.vaultCoins() + " · every roll picks a mine" })),
+            h("button", { class: "vault-lab pick" + (labPick && labPick !== ANY ? " on" : ""), onclick: () => { labPick = labs.find((l) => l.id === lastPick) ? lastPick : labs[0].id; lastPick = labPick; openVault(); } },
+              h("span", { text: "📍 Select mine" }), h("b", { text: labs.length + (labs.length === 1 ? " mine" : " mines") + " with coins ▾" }))),
+          labPick && labPick !== ANY ? h("select", { class: "vault-lab-select", "aria-label": "Mine to roll at", onchange: (e) => { labPick = lastPick = e.currentTarget.value; openVault(); } },
+            labs.map((l) => h("option", { value: l.id, selected: l.id === labPick ? "" : null, text: l.icon + " " + l.name + " · 🪙 " + (v.coins[l.id] || 0) + (SVT.vaultWild() ? " +" + SVT.vaultWild() + " wild" : "") }))) : null,
+          labPick && labPick !== ANY ? h("span", { class: "vault-lab-cats", "aria-label": "Makes: " + SVT.vaultLabCats(labPick).map((c) => CATS[c]).join(", ") },
+            h("small", { class: "muted", text: "Makes: " }), SVT.vaultLabCats(labPick).map((c) => h("i", { class: "vault-cat-ic" + (needCats.includes(c) ? " need" : ""), title: CATS[c], text: catIcon(c) }))) : null)
         : h("p", { class: "vault-empty", text: "No coins yet. Raise a lab's IPO to earn " + V.COIN_PER_BEAT + " coins, then replay a beaten lab from the map for " + V.COIN_PER_BEAT + " more." }),
       labPick ? h("div", { class: "vault-stakes" }, V.STAKES.map((s) => h("button", { class: "vault-stake" + (s === stake ? " on" : ""), disabled: s > have, onclick: () => { stake = s; openVault(); } }, h("b", { text: "🪙 " + s }), h("small", { text: s === 1 ? "1 coin" : s + " coins" })))) : null,
       labPick ? h("button", { class: "vault-bulk" + (bulk ? " on" : ""), "aria-pressed": bulk ? "true" : "false", onclick: () => { bulk = !bulk; openVault(); } },

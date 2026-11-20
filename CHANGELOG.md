@@ -2,6 +2,12 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.52.1 (2026-11-20)
+
+- On the map, beaten labs are folded under a "🏆 Beaten labs" drop-down, so your open labs and the next ones are at the top. Tap it to show them and replay one.
+- In the Vault, you pick 🎲 Random mine or 📍 Select mine instead of scrolling a long list. Select mine opens a drop-down of the mines you have coins for, and shows what kinds of items that mine makes.
+- Chip's "still needs" list in the Vault is folded too: tap it to see where each missing item comes from.
+
 ## v0.52.0 (2026-11-20)
 
 - 20 new labs, 51 to 70, on a third map called Legends: Candy Lab, Robo Kitchen, Pirate Cove, Pyramid Works, Atlantis, Castle Keep, Dragon Forge, Wizard Tower, Circus of Wonders, Future Museum, Mega Mall, Skyport, Mega Harbor, Safari Lodge, Polar Station, Crystal Caves, Monster Garage, Mount Olympus, Dream Factory and Multiverse Hub.
