@@ -1674,3 +1674,56 @@ details.fold.vault-lab-select > summary { color: #8e44ad; }
 .vault-lab-opt { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 12px; border: 3px solid #dcc8ff; background: #fff; font: 700 .9rem var(--f-display); color: var(--ink); cursor: pointer; text-align: left; }
 .vault-lab-opt b { font-size: .8rem; color: #5a4a7a; white-space: nowrap; }
 .vault-lab-opt.on { border-color: #8e44ad; background: #f6eeff; }
+/* ---------- v0.53 super managers: Headhunter Slots ---------- */
+.side:has(> .bubble:nth-child(4)) { gap: 12px; }
+.side:has(> .bubble:nth-child(4)) .bubble { width: 68px; height: 68px; }
+.b-heroes { background: radial-gradient(circle at 35% 30%, #ffd1ef, #c2185b 70%); }
+.av.suph { position: relative; display: grid; place-items: center; width: 100%; height: 100%; border-radius: 50%; background: radial-gradient(circle at 50% 40%, #fff, color-mix(in srgb, var(--rc, #888) 35%, #fff)); overflow: visible; }
+.av.suph .sh-cape { position: absolute; inset: 52% 14% -4%; border-radius: 40% 40% 12px 12px; background: linear-gradient(var(--rc, #c2185b), color-mix(in srgb, var(--rc, #c2185b) 60%, #000)); z-index: 0; }
+.av.suph .sh-face { position: relative; z-index: 1; font-size: 1.1em; margin-top: -12%; line-height: 1; filter: drop-shadow(0 1px 1px #0006); }
+.seat.sup { border-style: solid; box-shadow: 0 0 0 2px #fff, 0 0 10px var(--rc); }
+.seat.sup .av.suph .sh-face { font-size: 1.2rem; }
+.floor-scene .seat.sup .av.suph .sh-face { font-size: 1rem; }
+.seat.sup.live { animation: hero-flare .6s ease-in-out infinite alternate; }
+@keyframes hero-flare { from { box-shadow: 0 0 0 2px #fff, 0 0 6px var(--rc); transform: scale(1); } to { box-shadow: 0 0 0 3px #fff, 0 0 22px 6px var(--rc); transform: scale(1.12); } }
+.mcard .portrait .av.suph .sh-face { font-size: 2rem; }
+.sh-list { display: grid; gap: 8px; }
+.sh-card { display: grid; grid-template-columns: 64px 1fr; gap: 10px; align-items: start; background: #fff; border: 3px solid var(--rc, #999); border-radius: 12px; padding: 8px; color: var(--ink); text-align: left; }
+.sh-port { display: grid; justify-items: center; gap: 2px; }
+.sh-port .av.suph { width: 56px; height: 56px; }
+.sh-port .sh-face { font-size: 2rem; }
+.sh-stars { font-size: .7rem; color: #f5a400; letter-spacing: 1px; white-space: nowrap; }
+.sh-info { display: grid; gap: 2px; font-size: .78rem; min-width: 0; }
+.sh-info b { font-size: .95rem; }
+.sh-rar { font-size: .64rem; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; color: var(--rc); }
+.sh-power { font-weight: 700; }
+.sh-perk { color: #4a5a63; }
+.sh-where { color: #2d72bd; font-weight: 700; }
+.sh-btns { display: flex; gap: 6px; margin-top: 4px; flex-wrap: wrap; }
+.sh-pick { display: grid; gap: 8px; margin: 8px 0; }
+.hh-open { justify-self: start; }
+.hh-machine { position: relative; padding: 14px 10px 12px; border-radius: 18px; background: linear-gradient(#b3124f, #6a0a2e); border: 4px solid #ffd54f; box-shadow: inset 0 0 0 3px #00000033, 0 6px 0 #4a0720; }
+.hh-lights { display: flex; justify-content: space-between; position: absolute; left: 14px; right: 14px; top: 3px; }
+.hh-lights i { width: 7px; height: 7px; border-radius: 50%; background: #ffe082; animation: hh-blink 1s steps(2) infinite; animation-delay: calc(var(--i) * -.11s); }
+@keyframes hh-blink { 50% { background: #ff5252; box-shadow: 0 0 6px #ff5252; } }
+.hh-reels { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.hh-reel { display: grid; gap: 2px; justify-items: center; align-content: center; min-height: 58px; padding: 6px 4px; border-radius: 10px; background: linear-gradient(#fff, #eceff1 45%, #fff); color: #17252c; text-align: center; box-shadow: inset 0 3px 6px #0003; }
+.hh-reel small { font-size: .58rem; text-transform: uppercase; letter-spacing: .06em; color: #8a6d00; font-weight: 800; }
+.hh-sym { font-weight: 800; font-size: .82rem; line-height: 1.15; }
+.hh-reel[data-k="face"] .hh-sym { font-size: 1.7rem; }
+.hh-reel[data-k="stars"] .hh-sym { color: #f5a400; letter-spacing: 1px; }
+.hh-reel[data-k="rar"].lock, .hh-machine:not(.spinning) .hh-reel[data-k="rar"][class*="r-"] { background: var(--rc); color: #fff; }
+.hh-machine.spinning .hh-reel:not(.lock) .hh-sym { filter: blur(1px); opacity: .75; }
+.hh-reel.lock { animation: hh-lock .25s ease-out; }
+@keyframes hh-lock { from { transform: scale(1.15); } }
+.hh-reel.held { outline: 3px solid #29b6f6; outline-offset: -3px; }
+.hh-machine.idle .hh-sym { font-size: 1.4rem; color: #b0bec5; }
+.hh-tiers .vault-stake small { white-space: nowrap; }
+.hh-holds { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.hh-hold { border: 2px solid #29b6f6; background: #fff; color: #0d47a1; border-radius: 999px; padding: 4px 10px; font: 700 .75rem var(--f-body); cursor: pointer; }
+.hh-hold.on { background: #29b6f6; color: #fff; }
+.hh-jackpot { text-align: center; font: 900 1.4rem var(--f-display); color: #ffb300; text-shadow: 0 2px 0 #7a4f00; animation: pulse 0.8s ease-in-out infinite; }
+.cheat-row { display: flex; gap: 8px; }
+.cheat-input { flex: 1; min-width: 0; padding: 8px 10px; border-radius: 10px; border: 2px solid #9fb5c4; font: 600 1rem var(--f-body); }
+.vault.heroes .vault-foot .btn:not(.fund-cta) { background: #fff; color: #2d72bd; border: 3px solid #2d72bd; }
+.mcard .portrait .av.suph { width: 56px; height: 56px; margin: auto; }

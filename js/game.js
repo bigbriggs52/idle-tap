@@ -275,13 +275,16 @@ window.SVT = window.SVT || {};
     for (let i = 0; i < lab.round; i++) m *= B.ROUNDS[i].mult;
     return m;
   };
-  SVT.rank = (id) => B.RANKS.find((r) => r.id === id);
+  SVT.rank = (id) => B.RANKS.find((r) => r.id === id) || B.VAULT.RARITIES.find((r) => r.id === id); // supers use the Vault's 16 rarities
   SVT.ability = (role, id) => B.ABILITIES[role].find((a) => a.id === id);
   const roleOf = (kind) => (kind === "floor" ? "floor" : kind);
 
   SVT.slotKey = (kind, n) => (kind === "floor" ? "floor:" + n : kind);
   SVT.slotName = (key) => (key.startsWith("floor:") ? "Floor " + key.slice(6) : key === "freight" ? "Lift" : "Warehouse");
   SVT.mgrOf = (lab, kind, n) => {
+    // v0.53: a super manager seated here (js/supers.js) runs the seat ahead of any normal manager.
+    const sup = SVT.superAt ? SVT.superAt(lab, SVT.slotKey(kind, n)) : null;
+    if (sup) return sup;
     const id = lab.assign[SVT.slotKey(kind, n)];
     return id ? lab.managers[id] || null : null;
   };
@@ -309,8 +312,8 @@ window.SVT = window.SVT || {};
   // v0.46.3: a manager from an old save with a rarity or ability this version no longer has falls back to Common Speed
   // instead of throwing (which stopped the whole game step).
   SVT.statsOf = (m, ab) => { const r = B.ABILITY_STATS[m.rank] || B.ABILITY_STATS.common; return r[ab.kind] || r.speed; };
-  SVT.abilityOf = (m) => SVT.ability(m.role, m.ability) || B.ABILITIES[m.role][0];
-  SVT.isSuper = (m) => !!m && SVT.abilityOf(m).kind === "special";
+  SVT.abilityOf = (m) => (m.sup ? SVT.superDef(m) : SVT.ability(m.role, m.ability) || B.ABILITIES[m.role][0]);
+  SVT.isSuper = (m) => !!m && (!!m.sup || SVT.abilityOf(m).kind === "special");
   SVT.isActive = (m, t) => !!m && m.activeUntil > (t || now());
   // Active seconds, cooldown seconds and headline numbers of a manager's ability.
   SVT.abilityStats = (m) => {
@@ -334,7 +337,9 @@ window.SVT = window.SVT || {};
   // cost only 1.3-1.5x more each, so every new shaft paid for the rest at once. Now each is worth RAID.valueStep x
   // the one above, the same step as its price.
   SVT.shaftValue = (lab, n) => (SVT.isRaid(lab) && n > 1 && SVT.RAID.valueStep ? Math.pow(SVT.RAID.valueStep(lab.stage) / 6, n - 1) : 1);
-  SVT.boostMult = (lab, t) => SVT.rushMult(t) * SVT.bugsMult(t) * vaultMult * (SVT.isRaid(lab) && SVT.hoardMult ? SVT.hoardMult() : 1);
+  // v0.53: a seated Gamer super manager makes a running Rush or Bug Hunt boost stronger in its lab.
+  const gamer = (lab, t) => { const g = SVT.rushMult(t) * SVT.bugsMult(t); return g > 1 ? g * (1 + SVT.labPassive(lab, "gamer")) : g; };
+  SVT.boostMult = (lab, t) => gamer(lab, t) * vaultMult * (SVT.isRaid(lab) && SVT.hoardMult ? SVT.hoardMult() : 1);
   // Passives of the node's super manager (always on while assigned): speed, load and that node's price cut.
   SVT.passives = (lab, kind, n) => {
     const s = superOn(lab, kind, n), p = (s && s.ab.passive) || {};
@@ -344,9 +349,11 @@ window.SVT = window.SVT || {};
   const labPassive = (lab, key) => {
     let best = 0;
     for (const k in lab.assign) { const m = lab.managers[lab.assign[k]]; if (m && SVT.isSuper(m)) best = Math.max(best, (SVT.abilityOf(m).passive || {})[key] || 0); }
+    if (SVT.supersIn) SVT.supersIn(lab).forEach((m) => { best = Math.max(best, (SVT.abilityOf(m).passive || {})[key] || 0); });
     return best;
   };
   SVT.revenueMult = (lab) => 1 + labPassive(lab, "revenue");
+  SVT.labPassive = labPassive;
   SVT.cooldownMult = (lab) => 1 - labPassive(lab, "cooldowns");
   // The ability running on a node right now, or null. Regular: { kind, mult } plus speed/load/off; special: kind
   // "special" with id, icon and its effects (speed, load, direct = sell from the floor at x cash, cash = x on
@@ -357,7 +364,7 @@ window.SVT = window.SVT || {};
     if (!SVT.isActive(m, t)) return null;
     const ab = SVT.abilityOf(m);
     if (ab.kind === "special") {
-      return { kind: "special", id: ab.id, name: ab.name, icon: ab.icon, mult: ab.speed || ab.direct || ab.cash || ab.allDiscount || 1, speed: ab.speed || 1, load: 1,
+      return { kind: "special", id: ab.id, name: ab.name, icon: ab.icon, mult: ab.speed || ab.load || ab.direct || ab.cash || ab.allDiscount || 1, speed: ab.speed || 1, load: ab.load || 1,
         direct: ab.direct || 0, cash: ab.cash || 1, vacuum: !!ab.vacuum, warp: ab.warp || 0, off: ab.allDiscount || 0 };
     }
     const st = SVT.statsOf(m, ab);
@@ -556,6 +563,7 @@ window.SVT = window.SVT || {};
       const first = lab.stage > S.raid.cleared, pay = first ? SVT.raidStage(lab).tokens : SVT.RAID.TOKENS.replay;
       S.raid.cleared = Math.max(S.raid.cleared, lab.stage);
       S.raid.tokens = (S.raid.tokens || 0) + pay;
+      if (first && SVT.superCoinsAdd) SVT.superCoinsAdd(SVT.SUPER.RAID_COINS);
       emit("raidClear", { stage: lab.stage, tokens: pay, first });
     }
     return earned;
@@ -574,6 +582,7 @@ window.SVT = window.SVT || {};
       // v0.46.3: one broken lab must not stop the others (or the warehouse after it) from running; the error is kept
       // and shown once so it can be reported.
       try { for (let s = dt; s > 0; s -= 1) tickLab(S.labs[id], Math.min(1, s), t - s + Math.min(1, s)); } catch (e) { SVT.reportError(e, id); }
+      if (SVT.superAuto) SVT.superAuto(S.labs[id]); // v0.53: Early Bird super managers use their power when ready
     }
     S.lastSeen = Date.now();
   };
@@ -589,6 +598,8 @@ window.SVT = window.SVT || {};
       if (SVT.labBeaten(lab)) continue;
       let earned = 0;
       for (let s = 0; s < away; s += step) earned += tickLab(lab, Math.min(step, away - s), t0 + s);
+      const owl = labPassive(lab, "offline"); // v0.53: Night Owl super manager
+      if (owl > 0 && earned > 0) { lab.cash += earned * owl; lab.lifetime += earned * owl; earned *= 1 + owl; }
       lab.rate = 0;
       if (earned > 0) result[id] = earned;
     }
@@ -890,6 +901,7 @@ window.SVT = window.SVT || {};
     let moved = 0, i = 0;
     for (let n = lab.floors.length; n >= 1; n--) {
       const key = SVT.slotKey("floor", n), cur = lab.managers[lab.assign[key]];
+      if (SVT.superAt && SVT.superAt(lab, key)) continue; // v0.53: a seated super manager keeps its floor
       if (cur && busy(cur)) continue; // leave a cooling-down manager on its floor
       const m = pool[i++];
       if (!m) { if (cur) { delete lab.assign[key]; moved++; } continue; }
@@ -903,6 +915,7 @@ window.SVT = window.SVT || {};
     return { floor: moved, skipped: SVT.owned(lab, "floor").length - pool.length };
   };
   SVT.unassign = (id) => {
+    if (typeof id === "string" && SVT.superUnseat) return SVT.superUnseat(id);
     const lab = SVT.lab();
     const from = SVT.slotOfMgr(lab, id);
     if (!from) return false;
@@ -913,15 +926,22 @@ window.SVT = window.SVT || {};
   };
   // v0.31.2: managers cannot be sold (user rule); benched managers simply wait in the Owned list.
 
-  SVT.activate = (kind, n) => {
-    const lab = SVT.lab();
+  SVT.activate = (kind, n, labArg, chained) => {
+    const lab = labArg || SVT.lab();
     const m = SVT.mgrOf(lab, kind, n);
     const t = now();
-    if (!m || m.cdUntil > t) return false;
+    if (!m || m.cdUntil > t || m.activeUntil > t) return false;
     const st = SVT.abilityStats(m); // v0.30: the tier (or the super manager's special) sets both timers
     m.activeUntil = t + st.active;
     m.cdUntil = m.activeUntil + st.cooldown * SVT.cooldownMult(lab);
-    emit("ability", { kind, n });
+    // v0.53 super manager perks: Lucky Break may skip the cooldown; Chain Reaction fires every ready manager in the lab.
+    const pas = (m.sup && SVT.abilityOf(m).passive) || {};
+    if (pas.lucky && Math.random() < pas.lucky) { m.cdUntil = m.activeUntil; m.lucky = t; }
+    if (pas.chain && !chained) {
+      SVT.activate("freight", 0, lab, true); SVT.activate("commercial", 0, lab, true);
+      lab.floors.forEach((f, i) => SVT.activate("floor", i + 1, lab, true));
+    }
+    emit("ability", { kind, n, lab: lab.id, sup: m.sup ? m : null, chained: !!chained });
     emit("change");
     return true;
   };
@@ -953,6 +973,9 @@ window.SVT = window.SVT || {};
     lab.commercial.lvl = 1; lab.commercial.left = 0; lab.commercial.carry = 0; lab.commercial.loaded = false;
     lab.managers = {}; lab.assign = {}; lab.hires = { floor: 0, freight: 0, commercial: 0 };
     lab.rate = 0;
+    // v0.53: every round pays Hero coins for Headhunter Slots (more for the IPO, plus any Headhunter perk here).
+    // Super managers keep their seats through a round; they leave a lab only when it is beaten.
+    if (SVT.superPay) SVT.superPay(lab, r);
     // v0.26: every round and the IPO pay wild Vault coins, on top of the beat and new-lab coins.
     if (S.vault) S.vault.wild = (S.vault.wild || 0) + B.VAULT.ROUND_COINS;
     emit("raise", { round: r, mult: SVT.prestigeMult(lab), coins: B.VAULT.ROUND_COINS });
@@ -964,6 +987,7 @@ window.SVT = window.SVT || {};
       delete lab.replay;
       if (S.vault.replay === lab.id) S.vault.replay = null;
       payCoin(lab.id);
+      if (SVT.superUnseatLab) SVT.superUnseatLab(lab);
       const next = SVT.LABS.find((l) => S.labs[l.id] && !SVT.labBeaten(S.labs[l.id]));
       if (next) S.activeLab = next.id;
       emit("labBeaten", { lab: SVT.labDef(lab.id), replay, coins: SVT.vaultCoins(lab.id) });
