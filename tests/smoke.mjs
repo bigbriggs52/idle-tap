@@ -779,6 +779,8 @@ const vault = await page.evaluate(() => {
     SVT.raise();
   }
   out.coin2 = SVT.vaultCoins("garage"); out.beats = S.vault.beats.garage; out.closed = SVT.labBeaten(S.labs.garage) && !S.vault.replay;
+  // v0.52.1: beaten labs are folded under a drop-down on the map
+  SVT.setView("map"); { const d = document.querySelector("details.loc-beaten"); out.beatenFold = d ? { closed: !d.open, rows: d.querySelectorAll(".loc.beaten").length } : null; }
   // odds: 1 coin vs 5 coins, and pity
   const sim = (coins, pity, n) => { const c = [0, 0, 0, 0, 0, 0]; for (let i = 0; i < n; i++) c[SVT.vaultRollRarity(coins, pity)]++; return c.map((x) => x / n); };
   out.p1 = sim(1, 0, 50000); out.p5 = sim(10, 0, 50000); out.hard = sim(1, V.PITY.HARD - 1, 2000); out.soft = SVT.vaultOdds(1, V.PITY.SOFT + 2);
@@ -799,6 +801,7 @@ const vault = await page.evaluate(() => {
 console.log("vault", JSON.stringify(vault));
 // wild: 50 starter + 2 x 50 for labs 2 and 6 opening + 2 x 5 for the Seed and IPO rounds raised above (v0.26)
 if (vault.coin !== 10 || vault.wild !== 160 || !vault.done || !vault.canReplay || !vault.replaying || vault.canReplayAgain) errors.push("Vault: coin on beat or replay start wrong");
+if (!vault.beatenFold || !vault.beatenFold.closed || !(vault.beatenFold.rows >= 1)) errors.push("Map: beaten labs should be folded under a drop-down (v0.52.1) " + JSON.stringify(vault.beatenFold));
 if (!vault.mapTitle.includes("of 5 open") || !vault.replayRow) errors.push("Vault: replay row or slot count wrong: " + vault.mapTitle);
 if (vault.coin2 !== 20 || vault.beats !== 2 || !vault.closed) errors.push("Vault: beating the replay did not pay a second coin");
 if (Math.abs(vault.p1[0] - 0.5) > 0.02 || Math.abs(vault.p1[4] - 0.018) > 0.004 || vault.p5[0] !== 0 || Math.abs(vault.p5[4] - 0.15) > 0.01) errors.push("Vault: odds off " + JSON.stringify([vault.p1, vault.p5]));
@@ -845,6 +848,10 @@ if (bulk.max3 !== 5 || bulk.maxGarage !== 4 || bulk.maxCap !== 16 || bulk.rolled
 if (bulk.capped !== bulk.capMax || bulk.afterCap !== 150 - bulk.capMax) errors.push("Vault: bulk roll cap wrong " + JSON.stringify(bulk));
 await page.evaluate(() => SVT.openVault()); await page.waitForTimeout(200);
 if (!(await page.locator(".vault-lab.any").isVisible())) errors.push("Vault: random lab option missing");
+// v0.52.1: Random mine or Select mine; Select mine opens a drop-down of the mines with coins
+await page.click(".vault-lab.pick"); await page.waitForTimeout(150);
+const pickDrop = await page.evaluate(() => { const sel = document.querySelector(".vault-lab-select"); return { sel: !!sel, opts: sel ? sel.options.length : 0, labs: SVT.LABS.filter((l) => SVT.vaultSpendable(l.id) > 0).length, rows: document.querySelectorAll(".vault-labs > .vault-lab").length }; });
+if (!pickDrop.sel || pickDrop.opts !== pickDrop.labs || pickDrop.rows !== 0) errors.push("Vault: Select mine should open a drop-down of the mines (v0.52.1) " + JSON.stringify(pickDrop));
 await page.click(".vault-lab.any"); await page.click(".vault-stake >> nth=1"); await page.click(".vault-bulk"); await page.waitForTimeout(200);
 const bulkBtn = await page.locator(".vault-roll").textContent();
 if (!bulkBtn.startsWith("Roll Max · 6 × 3 coins")) errors.push("Vault: Max button text wrong: " + bulkBtn);

@@ -1573,3 +1573,15 @@ body:has(#sheet) #toasts { top: auto; bottom: calc(132px + env(safe-area-inset-b
    painting and animating, so the phone spends its frames on the mini game. */
 body:has(> #rush, > #bugs) > #app { visibility: hidden; }
 body:has(> #rush, > #bugs) > #app * { animation-play-state: paused !important; }
+
+/* v0.52.1: beaten labs fold away on the map; the Vault picks Random mine or Select mine (a drop-down) */
+.loc-beaten { border-radius: 14px; }
+.loc-beaten > summary { cursor: pointer; font: 1rem var(--f-display); padding: 10px 4px; list-style: revert; }
+.loc-beaten[open] > summary { margin-bottom: 6px; }
+.vault-mode { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.vault-mode .vault-lab { flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; }
+.vault-mode .vault-lab b { font-size: .75rem; }
+.vault-lab.pick { border-color: #8e44ad; background: linear-gradient(#fbf6ff, #efe2ff); }
+.vault-lab-select { width: 100%; min-width: 0; padding: 10px 12px; border-radius: 12px; border: 3px solid #8e44ad; background: #fff; font: 700 1rem inherit; }
+.vault-labs .vault-lab-cats { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+details.vault-needs > summary { cursor: pointer; font-weight: 700; }
