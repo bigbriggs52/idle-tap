@@ -774,6 +774,92 @@ window.SVT = window.SVT || {};
     return box;
   }
 
+  // v0.52.3 (user ask): a themed scene on every floor's back wall that matches the lab: cars on a lift in the car
+  // plants, a grill in the kitchens, notes in the studio and so on. Each sprite is "emoji anim x% y(px from the
+  // floor line)"; the anims are the .fx-* keyframes in style.css. Even floors mirror the layout so rows differ.
+  const FX = {
+    garage: "🔧 swing 10 6|📱 hop 42 4|🔋 blink 74 4",
+    arcade: "🕹️ wiggle 12 4|👾 hop 44 6|⭐ rise 46 22|👾 hop 76 6",
+    library: "📚 none 8 2|📖 flip 40 6|✏️ wiggle 72 4",
+    maker: "🔨 swing 12 8|🪵 none 30 2|🪚 saw 62 6",
+    studio: "🎸 wiggle 10 4|🎵 rise 34 12|🎶 rise 56 12|🥁 hop 76 2",
+    cinema: "🎬 snap 10 6|🎞️ spin 42 6|🍿 hop 74 2",
+    robotics: "⚙️ spin 6 18|🤖 walk 40 2|⚙️ spinr 78 14",
+    auto: "🚗 lift 14 2|🛞 spin 46 2|🔧 swing 64 8|💨 rise 4 6",
+    space: "⭐ blink 10 26|🚀 launch 40 2|🛰️ orbit 74 16",
+    medtech: "🩺 none 8 4|❤️ pulse 40 10|💉 wiggle 72 4",
+    agri: "🌱 grow 8 2|💧 fall 10 26|🌱 grow 30 2|🚜 drive 0 2",
+    ocean: "🐟 swim 0 12|🫧 rise 40 6|🐙 bob 72 2",
+    arctic: "❄️ fall 12 30|💾 blink 40 4|🐧 walk 70 2",
+    geo: "🌋 none 10 2|🔥 flicker 44 2|💨 rise 46 18|⛏️ swing 74 6",
+    stadium: "⚽ hop 12 2|📣 wiggle 44 6|🏀 hop 74 2",
+    fashion: "🧵 bob 10 4|🪡 stitch 40 8|👗 sway 72 2",
+    toys: "🧸 bob 10 2|🪀 yoyo 44 22|🎈 rise 74 4",
+    home: "💡 blink 10 24|🤖 walk 40 2|🛋️ none 74 2",
+    drone: "🚁 hover 12 16|📦 hover 14 4|🛩️ drive 0 22",
+    cyber: "🔒 pulse 12 6|🔑 spin 44 8|🛡️ none 74 4",
+    fintech: "💰 hop 10 2|🪙 flip 42 8|📈 pulse 74 8",
+    weather: "☁️ bob 12 24|💧 fall 14 18|⚡ blink 46 18|☁️ bob 72 24|💧 fall 74 18",
+    rail: "🚦 blink 8 6|🚄 zoom 0 2",
+    biotech: "🧪 wiggle 10 4|🫧 rise 12 18|🌿 pulse 44 2|🧬 spin 74 8",
+    quantum: "⚛️ spin 12 8|✨ blink 44 14|🌀 spin 74 6",
+    satellite: "📡 wiggle 10 4|🛰️ orbit 44 16|📶 blink 74 10",
+    energy: "⚡ blink 10 14|🔋 pulse 42 4|🔌 wiggle 74 6",
+    holo: "🕶️ bob 10 6|🌈 blink 42 12|✨ rise 74 8",
+    mars: "🪨 none 6 2|👨‍🚀 walk 40 2|🚀 launch 76 2",
+    moon: "🌙 bob 10 18|👨‍🚀 moonhop 42 2|⭐ blink 76 24",
+    deepsea: "🐠 swim 0 14|🫧 rise 40 4|🦑 bob 74 2",
+    nano: "🔬 none 10 2|⚛️ spin 44 10|✨ blink 74 12",
+    cloudcity: "☁️ drift 0 24|🎈 rise 30 2|🛩️ drive 0 8",
+    asteroid: "☄️ zoom 0 24|⛏️ swing 30 6|🪨 hop 60 2",
+    neural: "🧠 pulse 12 6|⚡ blink 44 14|💭 rise 72 6",
+    chrono: "⏰ wiggle 10 4|⌛ flip 42 6|🕰️ none 74 2",
+    jupiter: "🪐 spinslow 12 8|🛰️ orbit 46 16|⭐ blink 76 24",
+    dino: "🥚 wiggle 10 2|🦖 walk 40 2|🦕 bob 76 2",
+    orbithotel: "🛎️ hop 10 2|🧳 drive 0 2|🌍 spinslow 74 14",
+    desert: "☀️ pulse 10 22|🐪 walk 40 2|🌵 none 76 2",
+    subway: "🚦 blink 8 6|🚇 zoom 0 2|💨 rise 70 4",
+    rainforest: "🦜 hover 12 18|🌿 sway 44 2|💧 fall 74 26",
+    magma: "🔥 flicker 10 2|⚒️ swing 40 6|💨 rise 42 20|🔥 flicker 74 2",
+    antimatter: "⚛️ spin 12 8|💥 pulse 44 8|✨ blink 74 14",
+    elevator: "⭐ blink 8 26|🛗 lift 40 2|🚀 launch 74 2",
+    dyson: "☀️ spinslow 12 8|🛰️ orbit 46 16|⚡ blink 74 10",
+    venus: "🎈 bob 12 12|☁️ drift 0 24|🌋 none 74 2",
+    titan: "🧊 none 8 2|🪐 spinslow 42 12|🚀 launch 76 2",
+    wormhole: "🌀 spin 12 8|✨ rise 44 6|🚀 zoom 0 18",
+    galactic: "⭐ blink 8 24|🛸 hover 40 12|🌌 none 74 6",
+    candy: "🍭 spin 10 6|🥣 wiggle 40 2|🍬 hop 44 18|🧁 bob 74 2",
+    kitchen: "🔥 flicker 14 0|🍳 wiggle 12 8|🥩 flipup 14 14|♨️ rise 40 10|🍔 flipup 72 6",
+    pirate: "🏴‍☠️ sway 10 10|⛵ rock 42 2|💰 hop 74 2",
+    pyramid: "☀️ pulse 10 24|🔺 none 40 2|🐪 walk 72 2",
+    atlantis: "🔱 swing 10 6|🐚 bob 42 2|🫧 rise 74 6",
+    castle: "⚔️ swing 12 8|🛡️ none 42 4|🏰 none 74 2",
+    dragon: "🐉 bob 8 6|🔥 breath 30 10|⚒️ swing 72 6",
+    wizard: "🪄 swing 12 8|✨ rise 14 18|🔮 pulse 44 4|📜 sway 74 4",
+    circus: "🤹 bob 12 2|🎪 none 42 2|🎈 rise 74 4",
+    museum: "🏺 none 10 2|🦴 wiggle 42 6|🔦 swing 74 8",
+    mall: "🛍️ bob 10 4|🛒 drive 0 2|💳 flip 74 8",
+    airport: "🧳 drive 0 2|✈️ takeoff 30 6|🛄 none 76 2",
+    harbor: "⚓ swing 10 8|🚢 drift 0 2|📦 bob 76 2",
+    safari: "🦒 bob 8 2|🦁 walk 42 2|📷 blink 76 14",
+    polar: "❄️ fall 10 30|🐧 walk 40 2|🧊 none 76 2",
+    crystal: "💎 pulse 12 6|✨ blink 30 18|⛏️ swing 44 6|💎 pulse 76 4",
+    racing: "🏎️ zoom 0 2|🛞 spin 30 16|🔧 swing 56 10|🏁 sway 80 8",
+    olympus: "⚡ blink 10 18|🏛️ none 42 2|🦅 hover 74 16",
+    dreams: "🛏️ none 8 2|💤 rise 12 14|🌙 bob 44 16|⭐ blink 74 22",
+    multiverse: "🌀 spin 10 8|🪐 orbit 44 14|🌌 none 74 6",
+    raid: "⛏️ swing 12 6|🪓 swing 44 6|🛡️ none 76 4"
+  };
+  const FX_RUN = { drive: 1, zoom: 1, swim: 1, drift: 1 }; // these cross the whole wall, so their x is ignored
+  function themeFx(n) {
+    const spec = FX[lab().id] || FX.garage, flip = n % 2 === 0;
+    return h("div", { class: "fx", "aria-hidden": "true" }, spec.split("|").map((s, i) => {
+      const [e, a, x, y] = s.split(" "), run = FX_RUN[a];
+      const left = run ? 0 : flip ? 84 - +x : +x;
+      return h("span", { class: "fxs fx-" + a + (run ? " run-across" : ""), style: "left:" + left + "%;bottom:" + y + "px;--d:" + (-(n * 0.37 + i * 0.6)).toFixed(2) + "s" }, h("i", { text: e }));
+    }));
+  }
+
   // The floor's production line: build at the bench (sparks), wrap at the packer, ride the belt to the crate.
   // It is drawn left-to-right and mirrored so products flow toward the crate on the left, like Idle Miner's shafts.
   // The tool and sparks change by tech era (see .tier* in style.css). Everything pauses when nobody is working.
@@ -803,6 +889,7 @@ window.SVT = window.SVT || {};
     const tier = tierOf(n);
     const scene = runBind(h("div", { class: "scene floor-scene", onclick: () => SVT.tap("floor", n) },
       h("div", { class: "rock", "aria-hidden": "true" }),
+      themeFx(n),
       productionLine(n),
       rack(n),
       h("div", { class: "seat-wrap" }, seat("floor", n), boostBtn("floor", n)),
@@ -947,6 +1034,9 @@ window.SVT = window.SVT || {};
   }
 
   let beatenOpen = false;
+  // v0.52.3 (user: "Islands on the map should also have a drop down", in the rarity drop-down style): each map region
+  // and the Islands list fold. Until you choose, only the region with your current lab is open.
+  let mapOpen = null;
   function mapView() {
     const S = SVT.state();
     // v0.48: labs carry a map number (no number = the first map); The Frontier (labs 31-50) is the second.
@@ -967,6 +1057,11 @@ window.SVT = window.SVT || {};
         h("span", { class: "pin-dot" }, h("span", { class: "pin-icon", text: l.icon }), !unlocked ? h("span", { class: "pin-lock", text: "🔒" }) : beaten ? h("span", { class: "pin-lock", text: "🏆" }) : replaying ? h("span", { class: "pin-lock", text: "🔁" }) : null),
         h("span", { class: "pin-label", text: (i + 1) + ". " + l.name }));
     };
+    if (!mapOpen) { const cur = SVT.labDef(S.activeLab); mapOpen = new Set([cur && cur.map ? cur.map : S.activeLab === "raid" ? "isles" : 1]); }
+    const region = (key, title, body) => h("details", { class: "fold map-fold", "data-region": key, open: mapOpen.has(key) ? "" : null, ontoggle: (e) => { if (e.currentTarget.open) mapOpen.add(key); else mapOpen.delete(key); } },
+      h("summary", { text: title }), body);
+    const regionTitle = (m, name) => { const ls = SVT.LABS.map((l, i) => [l, i]).filter(([l]) => (l.map || 1) === m), first = ls[0][1] + 1, last = ls[ls.length - 1][1] + 1;
+      return name + " · labs " + first + "–" + last + " (" + ls.filter(([l]) => SVT.labBeaten(S.labs[l.id])).length + " of " + ls.length + " beaten)"; };
     // Your open labs first, then the labs you have beaten, then the next ones you can open.
     const nextUp = (l) => { const g = SVT.labGate(l.id); return !S.labs[l.id] && g && S.labs[g.from.id]; };
     const rows = (pick) => SVT.LABS.filter(pick).map((l) => {
@@ -987,26 +1082,24 @@ window.SVT = window.SVT || {};
         upcoming.length ? [h("h3", { text: "Next to open" }), ...upcoming] : null,
         // v0.52.1 (user: "beaten labs can be hidden under a drop down menu so when I go to pick a lab I don't have to scroll"):
         // folded away by default; the open/closed choice is kept while you stay in the game.
-        beatenRows.length ? h("details", { class: "loc-beaten", open: beatenOpen ? "" : null, ontoggle: (e) => { beatenOpen = e.currentTarget.open; } },
-          h("summary", { text: "🏆 Beaten labs (" + beatenRows.length + ") · tap to replay for another 🪙" }), ...beatenRows) : null,
-        h("h3", { text: "Islands" }), raidCard(),
+        beatenRows.length ? h("details", { class: "fold loc-beaten", open: beatenOpen ? "" : null, ontoggle: (e) => { beatenOpen = e.currentTarget.open; } },
+          h("summary", { text: "🏆 Beaten labs (" + beatenRows.length + ")" }), h("p", { class: "muted small", text: "Tap one to replay it for another 🪙." }), ...beatenRows) : null,
+        region("isles", "🏝️ Islands (1)", raidCard()),
         h("p", { class: "muted small", text: "Each lab is its own company with 30 floors and its own cash. Up to 5 labs are open at a time: Seed funding opens labs 2 to 5, and beating a lab (raising its IPO) opens a new one, all the way to lab " + SVT.LABS.length + " in Legends." })),
       h("div", { class: "map-wrap" },
-        h("div", { class: "map" },
+        region(1, regionTitle(1, "🌉 Silicon Valley"), h("div", { class: "map" },
           h("div", { class: "bay", "aria-hidden": "true" }),
           h("div", { class: "road r1", "aria-hidden": "true" }), h("div", { class: "road r2", "aria-hidden": "true" }), h("div", { class: "road r3", "aria-hidden": "true" }),
-          pinsOn(1)),
-        h("h3", { class: "map-title", text: "🚀 The Frontier · labs 31 to 50" }),
-        h("div", { class: "map frontier" },
+          pinsOn(1))),
+        region(2, regionTitle(2, "🚀 The Frontier"), h("div", { class: "map frontier" },
           h("div", { class: "nebula", "aria-hidden": "true" }),
           h("div", { class: "road r1", "aria-hidden": "true" }), h("div", { class: "road r2", "aria-hidden": "true" }),
-          pinsOn(2)),
+          pinsOn(2))),
         // v0.52: Legends, the third map (labs 51-70)
-        h("h3", { class: "map-title", text: "🏰 Legends · labs 51 to " + SVT.LABS.length }),
-        h("div", { class: "map legends" },
+        region(3, regionTitle(3, "🏰 Legends"), h("div", { class: "map legends" },
           h("div", { class: "sea", "aria-hidden": "true" }),
           h("div", { class: "road r1", "aria-hidden": "true" }), h("div", { class: "road r2", "aria-hidden": "true" }),
-          pinsOn(3))),
+          pinsOn(3)))),
       h("footer", { class: "foot", text: "Silicon Valley Tycoon " + buildTag() }));
   }
 

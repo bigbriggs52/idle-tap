@@ -375,8 +375,8 @@ window.SVT = window.SVT || {};
     const needs = SVT.vaultNeeds();
     if (!needs.length) return h("p", { class: "muted small vault-needs-none", text: "🤖 Every one of Chip's slots is filled. Keep rolling for rarer items and bigger bonuses." });
     // v0.52.1: folded so the lab choice and the roll button sit near the top
-    return h("details", { class: "vault-needs" },
-      h("summary", { text: "🎯 Chip still needs " + needs.length + (needs.length === 1 ? " thing" : " things") + " · tap to see where they come from" }),
+    return h("details", { class: "fold vault-needs" },
+      h("summary", { text: "🎯 Chip still needs (" + needs.length + ")" }),
       needs.map((n) => h("div", { class: "vault-need" },
         h("span", { class: "vault-need-what", text: n.icon + " " + n.name.toLowerCase() + (n.slots.length > 1 ? " (" + n.slots.length + " slots)" : "") }),
         h("span", { class: "vault-need-labs" },
@@ -391,7 +391,7 @@ window.SVT = window.SVT || {};
     return h("div", { class: "vault-odds" }, RAR.slice(0, V.ROLLED).map((r, i) => h("div", { class: "vault-odd r-" + r.id }, h("b", { text: r.name }), h("span", { text: pct(p[i]) }))));
   }
 
-  let lastPick = null;
+  let lastPick = null, pickOpen = false;
   function openVault() {
     const { h } = SVT.ui;
     busy = false;
@@ -421,10 +421,14 @@ window.SVT = window.SVT || {};
           h("div", { class: "vault-mode" },
             h("button", { class: "vault-lab any" + (labPick === ANY ? " on" : ""), onclick: () => { labPick = ANY; openVault(); } },
               h("span", { text: "🎲 Random mine" }), h("b", { text: "🪙 " + SVT.vaultCoins() + " · every roll picks a mine" })),
-            h("button", { class: "vault-lab pick" + (labPick && labPick !== ANY ? " on" : ""), onclick: () => { labPick = labs.find((l) => l.id === lastPick) ? lastPick : labs[0].id; lastPick = labPick; openVault(); } },
+            h("button", { class: "vault-lab pick" + (labPick && labPick !== ANY ? " on" : ""), onclick: () => { labPick = labs.find((l) => l.id === lastPick) ? lastPick : labs[0].id; lastPick = labPick; pickOpen = true; openVault(); } },
               h("span", { text: "📍 Select mine" }), h("b", { text: labs.length + (labs.length === 1 ? " mine" : " mines") + " with coins ▾" }))),
-          labPick && labPick !== ANY ? h("select", { class: "vault-lab-select", "aria-label": "Mine to roll at", onchange: (e) => { labPick = lastPick = e.currentTarget.value; openVault(); } },
-            labs.map((l) => h("option", { value: l.id, selected: l.id === labPick ? "" : null, text: l.icon + " " + l.name + " · 🪙 " + (v.coins[l.id] || 0) + (SVT.vaultWild() ? " +" + SVT.vaultWild() + " wild" : "") }))) : null,
+          // v0.52.3 (user: the rarity drop-down "is the style I want for all drop downs"): the mine list folds like them
+          labPick && labPick !== ANY ? (() => { const cur = labs.find((l) => l.id === labPick);
+            return h("details", { class: "fold vault-lab-select", open: pickOpen ? "" : null, ontoggle: (e) => { pickOpen = e.currentTarget.open; } },
+              h("summary", { text: "📍 " + cur.icon + " " + cur.name + " · 🪙 " + (v.coins[cur.id] || 0) + " (" + labs.length + (labs.length === 1 ? " mine)" : " mines)") }),
+              h("div", { class: "fold-body vault-lab-opts" }, labs.map((l) => h("button", { class: "vault-lab-opt" + (l.id === labPick ? " on" : ""), onclick: () => { labPick = lastPick = l.id; pickOpen = false; openVault(); } },
+                h("span", { text: l.icon + " " + l.name }), h("b", { text: "🪙 " + (v.coins[l.id] || 0) + (SVT.vaultWild() ? " +" + SVT.vaultWild() + " wild" : "") }))))); })() : null,
           labPick && labPick !== ANY ? h("span", { class: "vault-lab-cats", "aria-label": "Makes: " + SVT.vaultLabCats(labPick).map((c) => CATS[c]).join(", ") },
             h("small", { class: "muted", text: "Makes: " }), SVT.vaultLabCats(labPick).map((c) => h("i", { class: "vault-cat-ic" + (needCats.includes(c) ? " need" : ""), title: CATS[c], text: catIcon(c) }))) : null)
         : h("p", { class: "vault-empty", text: "No coins yet. Raise a lab's IPO to earn " + V.COIN_PER_BEAT + " coins, then replay a beaten lab from the map for " + V.COIN_PER_BEAT + " more." }),
@@ -643,7 +647,7 @@ window.SVT = window.SVT || {};
     const byRar = RAR.map((r, i) => i).reverse();
     const shelf = (i) => {
       const mine = v.items.filter((x) => x.rar === i);
-      return h("details", { class: "vault-shelf vault-rarshelf r-" + RAR[i].id, open: rarOpen.has(i) ? "" : null, ontoggle: (e) => { if (e.currentTarget.open) rarOpen.add(i); else rarOpen.delete(i); } },
+      return h("details", { class: "fold vault-shelf vault-rarshelf r-" + RAR[i].id, open: rarOpen.has(i) ? "" : null, ontoggle: (e) => { if (e.currentTarget.open) rarOpen.add(i); else rarOpen.delete(i); } },
         h("summary", { class: "r-" + RAR[i].id, text: RAR[i].name + (i >= 4 ? " ★" : "") + " (" + mine.length + ")" }),
         mine.length ? CAT_ORDER.filter((c) => mine.some((x) => SVT.itemCat(x) === c)).map((c) => h("div", { class: "vault-typegroup" },
           h("h4", { class: "vault-type", text: catIcon(c) + " " + CATS[c] }),
@@ -655,8 +659,8 @@ window.SVT = window.SVT || {};
       v.items.length ? null : h("p", { class: "vault-empty", text: "Nothing on the shelves yet. Roll a coin to get your first collectible." }),
       // v0.52.2: the merge list folds too (Max merge stays in view), so the rarity drop-downs sit near the top
       merges.length ? h("button", { class: "btn fund-cta vault-merge-all", onclick: () => { const made = SVT.vaultMergeAll(); mergePick = null; SVT.ui.toast("🔀 " + made.length + (made.length === 1 ? " merge" : " merges") + ": " + made.map((it) => RAR[it.rar].name).filter((x, i, a) => a.indexOf(x) === i).join(", "), "big"); if (made.length) reveal(made.sort((a, b) => b.rar - a.rar || b.id - a.id)[0]); else refresh(); }, text: "🔀 Max merge · " + merges.reduce((n, m) => n + Math.floor(m.count / 3), 0) + " now" }) : null,
-      v.items.length ? h("details", { class: "vault-shelf vault-mergebox", open: mergeOpen || mergePick ? "" : null, ontoggle: (e) => { mergeOpen = e.currentTarget.open; } },
-        h("summary", { text: "🔀 Merge (" + merges.length + ")" + (merges.length ? " · tap to pick what to merge" : "") }),
+      v.items.length ? h("details", { class: "fold vault-shelf vault-mergebox", open: mergeOpen || mergePick ? "" : null, ontoggle: (e) => { mergeOpen = e.currentTarget.open; } },
+        h("summary", { text: "🔀 Merge (" + merges.length + ")" }),
         merges.length ? merges.map(mergeRow) : h("p", { class: "muted small", text: "Three items of the same type and rarity merge into one of the next rarity: a random item of that same type from one of their labs. Items on Chip don't count: take them off first." })) : null,
       v.items.length ? h("p", { class: "muted small vault-vendor", text: "🏪 The vendor buys any item for wild coins: " + RAR.map((r, i) => r.name + " " + fmtCoins(V.SELL[i])).filter((x, i) => i <= 6 || i === RAR.length - 1).join(", ").replace(/, ([^,]*)$/, ", … $1") + ". Tap Sell twice on an item." }) : null,
       byRar.map(shelf)));

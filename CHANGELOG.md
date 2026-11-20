@@ -2,6 +2,13 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.52.3 (2026-11-20)
+- Coins flying from a floor's crate to the lift now leave from the bottom of the crate, so they no longer cover the stored-money number.
+- Every lab now has its own themed animation on each floor's back wall: cars rising on a lift and spinning wheels in the car plants, a grill with flipping patties and steam in Robo Kitchen, notes and guitars in the studio, launching rockets in space labs, falling snow and waddling penguins in the polar labs, and so on for all 70 labs and the Viking raid. They move while the floor works, and even floors mirror the layout.
+- Tech Vault: the five rarities above Ascended (Transcendent, Primordial, Infinite, Omega, Singularity) are gone. Ascended is the top rarity and the one that binds to Chip (+1.75 each). Saved items above Ascended become Ascended, and Singularity binds made before keep their +3.
+- The map folds: Silicon Valley, The Frontier, Legends and the Islands each sit in their own drop-down (only the region with your current lab starts open).
+- Every drop-down in the game now uses the Vault rarity style: map regions, Islands, Beaten labs, Select mine (now a fold-out list of mines instead of a phone picker), Chip still needs, and Merge.
+
 ## v0.52.2 (2026-11-20)
 
 - Less lag on Hire max and Max all. Each hire or level used to redraw the whole screen (25 redraws for one Hire max, and hundreds of unlock pop-ups for one Max all), and Max all re-measured the whole lab for every option on every step. Now the screen redraws once at the end with one pop-up, and Max all works about 10× faster with the same results.
