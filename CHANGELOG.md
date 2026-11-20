@@ -2,6 +2,9 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.53.3 (2026-11-20)
+- One manager per seat again (v0.53.2's shared seat is undone). Tapping Assign on a regular manager now swaps out the super manager on that seat, and Seat here on a super manager swaps out the regular one. Before, assigning a regular manager to a seat with a super manager did nothing you could see.
+
 ## v0.53.1 (2026-11-20)
 - The manager panel has two tabs: 🦸 Super managers on the left and 👔 Regular managers on the right. Regular is selected every time you open it. Super lists the super managers that fit the seat, with Seat here, and a Headhunter Slots button at the bottom.
 

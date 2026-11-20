@@ -886,6 +886,11 @@ window.SVT = window.SVT || {};
     if (!m || m.role !== roleOf(kind)) return false;
     const from = SVT.slotOfMgr(lab, id);
     if (from) delete lab.assign[from];
+    // v0.53.3 (user: "I want them to unassign the other. The issue was they weren't swapping when I clicked assign"):
+    // one manager per seat. Assigning a regular manager sends the seat's super manager back to the team (and seating a
+    // super manager benches the regular one, js/supers.js).
+    const sup = SVT.superAt ? SVT.superAt(lab, SVT.slotKey(kind, n)) : null;
+    if (sup) SVT.superUnseat(sup.id, true);
     lab.assign[SVT.slotKey(kind, n)] = id;
     emit("assign", { id });
     emit("change");
