@@ -255,11 +255,14 @@ window.SVT = window.SVT || {};
   // Assign below, ‹ › to the next slot. Without one it is the roster for a role. Hire is pinned at the bottom.
   let mgrType = "all"; // ability-type filter on the manager panels: "all", "speed", "storage" or "discount" (price)
   const MGR_TYPES = [["all", "✨", "All"]].concat(Object.keys(B.ABILITY_KINDS).map((k) => [k, B.ABILITY_KINDS[k].icon, B.ABILITY_KINDS[k].name]));
-  function openManagers(role, kind, n, _back, dir) {
+  // v0.53.1 (user: "2 tabs. Regular managers on the right which is auto selected and then you can open up super
+  // managers on the left"): every fresh open starts on Regular; rebuilds after an action and ‹ › keep the tab.
+  function openManagers(role, kind, n, _back, dir, tab) {
     sheetCtx = { role, kind, n };
+    const mgrTab = tab === "super" ? "super" : "regular";
     const L = lab();
     const here = kind ? SVT.slotKey(kind, n) : null;
-    const reopen = () => openManagers(role, kind, n);
+    const reopen = () => openManagers(role, kind, n, null, null, mgrTab);
     const current = kind ? SVT.mgrOf(L, kind, n) : null;
     // Free managers first, then managers busy elsewhere (greyed out at the bottom). Within each, grouped by ability
     // type (speed, storage, then price) with the best rarity at the top of each group. SVT.owned is already in
@@ -293,7 +296,6 @@ window.SVT = window.SVT || {};
         top = mgrCard(current, { assigned: true, buttons: [h("button", { class: "btn unassign", onclick: () => { SVT.unassign(current.id); reopen(); }, text: "Unassign" }), use] });
       } else top = h("li", { class: "mcard empty-slot" }, h("div", { class: "portrait" }, h("span", { class: "plus", text: "+" })), h("div", { class: "minfo" }, h("b", { text: "Nobody yet" }), h("span", { class: "muted", text: "Assign one below or hire a new one." })));
       parts.push(h("div", { class: "sec-label", text: "Assigned manager:" }), h("ul", { class: "mlist" }, top));
-      if (SVT.superPicker) parts.push(SVT.superPicker(kind, n, reopen, mgrCard)); // v0.53: seat a super manager here
     } else {
       parts.push(h("div", { class: "filters", role: "tablist" }, ["floor", "freight", "commercial"].map((ro) =>
         h("button", { class: "filter" + (ro === role ? " on" : ""), role: "tab", "aria-selected": ro === role ? "true" : "false", onclick: () => openManagers(ro, null, 0),
@@ -348,11 +350,24 @@ window.SVT = window.SVT || {};
     let nav = null;
     if (here) {
       const slots = nodeList(), i = Math.max(0, slots.findIndex(([k, m]) => k === kind && m === n));
-      const go = (d) => { const [k, m] = slots[(i + d + slots.length) % slots.length]; openManagers(k, k, m, null, d); };
+      const go = (d) => { const [k, m] = slots[(i + d + slots.length) % slots.length]; openManagers(k, k, m, null, d, mgrTab); };
       nav = { prev: () => go(-1), next: () => go(1), pos: (i + 1) + " of " + slots.length, dir };
     }
-    sheet(here ? SVT.slotName(here) + " Manager" : "Managers", h("div", { class: "sheet-body mgr-panel" }, parts),
-      { icon: "👔", nav, foot: h("div", { class: "panel-foot hire-row" }, hire, hireMax) });
+    // Tabs: 🦸 Super on the left, 👔 Regular on the right (selected on open).
+    const supN = SVT.superList ? SVT.superList().filter((m) => SVT.superFits(m, role)).length : 0;
+    const tabBtn = (t, ic, label) => h("button", { class: "filter mgr-tab" + (t === mgrTab ? " on" : ""), role: "tab", "aria-selected": t === mgrTab ? "true" : "false",
+      onclick: () => openManagers(role, kind, n, null, null, t) }, h("span", { "aria-hidden": "true", text: ic }), h("small", { text: label }));
+    const tabs = h("div", { class: "filters mgr-tabs", role: "tablist", "aria-label": "Manager kind" },
+      tabBtn("super", "🦸", "Super managers " + supN), tabBtn("regular", "👔", "Regular managers " + SVT.owned(L, role).length));
+    let body = [tabs].concat(parts), foot = h("div", { class: "panel-foot hire-row" }, hire, hireMax);
+    if (mgrTab === "super") {
+      const sup = here ? parts.slice(0, 2).concat(SVT.superPicker(kind, n, reopen, mgrCard))
+        : [parts[0], h("div", { class: "sh-list" }, SVT.superList().filter((m) => SVT.superFits(m, role)).sort((a, b) => b.rar - a.rar || b.stars - a.stars).map((m) => SVT.superCard(m))),
+          supN ? h("p", { class: "muted small", text: "Tap a seat on the lab screen to seat one." }) : h("p", { class: "muted small", text: "No super managers for this role yet." })];
+      body = [tabs].concat(sup);
+      foot = h("div", { class: "panel-foot hire-row" }, h("button", { class: "btn fund-cta big hire", onclick: () => SVT.openSupers(), text: "🎰 Headhunter Slots · 💠 " + fmt(SVT.superCoins()) }));
+    }
+    sheet(here ? SVT.slotName(here) + " Manager" : "Managers", h("div", { class: "sheet-body mgr-panel" }, body), { icon: "👔", nav, foot });
     update();
   }
   SVT.openManagers = openManagers;

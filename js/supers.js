@@ -431,8 +431,7 @@ window.SVT = window.SVT || {};
     }, text: m.at ? "Move here" : "Seat here" })])))
       : h("p", { class: "muted small", text: SVT.superCount() ? "None of your super managers fit this seat." : "No super managers yet." });
     return h("div", { class: "sh-pick" },
-      h("div", { class: "sec-label", text: "🦸 Super managers:" }), body,
-      h("button", { class: "btn small hh-open", onclick: () => SVT.openSupers(), text: "🎰 Headhunter Slots · 💠 " + SVT.fmt(st().coins) }));
+      h("div", { class: "sec-label", text: "🦸 Super managers that fit this seat:" }), body);
   };
 
   // Settings: the cheat code box.

@@ -2,6 +2,9 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.53.1 (2026-11-20)
+- The manager panel has two tabs: 🦸 Super managers on the left and 👔 Regular managers on the right. Regular is selected every time you open it. Super lists the super managers that fit the seat, with Seat here, and a Headhunter Slots button at the bottom.
+
 ## v0.53.0 (2026-11-20)
 - Super managers and **Headhunter Slots** (new 🦸 Heroes bubble on the home screen). One spin hires one super manager. The six reels are Area (Floor 48%, Lift 24%, Warehouse 24%, Wild 4%), Rarity (Common to Mythic), Power, Perk, Stars (1 to 5) and Face.
 - Spins cost 💠 Hero coins. Basic costs 500, Pro 1,500 and Elite 5,000, and the pricier spins have better rarity odds (Mythic 0.3%, 1% and 4%). Legendary or better is guaranteed within 40 spins. 🎰 Jackpot: a 5-star Rare or better gives the spin back. Hold keeps the last spin's area and power, perk or face for the next spin, for +50% a spin.
