@@ -1727,3 +1727,8 @@ details.fold.vault-lab-select > summary { color: #8e44ad; }
 .cheat-input { flex: 1; min-width: 0; padding: 8px 10px; border-radius: 10px; border: 2px solid #9fb5c4; font: 600 1rem var(--f-body); }
 .vault.heroes .vault-foot .btn:not(.fund-cta) { background: #fff; color: #2d72bd; border: 3px solid #2d72bd; }
 .mcard .portrait .av.suph { width: 56px; height: 56px; margin: auto; }
+/* v0.53.1: Super | Regular tabs on the manager panel */
+.mgr-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 8px; }
+.mgr-tabs .mgr-tab { display: flex; align-items: center; justify-content: center; gap: 6px; }
+.mgr-tabs .mgr-tab small { font-weight: 800; }
+.panel-foot.hire-row > .btn:only-child { grid-column: 1 / -1; flex: 1 1 100%; width: 100%; }
