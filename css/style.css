@@ -1585,3 +1585,11 @@ body:has(> #rush, > #bugs) > #app * { animation-play-state: paused !important; }
 .vault-lab-select { width: 100%; min-width: 0; padding: 10px 12px; border-radius: 12px; border: 3px solid #8e44ad; background: #fff; font: 700 1rem inherit; }
 .vault-labs .vault-lab-cats { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
 details.vault-needs > summary { cursor: pointer; font-weight: 700; }
+/* v0.52.2: one fold-out per rarity in the Items tab, grouped by type inside */
+details.vault-rarshelf > summary { cursor: pointer; font: 1.05rem var(--f-display); padding: 4px 0; color: var(--rc, inherit); }
+details.vault-rarshelf[open] > summary { margin-bottom: 6px; }
+.vault-typegroup { display: grid; gap: 8px; margin-bottom: 8px; }
+.vault-type { margin: 4px 0 0; font-size: .85rem; color: #5a4a7a; }
+details.vault-mergebox > summary { cursor: pointer; font: 1.05rem var(--f-display); padding: 4px 0; }
+details.vault-rarshelf { padding-top: 2px; padding-bottom: 2px; margin-top: 0; margin-bottom: 0; }
+details.vault-rarshelf:not([open]) > summary { padding: 2px 0; }

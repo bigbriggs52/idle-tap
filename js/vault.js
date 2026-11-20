@@ -631,22 +631,35 @@ window.SVT = window.SVT || {};
         SVT.itemArt(it, "mini"),
         h("span", { class: "vault-pick-body" }, h("b", { text: SVT.itemName(it) }), h("small", { class: "r-" + it.rarity, text: "🔒 On Chip · take it off to merge" })))))) : null);
   }
+  const rarOpen = new Set();
+  let mergeOpen = false;
   function gallery() {
     const { h } = SVT.ui;
     const v = S();
     // v0.50.3 (user: "Sort them by rarity"): shelves by rarity, rarest first; Chip's bonus comes from rarity alone.
-    const byRar = RAR.map((r, i) => i).reverse().filter((i) => v.items.some((x) => x.rar === i));
+    // v0.52.2 (user: "create a drop down for each rarity. And also have the drop down even if it's not in inventory for
+    // that rarity. Then sort them in those drop downs by type"): every rarity is a fold-out, even an empty one, and
+    // inside it the items are grouped by type (where Chip wears them), strongest bonus first.
+    const byRar = RAR.map((r, i) => i).reverse();
+    const shelf = (i) => {
+      const mine = v.items.filter((x) => x.rar === i);
+      return h("details", { class: "vault-shelf vault-rarshelf r-" + RAR[i].id, open: rarOpen.has(i) ? "" : null, ontoggle: (e) => { if (e.currentTarget.open) rarOpen.add(i); else rarOpen.delete(i); } },
+        h("summary", { class: "r-" + RAR[i].id, text: RAR[i].name + (i >= 4 ? " ★" : "") + " (" + mine.length + ")" }),
+        mine.length ? CAT_ORDER.filter((c) => mine.some((x) => SVT.itemCat(x) === c)).map((c) => h("div", { class: "vault-typegroup" },
+          h("h4", { class: "vault-type", text: catIcon(c) + " " + CATS[c] }),
+          mine.filter((x) => SVT.itemCat(x) === c).sort((a, b) => b.boost - a.boost || b.id - a.id).map((x) => itemCard(x))))
+          : h("p", { class: "muted small", text: "None yet." + (i >= V.ROLLED ? " Merge three " + RAR[i - 1].name + " items of one type to make one." : "") }));
+    };
     const merges = SVT.vaultMerges();
     shell(h("div", { class: "vault-body" },
       v.items.length ? null : h("p", { class: "vault-empty", text: "Nothing on the shelves yet. Roll a coin to get your first collectible." }),
-      v.items.length ? h("div", { class: "vault-shelf" },
-        h("h3", { text: "🔀 Merge (" + merges.length + ")" }),
-        merges.length ? h("button", { class: "btn fund-cta vault-merge-all", onclick: () => { const made = SVT.vaultMergeAll(); mergePick = null; SVT.ui.toast("🔀 " + made.length + (made.length === 1 ? " merge" : " merges") + ": " + made.map((it) => RAR[it.rar].name).filter((x, i, a) => a.indexOf(x) === i).join(", "), "big"); if (made.length) reveal(made.sort((a, b) => b.rar - a.rar || b.id - a.id)[0]); else refresh(); }, text: "🔀 Max merge · " + merges.reduce((n, m) => n + Math.floor(m.count / 3), 0) + " now" }) : null,
+      // v0.52.2: the merge list folds too (Max merge stays in view), so the rarity drop-downs sit near the top
+      merges.length ? h("button", { class: "btn fund-cta vault-merge-all", onclick: () => { const made = SVT.vaultMergeAll(); mergePick = null; SVT.ui.toast("🔀 " + made.length + (made.length === 1 ? " merge" : " merges") + ": " + made.map((it) => RAR[it.rar].name).filter((x, i, a) => a.indexOf(x) === i).join(", "), "big"); if (made.length) reveal(made.sort((a, b) => b.rar - a.rar || b.id - a.id)[0]); else refresh(); }, text: "🔀 Max merge · " + merges.reduce((n, m) => n + Math.floor(m.count / 3), 0) + " now" }) : null,
+      v.items.length ? h("details", { class: "vault-shelf vault-mergebox", open: mergeOpen || mergePick ? "" : null, ontoggle: (e) => { mergeOpen = e.currentTarget.open; } },
+        h("summary", { text: "🔀 Merge (" + merges.length + ")" + (merges.length ? " · tap to pick what to merge" : "") }),
         merges.length ? merges.map(mergeRow) : h("p", { class: "muted small", text: "Three items of the same type and rarity merge into one of the next rarity: a random item of that same type from one of their labs. Items on Chip don't count: take them off first." })) : null,
       v.items.length ? h("p", { class: "muted small vault-vendor", text: "🏪 The vendor buys any item for wild coins: " + RAR.map((r, i) => r.name + " " + fmtCoins(V.SELL[i])).filter((x, i) => i <= 6 || i === RAR.length - 1).join(", ").replace(/, ([^,]*)$/, ", … $1") + ". Tap Sell twice on an item." }) : null,
-      byRar.map((i) => h("div", { class: "vault-shelf vault-rarshelf" },
-        h("h3", { class: "r-" + RAR[i].id, text: RAR[i].name + (i >= 4 ? " ★" : "") + " (" + v.items.filter((x) => x.rar === i).length + ")" }),
-        v.items.filter((x) => x.rar === i).sort((a, b) => b.boost - a.boost || b.id - a.id).map((x) => itemCard(x))))));
+      byRar.map(shelf)));
   }
 
   // Trophies: every lab beaten (with how often and its coins), the inventory totals by rarity, and Chip's slots.
@@ -670,7 +683,7 @@ window.SVT = window.SVT || {};
   SVT.openVault = () => { tab = "roll"; openVault(); };
   SVT.openGallery = () => { tab = "gallery"; openVault(); };
   SVT.openChip = (slot) => { tab = "chip"; slotPick = slot || null; openVault(); };
-  SVT.openMerge = () => { tab = "gallery"; openVault(); };
+  SVT.openMerge = () => { tab = "gallery"; mergeOpen = true; openVault(); };
   SVT.closeVault = close;
   SVT.VAULT_DATA = { COLORS, FINISHES, SIZES, MODS, SIGNATURE };
 })();

@@ -19,9 +19,9 @@ window.SVT = window.SVT || {};
   }
 
   const B = {
-    VERSION: "0.52.1",
+    VERSION: "0.52.2",
     // Release time in UTC, set with each release. Shown after the version in the player's local time.
-    BUILT: "2026-11-20T07:05Z",
+    BUILT: "2026-11-20T07:15Z",
     FLOORS: 30,
     // v0.26: lower caps, because the IPO needs every floor, the lift and the warehouse at max level. The hubs cap at
     // Lv 400: that is the income every lab ends with, so the deep floors must stay affordable against it, and
@@ -250,7 +250,8 @@ window.SVT = window.SVT || {};
   // lab's price scale, and Viking hires followed the shaft prices.
   // v0.42.1 (user: "I'm getting too many managers too quickly, make the curve harder"): each hire costs 80% more
   // than the one before (was 30%): the 5th is about $2.6k, the 10th $50k, the 20th $9M.
-  B.HIRE = { first: 250, grow: 1.8 };
+  // v0.52.2 (user: "Make the manager slightly more expensive to buy ... Start cost should be 500"): $500 first.
+  B.HIRE = { first: 500, grow: 1.8 };
   B.hireCost = (role, k) => B.HIRE.first * Math.pow(B.HIRE.grow, k || 0);
 
   // Per-lab price scaling (see SVT.costScale). v0.28: every lab's floor prices grow 6x per floor (grow 0.6, was 0.72)

@@ -7,7 +7,20 @@ window.SVT = window.SVT || {};
   const listeners = [];
 
   SVT.on = (fn) => listeners.push(fn);
-  const emit = (type, data) => listeners.forEach((fn) => fn(type, data || {}));
+  // v0.52.2 (user: "a lot of lag when I click buy 25 or click update"): a bulk action (Hire max, Max all) used to fire
+  // an event per hire or level, and each one redrew the whole screen (25 redraws for one Hire max, hundreds of unlock
+  // toasts for one Max all). SVT.quietly holds them back and replays only the last of each kind at the end.
+  let quiet = 0, held = null;
+  const emit = (type, data) => {
+    if (quiet) { held.set(type, data); return; }
+    listeners.forEach((fn) => fn(type, data || {}));
+  };
+  SVT.quietly = (fn) => {
+    if (!quiet++) held = new Map();
+    try { return fn(); } finally {
+      if (!--quiet) { const h = held; held = null; h.delete("change"); h.forEach((d, type) => emit(type, d)); emit("change"); }
+    }
+  };
 
   // ---------- number formatting: K, M, B, T, then aa, ab, ac ... ----------
   const SUF = ["", "K", "M", "B", "T"];
@@ -727,7 +740,8 @@ window.SVT = window.SVT || {};
   // hiring while the cash lasts, up to HIRE_MAX_PRESS a press. The best hires then take the seats: floors through
   // Auto-assign (rarest deepest), the lift or warehouse seat goes to a rarer hire unless the sitter is mid-ability.
   SVT.HIRE_MAX_PRESS = 25;
-  SVT.hireMany = (role, limit) => {
+  SVT.hireMany = (role, limit) => SVT.quietly(() => hireMany(role, limit));
+  function hireMany(role, limit) {
     const lab = SVT.lab(), t = now();
     let open = limit === undefined ? SVT.HIRE_MAX_PRESS : Math.min(limit, SVT.HIRE_MAX_PRESS);
     const hired = [];
@@ -745,7 +759,7 @@ window.SVT = window.SVT || {};
       }
     }
     return hired;
-  };
+  }
   // How many hires "Hire max" would make right now (same rule, no side effects).
   SVT.hireManyQuote = (lab, role) => {
     let open = SVT.HIRE_MAX_PRESS, cash = lab.cash, k = lab.hires[role] || 0, n = 0;
@@ -790,6 +804,18 @@ window.SVT = window.SVT || {};
   SVT.bestUpgrade = (lab, t) => {
     t = (t || now()) + 1e9; // far past every running ability: steady-state rates
     const r0 = SVT.rates(lab, t, true), base = r0.income;
+    // v0.52.2 (user: "a lot of lag when I click ... update"): one node changes per try, so the income after a buy is
+    // worked out from r0 by swapping that node's own number (multipliers don't depend on level) instead of re-running
+    // SVT.rates for every node on every step. Same result, about 30x faster on a 30-floor lab.
+    const raid = SVT.isRaid(lab), depth = lab.floors.length, P = SVT.prestigeMult(lab);
+    const cm = SVT.cashMult(lab, t, true), extra = r0.direct * SVT.cashMult(lab, t);
+    const quickIncome = (kind, n, L) => {
+      let b = r0.build, f = r0.freight, c = r0.commercial;
+      if (kind === "floor") { const L0 = lab.floors[n - 1].lvl, o0 = B.floorOutput(n, L0); b += o0 > 0 ? r0.floors[n - 1] * (B.floorOutput(n, L) / o0 - 1) : B.floorOutput(n, L) * P * SVT.nodeMult(lab, "floor", n, t); }
+      else if (kind === "freight") f *= B.freightCap(L, depth, raid) / B.freightCap(lab.freight.lvl, depth, raid);
+      else c *= B.commercialCap(L, raid) / B.commercialCap(lab.commercial.lvl, raid);
+      return Math.min(b, f, c) * cm + extra;
+    };
     let best = null;
     for (const [kind, n] of SVT.upgradeOrder(lab)) {
       if (kind === "commercial" && r0.commercial >= r0.freight) continue;
@@ -797,9 +823,7 @@ window.SVT = window.SVT || {};
       const q = SVT.upgradeChunk(lab, kind, n);
       if (!q) continue;
       const node = SVT.nodeOf(lab, kind, n);
-      node.lvl += q.count;
-      const gain = SVT.rates(lab, t, true).income - base;
-      node.lvl -= q.count;
+      const gain = quickIncome(kind, n, SVT.levelOf(lab, kind, n) + q.count) - base;
       const score = gain / q.cost;
       if (!best || score > best.score) best = { kind, n, q, gain, score, base };
     }
@@ -813,7 +837,8 @@ window.SVT = window.SVT || {};
     }
     return best;
   };
-  SVT.upgradeAll = () => {
+  SVT.upgradeAll = () => SVT.quietly(upgradeAll);
+  function upgradeAll() {
     const lab = SVT.lab(), t = now();
     let levels = 0, spent = 0, nodes = 0;
     const order = [];
@@ -830,7 +855,7 @@ window.SVT = window.SVT || {};
     }
     if (levels) emit("change");
     return { levels, spent, nodes, order };
-  };
+  }
   // Roughly how many levels Max all could buy right now (each node quoted against the full cash; no side effects).
   SVT.upgradeAllQuote = (lab) => {
     let can = 0;

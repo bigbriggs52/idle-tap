@@ -92,7 +92,7 @@ const kinds = await page.evaluate(async () => {
   Math.random = rnd;
   out.hires = { ranks: ranks.size, bad };
   out.kinds = Object.keys(B.ABILITY_KINDS).join() + "|" + ["floor", "freight", "commercial"].map((r) => B.ABILITIES[r].length).join();
-  // v0.42: one hire price everywhere, $250 then +30% a hire
+  // v0.42: one hire price everywhere (v0.52.2: $500 first)
   out.price = { first: B.hireCost("floor", 0), second: B.hireCost("commercial", 1), lab: SVT.hireCost(L, "freight") === B.hireCost("freight", L.hires.freight), sameRoles: B.hireCost("floor", 3) === B.hireCost("freight", 3) };
   // timers are absolute in the save
   const m = SVT.owned(L, "freight")[0]; SVT.assign(m.id, "freight", 0); m.activeUntil = 0; m.cdUntil = 0; SVT.activate("freight", 0);
@@ -119,7 +119,7 @@ await page.screenshot({ path: out + "/04c-ability-kinds.png" });
     if (!k.kindOk || k.cls !== "ab-speed" || k.speedMult !== k.boost || k.loadMult !== 1 || k.off !== 0 || Math.abs(k.ratio - k.boost) > 0.05 || !k.durOk || k.boost !== want[r][0] || k.active !== want[r][1] || k.cooldown !== want[r][2]) errors.push("Speed tier " + r + " wrong (v0.42): " + JSON.stringify(k));
   }
   if (kinds.hires.bad || kinds.hires.ranks < 4 || kinds.kinds !== "speed|1,1,1") errors.push("Hires are not all Speed (v0.42): " + JSON.stringify(kinds.hires) + " " + kinds.kinds);
-  if (kinds.price.first !== 250 || Math.abs(kinds.price.second - 450) > 1e-9 || !kinds.price.lab || !kinds.price.sameRoles) errors.push("Hire prices not uniform (v0.42): " + JSON.stringify(kinds.price));
+  if (kinds.price.first !== 500 || Math.abs(kinds.price.second - 900) > 1e-9 || !kinds.price.lab || !kinds.price.sameRoles) errors.push("Hire prices not uniform (v0.42): " + JSON.stringify(kinds.price));
   if (!kinds.persist) errors.push("Ability timers are not saved as absolute times");
   if (!kinds.noSwap || !kinds.noSell) errors.push("Hire replaced a mid-ability manager, or selling still exists (v0.31.2)");
   if (!kinds.migrate) errors.push("Old Storage/Price/special managers were not migrated to Speed (v0.42)");
@@ -241,6 +241,10 @@ const maxes = await page.evaluate(() => {
     let c = 1; while (c <= SVT.maxLevel(D, "commercial") - 1) { D.commercial.lvl = c; const r = SVT.rates(D); if (r.commercial >= r.freight) break; c++; }
     D.cash = 1e300; const r = SVT.rates(D), b = SVT.bestUpgrade(D);
     return { whFaster: r.commercial >= r.freight, whMaxed: D.commercial.lvl >= SVT.maxLevel(D, "commercial"), pick: b && b.kind }; })();
+  // v0.52.2: Max all's quick income estimate matches a full SVT.rates for the chosen buy, and a Hire max redraws once
+  out.quick = (() => { const D = SVT.newLab("garage"); while (D.floors.length < 12) D.floors.push({ lvl: 1 + D.floors.length * 3, stock: 0, left: 0 }); D.freight.lvl = 40; D.commercial.lvl = 20; D.cash = 1e12;
+    const t = SVT.now() + 1e9, b = SVT.bestUpgrade(D), node = SVT.nodeOf(D, b.kind, b.n), r0 = SVT.rates(D, t, true).income; node.lvl += b.q.count; const r1 = SVT.rates(D, t, true).income; node.lvl -= b.q.count;
+    return Math.abs((r1 - r0) / b.gain - 1) < 1e-9; })();
   // v0.50.1: Max all spends every last affordable level, even the warehouse the lift-first rule skips
   out.spendAll = (() => { const D = SVT.newLab("garage"), keep = SVT.state().labs, ka = SVT.state().activeLab;
     while (D.floors.length < 30) D.floors.push({ lvl: 1, stock: 0, left: 0 });
@@ -266,6 +270,7 @@ if (!(maxes.floor.seats >= 1) || maxes.floor.q !== maxes.floor.got || !(maxes.fl
 if (!(maxes.lift.got > 1) || !maxes.lift.assigned || !maxes.lift.bestSeated || maxes.lift.again !== 0 || !maxes.noCash) errors.push("Hire max (lift) wrong: " + JSON.stringify(maxes.lift));
 if (!(maxes.all.levels > 0) || maxes.all.sum !== maxes.all.levels || !maxes.all.buyKept || maxes.all.again !== 0 || maxes.all.canQ < 1 || !maxes.all.firstIsLimit || !(maxes.all.firstGain > 0) || !(maxes.all.income1 > maxes.all.income0)) errors.push("Max all wrong (v0.40.2: best upgrade for the backlog): " + JSON.stringify(maxes.all));
 if (!maxes.slowLift.whFaster || maxes.slowLift.whMaxed || maxes.slowLift.pick === "commercial") errors.push("Max all bought the warehouse while the lift was slower (v0.49.1) " + JSON.stringify(maxes.slowLift));
+if (!maxes.quick) errors.push("Max all's quick income estimate is off (v0.52.2)");
 if (JSON.stringify(maxes.spendAll) !== JSON.stringify({ bought: true, left: 0, whMaxed: true })) errors.push("Max all left affordable upgrades unbought (v0.50.1) " + JSON.stringify(maxes.spendAll));
 if (JSON.stringify(maxes.realLift) !== JSON.stringify({ between: true, floorsAhead: true, pick: "freight" })) errors.push("Max all should keep buying the lift until it keeps up with what the cart really ships (v0.50) " + JSON.stringify(maxes.realLift));
 // v0.49.1: a maxed node says MAX with no ▲ badge, however much cash there is
@@ -958,11 +963,16 @@ const bonus = await page.evaluate(() => {
   return out;
 });
 console.log("bonus", JSON.stringify(bonus));
-// v0.50.3: the item shelves go by rarity, rarest first
+// v0.50.3: the item shelves go by rarity, rarest first; v0.52.2: one fold-out per rarity (all 16, empty ones too),
+// grouped by type inside
 const shelves = await page.evaluate(async () => { SVT.openGallery(); await new Promise((r) => setTimeout(r, 300));
-  const idx = [...document.querySelectorAll(".vault-rarshelf h3")].map((e) => SVT.B.VAULT.RARITIES.findIndex((r) => e.classList.contains("r-" + r.id)));
-  SVT.closeVault(); return { n: idx.length, desc: idx.every((x, i) => x >= 0 && (!i || x < idx[i - 1])) }; });
-if (!(shelves.n >= 2) || !shelves.desc) errors.push("Vault shelves not sorted by rarity (v0.50.3) " + JSON.stringify(shelves));
+  const ds = [...document.querySelectorAll("details.vault-rarshelf")];
+  const idx = ds.map((e) => SVT.B.VAULT.RARITIES.findIndex((r) => e.classList.contains("r-" + r.id)));
+  const full = ds.find((d) => d.querySelector(".vault-card")); if (full) full.open = true;
+  const types = full ? [...full.querySelectorAll(".vault-type")].map((e) => e.textContent) : [];
+  const empty = ds.some((d) => !d.querySelector(".vault-card"));
+  SVT.closeVault(); return { n: idx.length, desc: idx.every((x, i) => x >= 0 && (!i || x < idx[i - 1])), closed: ds.length && !ds.some((d) => d !== full && d.open), types: types.length, uniqueTypes: new Set(types).size, empty }; });
+if (shelves.n !== 16 || !shelves.desc || !shelves.closed || !(shelves.types >= 1) || shelves.types !== shelves.uniqueTypes || !shelves.empty) errors.push("Vault: rarity drop-downs wrong (v0.52.2) " + JSON.stringify(shelves));
 if (!bonus.allHaveBoost || !bonus.mythicBoost) errors.push("Vault: item boosts missing");
 if (JSON.stringify(bonus.tiers) !== JSON.stringify({ n: 16, rolled: 6, div: "divine", divBoost: 1.75, sing: "singularity", singBoost: 4, topStays: true, same: 6, rollTop: 6 })) errors.push("Vault: merge-only rarities wrong (v0.46) " + JSON.stringify(bonus.tiers));
 if (!bonus.wornMerge || !bonus.wornMerge.worn || !bonus.wornMerge.notListed || !bonus.wornMerge.pickRefused || !bonus.wornMerge.stillThere || !bonus.wornMerge.weakestKeeps) errors.push("Vault: an equipped item could be merged " + JSON.stringify(bonus.wornMerge));
