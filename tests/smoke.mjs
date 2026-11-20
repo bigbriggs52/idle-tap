@@ -958,11 +958,16 @@ const bonus = await page.evaluate(() => {
   return out;
 });
 console.log("bonus", JSON.stringify(bonus));
-// v0.50.3: the item shelves go by rarity, rarest first
+// v0.50.3: the item shelves go by rarity, rarest first; v0.52.2: one fold-out per rarity (all 16, empty ones too),
+// grouped by type inside
 const shelves = await page.evaluate(async () => { SVT.openGallery(); await new Promise((r) => setTimeout(r, 300));
-  const idx = [...document.querySelectorAll(".vault-rarshelf h3")].map((e) => SVT.B.VAULT.RARITIES.findIndex((r) => e.classList.contains("r-" + r.id)));
-  SVT.closeVault(); return { n: idx.length, desc: idx.every((x, i) => x >= 0 && (!i || x < idx[i - 1])) }; });
-if (!(shelves.n >= 2) || !shelves.desc) errors.push("Vault shelves not sorted by rarity (v0.50.3) " + JSON.stringify(shelves));
+  const ds = [...document.querySelectorAll("details.vault-rarshelf")];
+  const idx = ds.map((e) => SVT.B.VAULT.RARITIES.findIndex((r) => e.classList.contains("r-" + r.id)));
+  const full = ds.find((d) => d.querySelector(".vault-card")); if (full) full.open = true;
+  const types = full ? [...full.querySelectorAll(".vault-type")].map((e) => e.textContent) : [];
+  const empty = ds.some((d) => !d.querySelector(".vault-card"));
+  SVT.closeVault(); return { n: idx.length, desc: idx.every((x, i) => x >= 0 && (!i || x < idx[i - 1])), closed: ds.length && !ds.some((d) => d !== full && d.open), types: types.length, uniqueTypes: new Set(types).size, empty }; });
+if (shelves.n !== 16 || !shelves.desc || !shelves.closed || !(shelves.types >= 1) || shelves.types !== shelves.uniqueTypes || !shelves.empty) errors.push("Vault: rarity drop-downs wrong (v0.52.2) " + JSON.stringify(shelves));
 if (!bonus.allHaveBoost || !bonus.mythicBoost) errors.push("Vault: item boosts missing");
 if (JSON.stringify(bonus.tiers) !== JSON.stringify({ n: 16, rolled: 6, div: "divine", divBoost: 1.75, sing: "singularity", singBoost: 4, topStays: true, same: 6, rollTop: 6 })) errors.push("Vault: merge-only rarities wrong (v0.46) " + JSON.stringify(bonus.tiers));
 if (!bonus.wornMerge || !bonus.wornMerge.worn || !bonus.wornMerge.notListed || !bonus.wornMerge.pickRefused || !bonus.wornMerge.stillThere || !bonus.wornMerge.weakestKeeps) errors.push("Vault: an equipped item could be merged " + JSON.stringify(bonus.wornMerge));

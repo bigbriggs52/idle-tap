@@ -2,6 +2,12 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.52.2 (2026-11-20)
+
+- The Vault's Items tab has a drop-down for every rarity, Singularity at the top down to Common, including rarities you don't own yet. They start folded; tap one to open it.
+- Inside each drop-down, items are grouped by type (hand, wrist, head, neck, body, feet, floor), with the biggest bonus first.
+- The merge list is folded too, with Max merge still showing above it, so the rarity drop-downs are near the top.
+
 ## v0.52.1 (2026-11-20)
 
 - On the map, beaten labs are folded under a "🏆 Beaten labs" drop-down, so your open labs and the next ones are at the top. Tap it to show them and replay one.
