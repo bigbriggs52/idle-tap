@@ -2,6 +2,10 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.53.4 (2026-11-21)
+- Fixed super managers seeming to seat themselves. A super manager kept its seat through a funding round (or into the next Viking stage), so one left on a deep floor popped back up the moment that floor reopened. Now every funding round and every new Viking stage sends super managers back to the team, the same as regular managers. Seat them again from any seat.
+- Old saves are cleaned up on load: seats on floors that aren't open are cleared, and those super managers go back to the team.
+
 ## v0.53.3 (2026-11-20)
 - One manager per seat again (v0.53.2's shared seat is undone). Tapping Assign on a regular manager now swaps out the super manager on that seat, and Seat here on a super manager swaps out the regular one. Before, assigning a regular manager to a seat with a super manager did nothing you could see.
 

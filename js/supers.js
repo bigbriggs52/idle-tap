@@ -124,11 +124,14 @@ window.SVT = window.SVT || {};
     const z = SVT.state().supers;
     if (!z || !z.seats[lab.id]) return null;
     const id = z.seats[lab.id][key];
-    return id ? z.list[id] || null : null;
+    if (!id) return null;
+    // v0.53.4: a seat on a floor that isn't open (any more) holds no one, so nothing can reappear there later.
+    if (key.startsWith("floor:") && +key.slice(6) > lab.floors.length) return null;
+    return z.list[id] || null;
   };
   SVT.supersIn = (lab) => {
     const z = SVT.state().supers, seats = z && z.seats[lab.id];
-    return seats ? Object.values(seats).map((id) => z.list[id]).filter(Boolean) : [];
+    return seats ? Object.keys(seats).map((k) => SVT.superAt(lab, k)).filter(Boolean) : [];
   };
   const kindOfKey = (key) => (key.startsWith("floor:") ? ["floor", +key.slice(6)] : [key, 0]);
   SVT.superFits = (m, kind) => m.area === "wild" || m.area === kind;
@@ -156,7 +159,23 @@ window.SVT = window.SVT || {};
     if (!quiet) { SVT.save(); if (SVT.render) SVT.render(); }
     return true;
   };
-  SVT.superUnseatLab = (lab) => { SVT.supersIn(lab).forEach((m) => SVT.superUnseat(m.id, true)); };
+  SVT.superUnseatLab = (lab) => {
+    const z = st(), seats = z.seats[lab.id] || {};
+    Object.keys(seats).forEach((k) => { const m = z.list[seats[k]]; if (m) m.at = null; });
+    z.seats[lab.id] = {};
+  };
+  // v0.53.4: clean up old saves: drop seats on floors that are not open, so they can't pop back up.
+  SVT.superTidy = () => {
+    const z = st();
+    for (const id in z.seats) {
+      const lab = SVT.state().labs[id], seats = z.seats[id];
+      for (const k in seats) {
+        const m = z.list[seats[k]], gone = !lab || (k.startsWith("floor:") && +k.slice(6) > lab.floors.length) || !m || !m.at || m.at.lab !== id || m.at.key !== k;
+        if (gone) { if (m && m.at && m.at.lab === id && m.at.key === k) m.at = null; delete seats[k]; }
+      }
+    }
+    SVT.superList().forEach((m) => { if (m.at && (!z.seats[m.at.lab] || z.seats[m.at.lab][m.at.key] !== m.id)) m.at = null; });
+  };
   SVT.superWhere = (m) => {
     if (!m.at) return null;
     const d = m.at.lab === "raid" ? { name: "Viking Raid" } : SVT.labDef(m.at.lab);
