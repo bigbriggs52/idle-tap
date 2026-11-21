@@ -246,6 +246,7 @@ window.SVT = window.SVT || {};
   SVT.resetRaid = () => {
     S.raid = newRaid();
     S.hoard = newHoard();
+    if (S.labs.raid && SVT.superUnseatLab) SVT.superUnseatLab(S.labs.raid);
     delete S.labs.raid;
     if (S.activeLab === "raid") S.activeLab = Object.keys(S.labs)[0] || "garage";
     emit("switch");
@@ -255,6 +256,7 @@ window.SVT = window.SVT || {};
   // Starts a stage from scratch. Only cleared stages and the next one can be raided.
   SVT.startRaid = (s) => {
     if (!(s >= 1 && s <= SVT.raidNext())) return false;
+    if (S.labs.raid && SVT.superUnseatLab) SVT.superUnseatLab(S.labs.raid); // v0.53.4: a new stage starts with no one seated
     const lab = newLab("raid");
     lab.stage = s; lab.won = false;
     lab.cash = SVT.raidStartCash(lab);
@@ -981,6 +983,10 @@ window.SVT = window.SVT || {};
     // v0.53: every round pays Hero coins for Headhunter Slots (more for the IPO, plus any Headhunter perk here).
     // Super managers keep their seats through a round; they leave a lab only when it is beaten.
     if (SVT.superPay) SVT.superPay(lab, r);
+    // v0.53.4 (user: "My super manager keeps randomly assigning itself"): a super manager used to keep its seat through
+    // a round, so one left on floor 12 popped back up the moment floor 12 reopened. Now every round sends super managers
+    // back to the team too, like regular managers; seat them again from any seat.
+    if (SVT.superUnseatLab) SVT.superUnseatLab(lab);
     // v0.26: every round and the IPO pay wild Vault coins, on top of the beat and new-lab coins.
     if (S.vault) S.vault.wild = (S.vault.wild || 0) + B.VAULT.ROUND_COINS;
     emit("raise", { round: r, mult: SVT.prestigeMult(lab), coins: B.VAULT.ROUND_COINS });
@@ -1140,6 +1146,7 @@ window.SVT = window.SVT || {};
         L.freight.lvl = Math.min(L.freight.lvl, B.HUB_MAX); L.commercial.lvl = Math.min(L.commercial.lvl, B.HUB_MAX);
       }
     }
+    if (S.supers && SVT.superTidy) SVT.superTidy(); // v0.53.4: drop stale super manager seats from older saves
     return applyOffline();
   };
 
