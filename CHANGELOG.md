@@ -2,6 +2,9 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.53.6 (2026-11-25)
+- Less lag, about twice the frame rate on a 30-floor lab in testing. Floors scrolled out of view now pause their animations and skip their per-frame updates (a full lab was running about 150 looping animations and 30 progress bars every frame, mostly off screen). The jump buttons no longer force a full page re-layout several times a second, and the themed floor sprites dropped a costly shadow filter.
+
 ## v0.53.5 (2026-11-25)
 - Fixed late floors getting far too easy. From Lv 300 the lift and warehouse get an extra x1.15 power boost each level, but their prices kept rising at the normal x1.14, so they suddenly bought about 1.28x more capacity per level for the same price. Labs reach that point around floor 19-22, and from there on floors opened and maxed in minutes when each earlier floor took 10-20. Lift and warehouse prices now rise with the boost, so a dollar buys the same capacity as before Lv 300 and the late floors keep the pace of the early ones (the last floors in a mid lab now take about 10, 25 and 50 minutes in the simulation, where they took under a minute). Viking Raid is unchanged.
 - Max all now plans the whole spend. It finds the highest income the floors, lift and warehouse can all reach together with your cash, buys exactly the levels each part needs (bottleneck first), and opens the next floor when that's the cheaper way to more income. Before, it bought one bundle at a time, which could overshoot the lift, and once the floors were maxed it spent the rest on lift and warehouse levels nothing could use. In the simulation, the same cash gives about twice as much income on average, and it never gives less than before. Spare cash still gets spent, on whatever is closest to becoming the bottleneck.

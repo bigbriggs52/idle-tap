@@ -1599,7 +1599,7 @@ details.vault-rarshelf:not([open]) > summary { padding: 2px 0; }
 /* ===== v0.52.3: themed floor scenes (cars on a lift, a grill, notes...) on each floor's back wall =====
    Sprites sit in .fx and use the fx-* keyframes; like the line they only move while the floor is working. */
 .floor[data-floor] .fx { position: absolute; left: 116px; right: 82px; top: 14px; bottom: 34px; pointer-events: none; z-index: 1; overflow: hidden; }
-.fx .fxs { position: absolute; display: block; line-height: 1; font-size: 20px; font-style: normal; filter: drop-shadow(0 1px 0 #0003); }
+.fx .fxs { position: absolute; display: block; line-height: 1; font-size: 20px; font-style: normal; }
 .fx .fxs i { display: block; font-style: normal; transform-origin: 50% 100%; animation: var(--fxa) var(--fxt, 1.2s) ease-in-out infinite; animation-delay: var(--d, 0s); animation-play-state: paused; }
 .fx .fxs.run-across { left: 0 !important; right: 0; animation: fx-across var(--fxt, 4s) linear infinite; animation-delay: var(--d, 0s); animation-play-state: paused; }
 .fx .fxs.run-across i { animation: none; display: inline-block; }
@@ -1732,3 +1732,6 @@ details.fold.vault-lab-select > summary { color: #8e44ad; }
 .mgr-tabs .mgr-tab { display: flex; align-items: center; justify-content: center; gap: 6px; }
 .mgr-tabs .mgr-tab small { font-weight: 800; }
 .panel-foot.hire-row > .btn:only-child { grid-column: 1 / -1; flex: 1 1 100%; width: 100%; }
+
+/* v0.53.6: floors out of view stop animating (see watchRow in ui.js) */
+.floor.off *, .floor.off *::before, .floor.off *::after { animation-play-state: paused !important; }
