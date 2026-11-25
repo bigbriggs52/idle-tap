@@ -25,6 +25,19 @@ window.SVT = window.SVT || {};
   // onFrame(el, fn): fn(el) runs every animation frame, for things that move (lift car, cart, progress bars).
   // Only write transforms here so the browser can move them without re-laying out the page.
   const onFrame = (e, fn) => { frames.push({ e, fn }); return e; };
+  // v0.53.6 (user: "It's running laggy"): floors scrolled out of view stop animating and skip their per-frame and
+  // per-tick updates. A 30-floor lab ran ~150 looping animations and 30 progress bars every frame, mostly off screen.
+  const offRows = typeof IntersectionObserver === "function" ? new IntersectionObserver((list) => {
+    for (const en of list) {
+      const row = en.target, off = !en.isIntersecting;
+      if (row.classList.contains("off") === off) continue;
+      row.classList.toggle("off", off);
+      for (const x of frames) if (row.contains(x.e)) x.off = off;
+      for (const x of binds) if (row.contains(x.e)) x.off = off;
+      if (!off) dirty = true;
+    }
+  }, { rootMargin: "200px 0px" }) : null;
+  const watchRow = (row) => { if (offRows) offRows.observe(row); return row; };
   const setText = (e, t) => { if (e.textContent !== t) e.textContent = t; };
   // popText: like setText, but a changed value gives a quick pop so you see it change (skipped on first fill).
   const popText = (e, t) => {
@@ -919,7 +932,7 @@ window.SVT = window.SVT || {};
     abilityBind(scene, "floor", n);
     // While the lift loads here, coins fly from the crate across into the shaft.
     const fly = h("span", { class: "fly", "aria-hidden": "true" }, [0, 1, 2].map((i) => h("span", { class: "coin", style: "--i:" + i, text: "$" })));
-    const row = h("div", { class: "floor tier" + tier, "data-floor": n }, scene, fly);
+    const row = watchRow(h("div", { class: "floor tier" + tier, "data-floor": n }, scene, fly));
     let seen = 0; // keep the coins flying a moment after a short stop so it stays visible
     bind(row, () => {
       const lift = lab().lift, t = performance.now();
@@ -1011,7 +1024,10 @@ window.SVT = window.SVT || {};
   // Idle Miner's jump arrows, bottom left: ⬆ glides back to the top of the mine, ⬇ down to the deepest floor.
   // Each shows only when there is somewhere to go, and you see the page scroll.
   let scrollAnim = 0;
-  const maxScroll = () => document.documentElement.scrollHeight - window.innerHeight;
+  // v0.53.6: the page height is read at most once a second; reading it after the numbers change forced a full layout.
+  let pageH = 0, pageAt = 0, scrollTop = window.scrollY;
+  window.addEventListener("scroll", () => { scrollTop = window.scrollY; }, { passive: true });
+  const maxScroll = (fresh) => { const t = performance.now(); if (fresh || t - pageAt > 1000) { pageH = document.documentElement.scrollHeight; pageAt = t; } return pageH - window.innerHeight; };
   function glideTo(target) {
     cancelAnimationFrame(scrollAnim);
     const y0 = window.scrollY, d = target - y0, t0 = performance.now(), dur = Math.min(900, 300 + Math.abs(d) / 4);
@@ -1026,9 +1042,9 @@ window.SVT = window.SVT || {};
   }
   function jumpBtns() {
     const up = bind(h("button", { class: "jump-btn up", "aria-label": "Back to the top", onclick: () => glideTo(0), text: "⬆" }),
-      (e) => toggle(e, "show", window.scrollY > 240));
-    const down = bind(h("button", { class: "jump-btn down", "aria-label": "Down to the bottom of the mine", onclick: () => glideTo(maxScroll()), text: "⬇" }),
-      (e) => toggle(e, "show", maxScroll() - window.scrollY > 240));
+      (e) => toggle(e, "show", scrollTop > 240));
+    const down = bind(h("button", { class: "jump-btn down", "aria-label": "Down to the bottom of the mine", onclick: () => glideTo(maxScroll(true)), text: "⬇" }),
+      (e) => toggle(e, "show", maxScroll() - scrollTop > 240));
     // v0.39 (user ask): Max all. v0.40.2: each buy goes to whatever is backing up (see SVT.upgradeAll); the toast
     // says where most of the money went.
     const maxAll = bind(h("button", { class: "jump-btn max-all", "aria-label": "Max all upgrades", onclick: () => {
@@ -1347,7 +1363,7 @@ window.SVT = window.SVT || {};
   function update() {
     for (let i = 0; i < binds.length; i++) {
       const b = binds[i];
-      if (b.e.isConnected) b.fn(b.e);
+      if (!b.off && b.e.isConnected) b.fn(b.e);
     }
   }
 
@@ -1553,14 +1569,14 @@ window.SVT = window.SVT || {};
     let lastUi = 0;
     // v0.46.2 (user: "game gets glitchy on rush"): while a full-screen mini game (Rush, Bug Hunt) covers the lab, the
     // lab keeps earning but stops redrawing, so the phone spends every frame on the mini game.
-    let cover = null;
+    let cover = null, coverAt = 0;
     (function loop(t) {
       requestAnimationFrame(loop); // v0.46.3: queued first, so an error below can never stop the game loop
       try { SVT.step(); } catch (e) { SVT.reportError(e, "step"); }
-      if (!(cover && cover.isConnected)) cover = document.querySelector("#rush, #bugs");
+      if (cover ? !cover.isConnected : ++coverAt % 15 === 0) cover = document.querySelector("#rush, #bugs"); // looked up 4x a second, not every frame
       if (!cover) {
         try {
-          for (let i = 0; i < frames.length; i++) { const f = frames[i]; if (f.e.isConnected) f.fn(f.e); }
+          for (let i = 0; i < frames.length; i++) { const f = frames[i]; if (!f.off && f.e.isConnected) f.fn(f.e); }
           if (dirty || t - lastUi > 150) { dirty = false; update(); lastUi = t; }
         } catch (e) { SVT.reportError(e, "screen"); }
       } else dirty = true;
