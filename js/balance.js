@@ -19,9 +19,9 @@ window.SVT = window.SVT || {};
   }
 
   const B = {
-    VERSION: "0.53.4",
+    VERSION: "0.53.5",
     // Release time in UTC, set with each release. Shown after the version in the player's local time.
-    BUILT: "2026-11-21T13:48Z",
+    BUILT: "2026-11-25T22:50Z",
     FLOORS: 30,
     // v0.26: lower caps, because the IPO needs every floor, the lift and the warehouse at max level. The hubs cap at
     // Lv 400: that is the income every lab ends with, so the deep floors must stay affordable against it, and
@@ -214,8 +214,15 @@ window.SVT = window.SVT || {};
   B.levelCost = (kind, n, L, growth) => {
     if (kind === "floor") return B.floorBase(n) * Math.pow(growth || B.FLOOR_GROWTH, L - 1);
     const base = kind === "freight" ? B.freightBase : B.commercialBase;
-    return base * Math.pow(growth || B.HUB_GROWTH, L - 1);
+    return base * Math.pow(growth || B.HUB_GROWTH, L - 1) * B.hubPriceBoost(kind, L, growth);
   };
+  // v0.53.5 (user: "Fix the inconsistency from floor 22 on it is way to easily upgradable after that"): from Lv 300
+  // the lab hubs gain HUB_BOOST over the last 100 levels (x1.15 a level) but their prices kept the usual x1.14, so a
+  // hub level suddenly bought ~1.28x capacity for 1.14x the price. Hubs pass Lv 300 around floor 19-22, and from there
+  // the hubs stopped holding anything back: floors 19-30 opened and maxed in minutes when each earlier floor took
+  // 10-20. Hub prices now rise by the same boost, so capacity per dollar keeps its earlier curve all the way to Lv 400
+  // and the late floors keep the pace of the early ones. Viking Raid hubs (own growth, no boost) are left alone.
+  B.hubPriceBoost = (kind, L, growth) => (kind === "floor" || (growth && growth !== B.HUB_GROWTH) ? 1 : B.hubBoost(L, false));
   B.growth = (kind) => (kind === "floor" ? B.FLOOR_GROWTH : B.HUB_GROWTH);
   B.maxLevel = (kind) => (kind === "floor" ? B.FLOOR_MAX : B.HUB_MAX);
 
@@ -228,16 +235,23 @@ window.SVT = window.SVT || {};
     const first = B.levelCost(kind, n, L, growth) * (1 - discount) * (scale || 1);
     const cap = (max || B.maxLevel(kind)) - L;
     if (cap <= 0) return { count: 0, cost: 0 };
+    // Two geometric runs: the usual ratio r up to HUB_BOOST_FROM, then r x the boost step for boosted lab hubs (v0.53.5).
+    const boosted = B.hubPriceBoost(kind, B.HUB_BOOST_FROM + 1, growth) > 1;
+    const run1 = boosted ? Math.max(0, B.HUB_BOOST_FROM - L) : cap, r2 = boosted ? r * Math.pow(B.HUB_BOOST, 1 / (B.HUB_MAX - B.HUB_BOOST_FROM)) : r;
+    const sum = (f, q, m) => (m > 0 ? (f * (Math.pow(q, m) - 1)) / (q - 1) : 0);
+    const fits = (f, q, c) => Math.max(0, Math.floor(Math.log(1 + (c * (q - 1)) / f) / Math.log(q)));
+    const costOf = (m) => { const a = Math.min(m, run1); return sum(first, r, a) + sum(first * Math.pow(r, a), r2, m - a); };
     let k;
     if (want === Infinity) {
-      k = Math.floor(Math.log(1 + (cash * (r - 1)) / first) / Math.log(r));
+      k = fits(first, r, cash);
+      if (k >= run1) { k = run1; k += fits(first * Math.pow(r, run1), r2, cash - sum(first, r, run1) + 1e-9 * cash); }
       k = Math.max(1, Math.min(k, cap));
       const round = k - ((L + k) % B.ROUND_TO);
       if (round >= 1 && k < cap) k = round;
     } else {
       k = Math.min(want, cap);
     }
-    const cost = (first * (Math.pow(r, k) - 1)) / (r - 1);
+    const cost = costOf(k);
     return { count: k, cost };
   };
 
