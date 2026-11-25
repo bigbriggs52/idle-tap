@@ -269,6 +269,23 @@ console.log("maxes", JSON.stringify(maxes));
 if (!(maxes.floor.seats >= 1) || maxes.floor.q !== maxes.floor.got || !(maxes.floor.got > maxes.floor.seats) || !(maxes.floor.got < 25) || maxes.floor.owned !== maxes.floor.got || maxes.floor.filled !== 0 || maxes.floor.again !== 0) errors.push("Hire max (floors) wrong: " + JSON.stringify(maxes.floor));
 if (!(maxes.lift.got > 1) || !maxes.lift.assigned || !maxes.lift.bestSeated || maxes.lift.again !== 0 || !maxes.noCash) errors.push("Hire max (lift) wrong: " + JSON.stringify(maxes.lift));
 if (!(maxes.all.levels > 0) || maxes.all.sum !== maxes.all.levels || !maxes.all.buyKept || maxes.all.again !== 0 || maxes.all.canQ < 1 || !maxes.all.firstIsLimit || !(maxes.all.firstGain > 0) || !(maxes.all.income1 > maxes.all.income0)) errors.push("Max all wrong (v0.40.2: best upgrade for the backlog): " + JSON.stringify(maxes.all));
+// v0.53.5: hub prices rise with the hub boost past Lv 300 (capacity per dollar stays on its curve), and Max all plans
+// the whole spend: it opens the next floor when the floors are maxed instead of buying lift levels nothing uses
+const maxPlan = await page.evaluate(() => {
+  const B = SVT.B, step = Math.pow(B.HUB_BOOST, 1 / (B.HUB_MAX - B.HUB_BOOST_FROM));
+  const ratio = (L) => B.levelCost("freight", 0, L + 1) / B.levelCost("freight", 0, L);
+  const capPerCost = (L) => B.freightCap(L + 1, 10) / B.freightCap(L, 10) / ratio(L);
+  const S = SVT.state(), keep = S.activeLab, lab = SVT.newLab("garage");
+  S.labs.__t = lab; lab.id = "garage"; const old = S.labs.garage; S.labs.garage = lab; S.activeLab = "garage";
+  lab.round = 1; while (lab.floors.length < 8) lab.floors.push({ lvl: 100, stock: 0, left: 0 }); lab.floors.forEach((f) => (f.lvl = 100));
+  lab.freight.lvl = 260; lab.commercial.lvl = 260; // hubs far ahead: the maxed floors hold income back
+  const nf = SVT.nextFloor(lab); lab.cash = nf.cost * 40;
+  const r = SVT.upgradeAll(), opened = lab.floors.length - 8;
+  S.labs.garage = old; delete S.labs.__t; S.activeLab = keep;
+  return { below: Math.abs(ratio(200) - B.HUB_GROWTH) < 1e-9, above: Math.abs(ratio(350) / (B.HUB_GROWTH * step) - 1) < 1e-9, steady: Math.abs(capPerCost(350) / capPerCost(250) - 1) < 0.05, opened: opened >= 1, blocked: !!nf.blocked, order: r.order.slice(0, 3).join() };
+});
+console.log("maxPlan", JSON.stringify(maxPlan));
+if (!maxPlan.below || !maxPlan.above || !maxPlan.steady || maxPlan.blocked || !maxPlan.opened || !maxPlan.order.startsWith("open")) errors.push("Hub price boost or Max all floor opening wrong (v0.53.5) " + JSON.stringify(maxPlan));
 if (!maxes.slowLift.whFaster || maxes.slowLift.whMaxed || maxes.slowLift.pick === "commercial") errors.push("Max all bought the warehouse while the lift was slower (v0.49.1) " + JSON.stringify(maxes.slowLift));
 if (!maxes.quick) errors.push("Max all's quick income estimate is off (v0.52.2)");
 if (JSON.stringify(maxes.spendAll) !== JSON.stringify({ bought: true, left: 0, whMaxed: true })) errors.push("Max all left affordable upgrades unbought (v0.50.1) " + JSON.stringify(maxes.spendAll));

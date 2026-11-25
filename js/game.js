@@ -827,8 +827,12 @@ window.SVT = window.SVT || {};
       if (kind === "floor") { const L0 = lab.floors[n - 1].lvl, o0 = B.floorOutput(n, L0); b += o0 > 0 ? r0.floors[n - 1] * (B.floorOutput(n, L) / o0 - 1) : B.floorOutput(n, L) * P * SVT.nodeMult(lab, "floor", n, t); }
       else if (kind === "freight") f *= B.freightCap(L, depth, raid) / B.freightCap(lab.freight.lvl, depth, raid);
       else c *= B.commercialCap(L, raid) / B.commercialCap(lab.commercial.lvl, raid);
-      return Math.min(b, f, c) * cm + extra;
+      return [Math.min(b, f, c) * cm + extra, soft(b, f, c)];
     };
+    // v0.53.5: a soft minimum breaks ties. When nothing raises income right now (the bottleneck's next level is out of
+    // reach), the spare cash goes to whatever is closest to being the bottleneck instead of the first node in the list.
+    const soft = (b, f, c) => Math.pow(Math.pow(b, -8) + Math.pow(f, -8) + Math.pow(c, -8), -1 / 8);
+    const soft0 = soft(r0.build, r0.freight, r0.commercial);
     let best = null;
     for (const [kind, n] of SVT.upgradeOrder(lab)) {
       if (kind === "commercial" && r0.commercial >= r0.freight) continue;
@@ -836,9 +840,18 @@ window.SVT = window.SVT || {};
       const q = SVT.upgradeChunk(lab, kind, n);
       if (!q) continue;
       const node = SVT.nodeOf(lab, kind, n);
-      const gain = quickIncome(kind, n, SVT.levelOf(lab, kind, n) + q.count) - base;
-      const score = gain / q.cost;
-      if (!best || score > best.score) best = { kind, n, q, gain, score, base };
+      const [inc, sf] = quickIncome(kind, n, SVT.levelOf(lab, kind, n) + q.count), gain = inc - base;
+      const score = gain / q.cost, tie = (sf - soft0) / q.cost;
+      if (!best || score > best.score || (score === best.score && tie > best.tie)) best = { kind, n, q, gain, score, tie, base };
+    }
+    // v0.53.5: opening the next floor is a buy too. Once the floors are maxed it's the only thing that raises income,
+    // and Max all used to pour that money into lift and warehouse levels nothing could use.
+    const nf = SVT.nextFloor(lab);
+    if (nf && !nf.blocked && nf.cost > 0 && lab.cash >= nf.cost) {
+      const add = B.floorOutput(depth + 1, 1) * P * SVT.nodeMult(lab, "floor", depth + 1, t);
+      const b = r0.build + add, f = r0.freight * B.freightCap(lab.freight.lvl, depth + 1, raid) / B.freightCap(lab.freight.lvl, depth, raid), c = r0.commercial;
+      const gain = Math.min(b, f, c) * cm + extra - base, score = gain / nf.cost, tie = (soft(b, f, c) - soft0) / nf.cost;
+      if (gain > 0 && (!best || score > best.score || (score === best.score && tie > best.tie))) best = { kind: "unlock", n: nf.n, q: { count: 1, cost: nf.cost }, gain, score, tie, base };
     }
     return best;
   };
@@ -850,11 +863,97 @@ window.SVT = window.SVT || {};
     }
     return best;
   };
+  // v0.53.5 (user: "Make the max all button max the most efficiently"): Max all first plans the whole spend. Income is
+  // the smallest of what the floors build, the lift carries and the warehouse ships, so the best use of the cash is the
+  // highest income X that all three can reach together: the lift and the warehouse each go to the lowest level that
+  // moves X, and the floors get the cheapest levels (best output per dollar, up to each 5-level unlock) until they
+  // build X. X is found by binary search on what that costs. Buying one bundle at a time (the old way) overshot: a lift
+  // bundle could pass the floors by far, and when the bottleneck's next bundle was out of reach the rest went to
+  // levels that added nothing. Whatever is left after the plan still goes to the best (then cheapest) single buys.
+  SVT.planUpgrades = (lab, t) => {
+    t = (t || now()) + 1e9; // steady state, no running abilities
+    const r0 = SVT.rates(lab, t, true), raid = SVT.isRaid(lab), depth = lab.floors.length, cash = lab.cash;
+    if (!depth || !(cash > 0)) return null;
+    const quote = (kind, n, L, to) => B.bulk(kind, n, L, to - L, 0, SVT.discount(lab, kind, n), SVT.costScale(lab, kind, n), SVT.maxLevel(lab, kind), SVT.growthOf(lab, kind));
+    // `extra` floors: 0, or 1 when the plan also opens the next floor (a deeper lift trip, one more floor to level).
+    const nf = SVT.nextFloor(lab), canOpen = nf && !nf.blocked && nf.cost > 0 ? 1 : 0;
+    const P = SVT.prestigeMult(lab);
+    const hub = (kind, extra) => {
+      const L0 = SVT.levelOf(lab, kind, 0), max = SVT.maxLevel(lab, kind), now0 = kind === "freight" ? r0.freight : r0.commercial;
+      const cap = kind === "freight" ? (L, d) => B.freightCap(L, d, raid) : (L) => B.commercialCap(L, raid);
+      const c0 = cap(L0, depth);
+      return { kind, L0, max, at: (L) => now0 * cap(L, depth + extra) / c0 };
+    };
+    const hubSets = [0, canOpen].map((e) => [hub("freight", e), hub("commercial", e)]);
+    // the lowest level reaching x (null if even the max can't), by binary search on the level
+    const levelFor = (h, x) => {
+      if (h.at(h.L0) >= x) return h.L0;
+      if (h.at(h.max) < x) return null;
+      let lo = h.L0, hi = h.max;
+      while (hi - lo > 1) { const mid = (lo + hi) >> 1; if (h.at(mid) >= x) hi = mid; else lo = mid; }
+      return hi;
+    };
+    const fmax = SVT.maxLevel(lab, "floor");
+    const floorsFor = (x, budget, extra) => {
+      const lv = lab.floors.map((f) => f.lvl), out = r0.floors.slice();
+      const per = lv.map((L, i) => (B.floorOutput(i + 1, L) > 0 ? out[i] / B.floorOutput(i + 1, L) : 0));
+      if (extra) { const m = P * SVT.nodeMult(lab, "floor", depth + 1, t); lv.push(1); out.push(B.floorOutput(depth + 1, 1) * m); per.push(m); }
+      let b = out.reduce((a, v) => a + v, 0), spent = 0;
+      while (b < x) {
+        let best = null;
+        for (let i = 0; i < lv.length; i++) {
+          if (lv[i] >= fmax || !per[i]) continue;
+          const to = Math.min(fmax, lv[i] + SVT.stepTo(lv[i], 5)), q = quote("floor", i + 1, lv[i], to);
+          const gain = per[i] * B.floorOutput(i + 1, to) - out[i], score = gain / q.cost;
+          if (q.count > 0 && (!best || score > best.score)) best = { i, to, q, gain, score };
+        }
+        if (!best) return null;
+        spent += best.q.cost;
+        if (spent > budget) return null;
+        out[best.i] += best.gain; b += best.gain; lv[best.i] = best.to;
+      }
+      return { spent, lv };
+    };
+    const variant = (x, extra) => {
+      let spent = extra ? nf.cost : 0;
+      const lv = hubSets[extra].map((h) => { const L = levelFor(h, x); if (L === null) return null; spent += L > h.L0 ? quote(h.kind, 0, h.L0, L).cost : 0; return L; });
+      if (lv.includes(null) || spent > cash) return null;
+      const fl = floorsFor(x, cash - spent, extra);
+      return fl ? { x, open: !!extra, hubs: lv, floors: fl.lv, spent: spent + fl.spent } : null;
+    };
+    const plan = (x) => {
+      const a = variant(x, 0), b = canOpen ? variant(x, 1) : null;
+      return a && b ? (b.spent < a.spent ? b : a) : a || b;
+    };
+    let lo = Math.min(r0.build, r0.freight, r0.commercial), best = plan(lo);
+    if (!best) return null;
+    let hi = lo * 2;
+    for (let g = 0; g < 200 && plan(hi); g++) { lo = hi; hi *= 2; }
+    for (let it = 0; it < 40 && hi / lo > 1 + 1e-6; it++) { const mid = Math.sqrt(lo * hi); if (plan(mid)) lo = mid; else hi = mid; }
+    best = plan(lo);
+    return best;
+  };
   SVT.upgradeAll = () => SVT.quietly(upgradeAll);
   function upgradeAll() {
     const lab = SVT.lab(), t = now();
     let levels = 0, spent = 0, nodes = 0;
     const order = [];
+    const p = SVT.planUpgrades(lab, t);
+    if (p) {
+      const oc = p.open ? SVT.nextFloor(lab).cost : 0;
+      if (p.open && SVT.unlockFloor()) { nodes++; spent += oc; order.push("open" + lab.floors.length); }
+      const buy = (kind, n, to) => {
+        const L = SVT.levelOf(lab, kind, n);
+        if (to <= L) return;
+        const q = B.bulk(kind, n, L, to - L, 0, SVT.discount(lab, kind, n), SVT.costScale(lab, kind, n), SVT.maxLevel(lab, kind), SVT.growthOf(lab, kind));
+        if (SVT.upgradeBy(lab, kind, n, q)) { levels += q.count; spent += q.cost; nodes++; order.push(kind + (kind === "floor" ? n : "")); }
+      };
+      // the backlog first: whichever part holds income back now gets its levels first
+      const r = SVT.rates(lab, t + 1e9, true);
+      [["freight", r.freight, () => buy("freight", 0, p.hubs[0])], ["commercial", r.commercial, () => buy("commercial", 0, p.hubs[1])],
+        ["floor", r.build, () => p.floors.map((to, i) => [to, i]).sort((a, b) => b[0] - SVT.levelOf(lab, "floor", b[1] + 1) - (a[0] - SVT.levelOf(lab, "floor", a[1] + 1))).forEach(([to, i]) => buy("floor", i + 1, to))]]
+        .sort((a, b) => a[1] - b[1]).forEach((x) => x[2]());
+    }
     for (let step = 0; step < SVT.UPGRADE_MAX_STEPS; step++) {
       // v0.50.1 (user: "buys everything that it can until there's no more money that can be actually spent at all"):
       // the lift-first order still decides what comes first, but once it has nothing left to buy (the lift is maxed
@@ -862,9 +961,9 @@ window.SVT = window.SVT || {};
       const b = SVT.bestUpgrade(lab, t) || SVT.cheapestUpgrade(lab);
       // v0.46.1 (user: "If I click max all I want it to max as much as it can until I have no money left"): it keeps
       // buying the best-value upgrade until nothing is affordable (v0.45 stopped early to save for the next shaft).
-      if (!b || !SVT.upgradeBy(lab, b.kind, b.n, b.q)) break;
-      levels += b.q.count; spent += b.q.cost; nodes++;
-      order.push(b.kind + (b.kind === "floor" ? b.n : ""));
+      if (!b || !(b.kind === "unlock" ? SVT.unlockFloor() : SVT.upgradeBy(lab, b.kind, b.n, b.q))) break;
+      levels += b.kind === "unlock" ? 0 : b.q.count; spent += b.q.cost; nodes++;
+      order.push(b.kind + (b.kind === "floor" || b.kind === "unlock" ? b.n : ""));
     }
     if (levels) emit("change");
     return { levels, spent, nodes, order };
