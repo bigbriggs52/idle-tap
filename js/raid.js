@@ -73,7 +73,7 @@ window.SVT = window.SVT || {};
     ],
     // v0.46 (user: "Viking mine needs to have lift and warehouse levels better associated with each level in the
     // mine"): the lift and warehouse go to 100 on a one-shaft stage, rising evenly to 500 on a 50-shaft stage (in
-    // steps of 10), and while you play they can only go as far as the shafts have got (see SVT.hubGate).
+    // steps of 10), and while you play they can only go as far as the shafts need (see SVT.hubGate).
     hubMax: (s) => 10 * Math.round((100 + (400 * (R.shafts(s) - 1)) / 49) / 10),
     max: (s) => { const c = R.CAPS[R.batchOf(s) - 1], h = R.hubMax(s); return { floor: c.floor, freight: Math.min(c.freight, h), commercial: Math.min(c.commercial, h) }; },
     // Shaft price growth per level: the same as the labs (v0.33, "similar numbers to the main levels"). Hub growth is
@@ -106,28 +106,30 @@ window.SVT = window.SVT || {};
     shaftStep: (s) => 1.3 + 0.2 * ((s || 1) - 1) / 249,
     // v0.51 (user: "Viking mine takes too long to get the 2nd shaft open ... After 2nd mine is open it's pretty much too
     // easy"): shaft 2 opened at 80-97% of a stage's time. Each shaft now earns shaftStep x the one above (it was 6x),
-    // a new shaft costs taking the one above to Lv UNLOCK_LV (was the max), and a stage starts with the price of
-    // taking shaft 1 to Lv START_LV. Shaft 2 now opens in the first few minutes and the work spreads over every shaft.
+    // a new shaft costs taking the one above to Lv UNLOCK_LV (was the max). (A starting stake, shaft 1 to Lv 25, was
+    // dropped in v0.53.7: the user wants every stage to start from $10.) Shaft 2 now opens in the first few minutes and the work spreads over every shaft.
     valueStep: (s) => R.shaftStep(s),
     UNLOCK_LV: 10,
-    START_LV: 25,
+    HUB_SPARE: 1.3,
+    HUB_GATE: 2, // v0.53.7: hubs level up to carry twice what the open shafts dig (SVT.hubGate)
     shaftBase: (n, s) => SVT.B.floorBase(1) * Math.pow(R.shaftStep(s), n - 1),
     // Viking tokens: a first clear pays the batch number (1 to 5), a replay pays 1. Boat k unlocks at BOAT_COST(k).
     TOKENS: { replay: 1, total: 750 },
     BOATS: 50,
     boatCost: (k) => (k <= 1 ? 0 : Math.round(750 * Math.pow((k - 1) / 49, 1.6))),
-    // Price scale per stage, from tests/raid-goals.mjs (the pacing sim fitted to each stage's target time).
+    // Price scale per stage, from tests/raid-goals.mjs (the pacing sim fitted to each stage's target time). Refitted in
+    // v0.53.7 for the $10 start and the lift and warehouse sized to each stage.
     SCALES: [
-      1400, 1300, 1200, 780, 1000, 1300, 890, 790, 520, 680, 620, 600, 770, 560, 490, 350, 470, 420, 270, 260, 370, 240, 290, 230, 340,
-      230, 220, 470, 310, 210, 300, 300, 300, 210, 400, 280, 200, 410, 190, 210, 300, 190, 290, 200, 290, 420, 440, 420, 250, 640,
-      6300, 3700, 3100, 2600, 4800, 3500, 3700, 3000, 6400, 5800, 3200, 6300, 6300, 5800, 4400, 5600, 4400, 2100, 6300, 8000, 6200, 3300, 2000, 3100, 3200,
-      2200, 2300, 2700, 4600, 3900, 6500, 8600, 2200, 4900, 3500, 5400, 5100, 3700, 3600, 4200, 7200, 2500, 11000, 2500, 8000, 2800, 4100, 3800, 2800, 2900,
-      8800, 11000, 7800, 27000, 21000, 7600, 7700, 19000, 7800, 7700, 7700, 16000, 8600, 14000, 7900, 8000, 22000, 20000, 37000, 8800, 20000, 38000, 8500, 9100, 10000,
-      19000, 21000, 24000, 8900, 9800, 11000, 21000, 19000, 25000, 10000, 11000, 11000, 50000, 12000, 28000, 53000, 54000, 22000, 11000, 12000, 12000, 12000, 24000, 12000, 13000,
-      95000, 43000, 30000, 39000, 29000, 25000, 29000, 29000, 26000, 26000, 26000, 29000, 79000, 50000, 140000, 60000, 74000, 83000, 76000, 28000, 65000, 66000, 57000, 30000, 32000,
-      60000, 30000, 62000, 34000, 65000, 65000, 180000, 77000, 90000, 34000, 83000, 72000, 37000, 36000, 38000, 78000, 110000, 40000, 100000, 41000, 110000, 40000, 41000, 110000, 120000,
-      86000, 100000, 300000, 150000, 110000, 96000, 96000, 86000, 260000, 85000, 86000, 93000, 94000, 260000, 280000, 93000, 93000, 220000, 87000, 88000, 570000, 220000, 230000, 89000, 90000,
-      94000, 91000, 210000, 210000, 250000, 660000, 98000, 100000, 99000, 99000, 300000, 99000, 270000, 100000, 110000, 110000, 110000, 330000, 320000, 110000, 320000, 290000, 330000, 110000, 340000,
+      360, 340, 380, 320, 320, 370, 370, 290, 250, 280, 270, 240, 390, 330, 250, 200, 320, 280, 180, 160, 300, 180, 150, 190, 270,
+      190, 170, 340, 230, 170, 220, 270, 280, 180, 360, 220, 170, 350, 150, 160, 260, 180, 230, 150, 220, 320, 380, 380, 170, 460,
+      1800, 1000, 870, 720, 1500, 970, 1100, 830, 1600, 1500, 910, 1600, 1800, 1500, 1300, 1500, 1300, 660, 1700, 2500, 1600, 970, 600, 890, 840,
+      640, 640, 680, 1300, 1200, 2400, 2100, 610, 1400, 960, 1600, 1400, 950, 820, 1400, 1800, 670, 2700, 700, 2000, 880, 1000, 870, 780, 750,
+      2500, 2700, 2100, 7000, 6500, 2200, 2100, 5200, 2100, 2200, 2200, 3800, 2400, 3000, 2000, 2100, 6300, 5100, 7900, 2600, 5400, 8400, 2300, 2800, 3400,
+      3700, 5400, 6800, 2300, 2900, 3700, 4900, 3900, 7600, 3100, 3200, 3300, 9700, 4100, 7900, 10000, 11000, 4500, 2900, 3600, 3000, 3100, 5000, 3200, 3700,
+      22000, 12000, 9100, 10000, 9600, 7900, 9100, 9100, 7700, 7900, 7900, 9500, 24000, 10000, 28000, 13000, 21000, 26000, 21000, 7900, 13000, 13000, 12000, 8400, 9900,
+      11000, 8100, 12000, 11000, 12000, 12000, 34000, 15000, 25000, 9500, 18000, 14000, 11000, 9500, 12000, 14000, 34000, 13000, 29000, 14000, 30000, 11000, 12000, 32000, 38000,
+      22000, 30000, 92000, 44000, 41000, 32000, 31000, 26000, 77000, 26000, 26000, 32000, 32000, 75000, 92000, 33000, 33000, 44000, 27000, 27000, 110000, 48000, 52000, 29000, 27000,
+      33000, 28000, 39000, 40000, 54000, 120000, 38000, 39000, 39000, 39000, 130000, 33000, 54000, 40000, 55000, 41000, 44000, 130000, 110000, 61000, 110000, 67000, 150000, 52000, 110000,
     ],
   };
 
@@ -187,6 +189,15 @@ window.SVT = window.SVT || {};
       mult: { floor: mult("floor"), freight: mult("freight"), commercial: mult("commercial") },
       diff: { scale: (R.SCALES[s - 1] || 1) * mult("cost"), grow: R.BASE.grow, hub: hp.hub },
     };
+    // v0.53.7 (user: "make the mines and warehouse and lift make sense when leveling up similar difficulty to the
+    // map"): the lift and the warehouse used to grow 1.11x a level plus milestones, far past what the shafts dig, so
+    // they hardly mattered until the end and then their last 100-250 levels cost seconds. Now their max level carries
+    // all the stage's maxed shafts with HUB_SPARE to spare (omens left out, so they still bite), like the labs' Lv 400
+    // hubs carry 30 maxed floors, and every level in between moves them by the same factor.
+    const B = SVT.B, M = st.max;
+    let need = 0;
+    for (let n = 1; n <= st.floors; n++) need += B.floorOutput(n, M.floor) * (n > 1 ? Math.pow(R.valueStep(s) / 6, n - 1) : 1);
+    st.hubK = { max: M.freight, freight: (R.HUB_SPARE * need) / B.freightCap(M.freight, st.floors, {}), commercial: (R.HUB_SPARE * need) / B.commercialCap(M.commercial, {}) };
     return (cache[s] = st);
   };
   // What the UI shows for the raid lab, shaped like an entry in SVT.LABS. Shaft tiers run 10 shafts each.

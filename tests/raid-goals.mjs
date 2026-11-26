@@ -10,7 +10,7 @@ const R = SVT.RAID, scales = [];
 const plainBoost = SVT.boostMult; SVT.boostMult = (l, t) => plainBoost(l, t) * (SVT.isRaid(l) ? R.SIM_BOOST : 1);
 const clear = (s) => {
   const lab = SVT.newLab("raid");
-  lab.stage = s; lab.cash = SVT.raidStartCash(lab);
+  lab.stage = s; lab.cash = SVT.B.START_CASH;
   return play(SVT, lab, (l) => SVT.raidProgress(l).p >= 1, R.time(s) * 20).t;
 };
 const FROM = +(process.env.FROM || 1), TO = +(process.env.TO || R.STAGES);

@@ -212,6 +212,8 @@ window.SVT = window.SVT || {};
   // Viking Hoard (v0.35): relics owned by id, tokens spent on spins (boats go by tokens ever earned), pity, find count.
   function newHoard() { return { owned: {}, spent: 0, pity: 0, serial: 0, ship: [] }; }
   SVT.isRaid = (lab) => !!lab && lab.id === "raid";
+  // v0.53.7: what the hub formulas take for a raid lab (the stage's lift and warehouse scaling), false in the labs.
+  SVT.hubRaid = (lab) => (SVT.isRaid(lab) ? SVT.raidStage(lab).hubK : false);
   SVT.vikingTokens = () => (S.raid && S.raid.tokens) || 0;
   // Boats unlocked by tokens: boat k (1-based) opens at RAID.boatCost(k). Chip sails the best one unless he picked another.
   SVT.boatsUnlocked = () => { let n = 0; for (let k = 1; k <= SVT.RAID.BOATS; k++) if (SVT.vikingTokens() >= SVT.RAID.boatCost(k)) n = k; return n; };
@@ -224,12 +226,21 @@ window.SVT = window.SVT || {};
   // "won't let me upgrade shaft or warehouse"): the gate follows the best opened shaft (hub max x its level / shaft
   // max, at least 10). Before, unopened shafts counted as Lv 0, which held the lift at Lv 10 on a 6-shaft stage with
   // one shaft open, so income was too low to ever open shaft 2.
-  SVT.hubGate = (lab) => {
-    const m = SVT.raidStage(lab).max;
-    let best = 1; lab.floors.forEach((f) => (best = Math.max(best, Math.min(m.floor, f.lvl))));
-    return Math.min(m.freight, Math.max(10, Math.ceil((m.freight * best) / m.floor)));
+  // v0.53.7 (user: "make the mines and warehouse and lift make sense when leveling up"): the gate is what the shafts
+  // dig, not their level. Hub capacity grows by a factor a level and shaft output by a step, so a gate tied to the
+  // best shaft's level held the lift far below what the shafts needed late in a stage. Now the lift and warehouse
+  // go up to the first level that carries RAID.HUB_GATE x what the open shafts dig at their current levels.
+  SVT.hubGate = (lab, kind) => {
+    const st = SVT.raidStage(lab), m = st.max, k = kind === "commercial" ? "commercial" : "freight", depth = Math.max(1, lab.floors.length);
+    let dig = 0;
+    lab.floors.forEach((f, i) => (dig += B.floorOutput(i + 1, Math.min(m.floor, f.lvl)) * (i ? Math.pow(SVT.RAID.valueStep(lab.stage) / 6, i) : 1)));
+    const want = SVT.RAID.HUB_GATE * dig, cap = (L) => (k === "freight" ? B.freightCap(L, depth, st.hubK) : B.commercialCap(L, st.hubK));
+    let lo = 1, hi = m[k];
+    if (cap(hi) < want) return hi;
+    while (lo < hi) { const mid = (lo + hi) >> 1; if (cap(mid) >= want) hi = mid; else lo = mid + 1; }
+    return Math.min(m[k], Math.max(10, lo));
   };
-  SVT.maxLevel = (lab, kind) => (SVT.isRaid(lab) ? (kind === "floor" ? SVT.raidStage(lab).max.floor : Math.min(SVT.raidStage(lab).max[kind], SVT.hubGate(lab))) : B.maxLevel(kind));
+  SVT.maxLevel = (lab, kind) => (SVT.isRaid(lab) ? (kind === "floor" ? SVT.raidStage(lab).max.floor : Math.min(SVT.raidStage(lab).max[kind], SVT.hubGate(lab, kind))) : B.maxLevel(kind));
   // The level a node can finally reach (the stage max in the raid, ignoring the shaft gate).
   SVT.finalLevel = (lab, kind) => (SVT.isRaid(lab) ? SVT.raidStage(lab).max[kind] : B.maxLevel(kind));
   SVT.gated = (lab, kind) => SVT.isRaid(lab) && kind !== "floor" && SVT.levelOf(lab, kind, 0) >= SVT.maxLevel(lab, kind) && SVT.maxLevel(lab, kind) < SVT.finalLevel(lab, kind);
@@ -259,12 +270,12 @@ window.SVT = window.SVT || {};
     if (S.labs.raid && SVT.superUnseatLab) SVT.superUnseatLab(S.labs.raid); // v0.53.4: a new stage starts with no one seated
     const lab = newLab("raid");
     lab.stage = s; lab.won = false;
-    lab.cash = SVT.raidStartCash(lab);
+    lab.cash = B.START_CASH; // v0.53.7 (user: "the Viking mine should not start with money on each level")
     S.labs.raid = lab;
     S.activeLab = "raid";
     emit("switch");
     // v0.51.1 (user: "It kept my money in the Viking mine to the next one"): it doesn't; say what the cash is.
-    if (SVT.toast) SVT.toast("⚔️ Fresh stage: your cash reset. You start with a $" + SVT.fmt(lab.cash) + " stake, enough to take shaft 1 to Lv " + SVT.RAID.START_LV + ".", "big");
+    if (SVT.toast) SVT.toast("⚔️ Fresh stage: every stage starts from $" + SVT.fmt(lab.cash) + ".", "big");
     save();
     return true;
   };
@@ -412,8 +423,8 @@ window.SVT = window.SVT || {};
     // Floors selling straight from the floor (Dropshipper, Unicorn) bypass the lift and the warehouse.
     let build = 0, direct = 0;
     floors.forEach((r, i) => { const a = SVT.activeAbility(lab, "floor", i + 1, t); if (a && a.direct) direct += r * a.direct; else build += r; });
-    const freight = B.freightCap(lab.freight.lvl, depth, SVT.isRaid(lab)) * P * SVT.nodeMult(lab, "freight", 0, t);
-    const commercial = B.commercialCap(lab.commercial.lvl, SVT.isRaid(lab)) * P * SVT.nodeMult(lab, "commercial", 0, t) * (real ? B.WH_HEAVY : 1);
+    const freight = B.freightCap(lab.freight.lvl, depth, SVT.hubRaid(lab)) * P * SVT.nodeMult(lab, "freight", 0, t);
+    const commercial = B.commercialCap(lab.commercial.lvl, SVT.hubRaid(lab)) * P * SVT.nodeMult(lab, "commercial", 0, t) * (real ? B.WH_HEAVY : 1);
     const min = Math.min(build, freight, commercial);
     const limit = min === build ? "build" : min === freight ? "freight" : "commercial";
     const income = min * SVT.cashMult(lab, t, true) + direct * SVT.cashMult(lab, t);
@@ -425,7 +436,7 @@ window.SVT = window.SVT || {};
   // Down one floor every 1/speed s, stop at each floor with stock and pour it in at the loading speed until the floor
   // is empty or the car is full, turn back once full or past the last floor, then empty it over UNLOAD_TIME at the top.
   // Average throughput matches B.freightCap.
-  SVT.liftCapacity = (lab, t) => B.freightLoad(lab.freight.lvl, SVT.isRaid(lab)) * SVT.prestigeMult(lab) * SVT.loadMult(lab, "freight", 0, t);
+  SVT.liftCapacity = (lab, t) => B.freightLoad(lab.freight.lvl, SVT.hubRaid(lab)) * SVT.prestigeMult(lab) * SVT.loadMult(lab, "freight", 0, t);
   SVT.liftLoadRate = (lab, t) => SVT.liftCapacity(lab, t) / B.liftFillTime(lab.freight.lvl) * SVT.speedMult(lab, "freight", 0, t);
   // The next floor below the car with something waiting. v0.48.1 (user: "Lift is now having the same issues not
   // picking up"): the car's height adds up in small steps, so it could sit at 2.9999999999 just above floor 3, and
@@ -541,7 +552,7 @@ window.SVT = window.SVT || {};
     }
     return earned;
   }
-  SVT.shipLoad = (lab, t) => B.commercialCap(lab.commercial.lvl, SVT.isRaid(lab)) * SVT.prestigeMult(lab) * SVT.loadMult(lab, "commercial", 0, t) * B.WH_TRIP;
+  SVT.shipLoad = (lab, t) => B.commercialCap(lab.commercial.lvl, SVT.hubRaid(lab)) * SVT.prestigeMult(lab) * SVT.loadMult(lab, "commercial", 0, t) * B.WH_TRIP;
   // A trip starts at the warehouse: the worker pushes the empty cart to the lift, loads up, and pushes it back.
   SVT.startShip = (lab) => {
     const c = lab.commercial;
@@ -676,9 +687,6 @@ window.SVT = window.SVT || {};
   };
   // Viking Raid (v0.33.3, user's call: opening mines was far cheaper than upgrading them or hiring): a new shaft costs
   // as much as taking the shaft above it from Lv 1 to the stage's max level. v0.51: to RAID.UNLOCK_LV only.
-  // v0.51 (user: "Viking mine takes too long to get the 2nd shaft open"): a stage starts with the price of taking
-  // shaft 1 to RAID.START_LV, so the slow first minutes from $10 are skipped.
-  SVT.raidStartCash = (lab) => Math.max(B.START_CASH, B.bulk("floor", 1, 1, SVT.RAID.START_LV - 1, 0, 0, SVT.costScale(lab, "floor", 1), SVT.maxLevel(lab, "floor"), SVT.growthOf(lab, "floor")).cost);
   SVT.raidUnlock = (lab, n) => {
     const m = Math.max(1, n - 1), cap = SVT.maxLevel(lab, "floor"), to = Math.min(cap, SVT.RAID.UNLOCK_LV || cap);
     return B.bulk("floor", m, 1, to - 1, 0, 0, SVT.costScale(lab, "floor", m), cap, SVT.growthOf(lab, "floor")).cost;
@@ -820,7 +828,7 @@ window.SVT = window.SVT || {};
     // v0.52.2 (user: "a lot of lag when I click ... update"): one node changes per try, so the income after a buy is
     // worked out from r0 by swapping that node's own number (multipliers don't depend on level) instead of re-running
     // SVT.rates for every node on every step. Same result, about 30x faster on a 30-floor lab.
-    const raid = SVT.isRaid(lab), depth = lab.floors.length, P = SVT.prestigeMult(lab);
+    const raid = SVT.hubRaid(lab), depth = lab.floors.length, P = SVT.prestigeMult(lab);
     const cm = SVT.cashMult(lab, t, true), extra = r0.direct * SVT.cashMult(lab, t);
     const quickIncome = (kind, n, L) => {
       let b = r0.build, f = r0.freight, c = r0.commercial;
@@ -872,7 +880,7 @@ window.SVT = window.SVT || {};
   // levels that added nothing. Whatever is left after the plan still goes to the best (then cheapest) single buys.
   SVT.planUpgrades = (lab, t) => {
     t = (t || now()) + 1e9; // steady state, no running abilities
-    const r0 = SVT.rates(lab, t, true), raid = SVT.isRaid(lab), depth = lab.floors.length, cash = lab.cash;
+    const r0 = SVT.rates(lab, t, true), raid = SVT.hubRaid(lab), depth = lab.floors.length, cash = lab.cash;
     if (!depth || !(cash > 0)) return null;
     const quote = (kind, n, L, to) => B.bulk(kind, n, L, to - L, 0, SVT.discount(lab, kind, n), SVT.costScale(lab, kind, n), SVT.maxLevel(lab, kind), SVT.growthOf(lab, kind));
     // `extra` floors: 0, or 1 when the plan also opens the next floor (a deeper lift trip, one more floor to level).

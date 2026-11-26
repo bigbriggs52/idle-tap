@@ -237,7 +237,7 @@ const maxes = await page.evaluate(() => {
   // a 30-floor lab: the lift's long trip down makes it the slower hub even at max level
   out.slowLift = (() => { const D = SVT.newLab("garage");
     while (D.floors.length < 30) D.floors.push({ lvl: 1, stock: 0, left: 0 });
-    D.floors.forEach((f) => (f.lvl = SVT.maxLevel(D, "floor"))); D.freight.lvl = SVT.maxLevel(D, "freight");
+    D.floors.forEach((f) => (f.lvl = SVT.maxLevel(D, "floor"))); D.freight.lvl = SVT.maxLevel(D, "freight") - 10; // v0.53.7: hubs are sized to the floors, so the lift sits a little below max to be the slower one
     let c = 1; while (c <= SVT.maxLevel(D, "commercial") - 1) { D.commercial.lvl = c; const r = SVT.rates(D); if (r.commercial >= r.freight) break; c++; }
     D.cash = 1e300; const r = SVT.rates(D), b = SVT.bestUpgrade(D);
     return { whFaster: r.commercial >= r.freight, whMaxed: D.commercial.lvl >= SVT.maxLevel(D, "commercial"), pick: b && b.kind }; })();
@@ -269,10 +269,10 @@ console.log("maxes", JSON.stringify(maxes));
 if (!(maxes.floor.seats >= 1) || maxes.floor.q !== maxes.floor.got || !(maxes.floor.got > maxes.floor.seats) || !(maxes.floor.got < 25) || maxes.floor.owned !== maxes.floor.got || maxes.floor.filled !== 0 || maxes.floor.again !== 0) errors.push("Hire max (floors) wrong: " + JSON.stringify(maxes.floor));
 if (!(maxes.lift.got > 1) || !maxes.lift.assigned || !maxes.lift.bestSeated || maxes.lift.again !== 0 || !maxes.noCash) errors.push("Hire max (lift) wrong: " + JSON.stringify(maxes.lift));
 if (!(maxes.all.levels > 0) || maxes.all.sum !== maxes.all.levels || !maxes.all.buyKept || maxes.all.again !== 0 || maxes.all.canQ < 1 || !maxes.all.firstIsLimit || !(maxes.all.firstGain > 0) || !(maxes.all.income1 > maxes.all.income0)) errors.push("Max all wrong (v0.40.2: best upgrade for the backlog): " + JSON.stringify(maxes.all));
-// v0.53.5: hub prices rise with the hub boost past Lv 300 (capacity per dollar stays on its curve), and Max all plans
-// the whole spend: it opens the next floor when the floors are maxed instead of buying lift levels nothing uses
+// v0.53.5: hub prices rise with the hub boost (capacity per dollar stays on its curve); v0.53.7: the boost is smooth
+// from Lv 1 to 400 (no kink at Lv 300). Max all plans the whole spend: it opens the next floor when the floors are maxed instead of buying lift levels nothing uses
 const maxPlan = await page.evaluate(() => {
-  const B = SVT.B, step = Math.pow(B.HUB_BOOST, 1 / (B.HUB_MAX - B.HUB_BOOST_FROM));
+  const B = SVT.B;
   const ratio = (L) => B.levelCost("freight", 0, L + 1) / B.levelCost("freight", 0, L);
   const capPerCost = (L) => B.freightCap(L + 1, 10) / B.freightCap(L, 10) / ratio(L);
   const S = SVT.state(), keep = S.activeLab, lab = SVT.newLab("garage");
@@ -282,7 +282,7 @@ const maxPlan = await page.evaluate(() => {
   const nf = SVT.nextFloor(lab); lab.cash = nf.cost * 40;
   const r = SVT.upgradeAll(), opened = lab.floors.length - 8;
   S.labs.garage = old; delete S.labs.__t; S.activeLab = keep;
-  return { below: Math.abs(ratio(200) - B.HUB_GROWTH) < 1e-9, above: Math.abs(ratio(350) / (B.HUB_GROWTH * step) - 1) < 1e-9, steady: Math.abs(capPerCost(350) / capPerCost(250) - 1) < 0.05, opened: opened >= 1, blocked: !!nf.blocked, order: r.order.slice(0, 3).join() };
+  return { below: Math.abs(ratio(1) / (B.HUB_GROWTH * B.hubBoost(2, false, "freight")) - 1) < 1e-9, above: [100, 200, 299, 300, 301, 398].every((L) => ratio(L + 1) >= ratio(L) && ratio(L + 1) / ratio(L) < 1.002), steady: [50, 150, 250, 350].every((L) => Math.abs(capPerCost(L) / capPerCost(L + 20) - 1) < 1e-9 || Math.abs(capPerCost(L) - 1.11 / 1.14) < 0.01), opened: opened >= 1, blocked: !!nf.blocked, order: r.order.slice(0, 3).join() };
 });
 console.log("maxPlan", JSON.stringify(maxPlan));
 if (!maxPlan.below || !maxPlan.above || !maxPlan.steady || maxPlan.blocked || !maxPlan.opened || !maxPlan.order.startsWith("open")) errors.push("Hub price boost or Max all floor opening wrong (v0.53.5) " + JSON.stringify(maxPlan));
@@ -370,16 +370,17 @@ const hair = await page.evaluate(() => {
 console.log("lift hair", JSON.stringify(hair));
 if (hair.left > 1e-9 || Math.abs(hair.lobby - 0.5) > 1e-9) errors.push("Lift skipped a floor it was a hair above (v0.48.1) " + JSON.stringify(hair));
 // v0.49 (user: "Lift doesn't ever get strong enough to go below level 23"): a maxed lift and warehouse carry all 30
-// floors at Lv 100 on the main map; Viking Raid hubs get no boost
+// floors at Lv 100 on the main map. v0.53.7: with ~30% to spare (no more), and Viking Raid hubs scale to their stage
 const deep = await page.evaluate(() => {
   const B = SVT.B, lab = SVT.newLab("garage");
   while (lab.floors.length < 30) lab.floors.push({ lvl: 1, stock: 0, left: 0 });
   lab.floors.forEach((f) => (f.lvl = 100)); lab.freight.lvl = 400; lab.commercial.lvl = 400;
   const r = SVT.rates(lab);
-  return { limit: r.limit, lift: r.freight / r.build, wh: r.commercial / r.build, raid: B.hubBoost(450, true), mid: B.hubBoost(300), top: B.hubBoost(400) };
+  return { limit: r.limit, lift: r.freight / r.build, wh: r.commercial / r.build, raid: B.hubBoost(450, {}), one: B.hubBoost(1, false, "freight"), top: B.hubBoost(400, false, "freight"), topWh: B.hubBoost(400, false, "commercial") };
 });
 console.log("deep floors", JSON.stringify(deep));
-if (deep.limit !== "build" || deep.lift < 1 || deep.wh < 1 || deep.raid !== 1 || deep.mid !== 1 || Math.abs(deep.top / 1.5e6 - 1) > 1e-9) errors.push("Maxed hubs can't carry 30 floors (v0.49) " + JSON.stringify(deep));
+const B_TOP = { f: 9e5, c: 3e5 };
+if (deep.limit !== "build" || deep.lift < 1 || deep.wh < 1 || deep.lift > 1.6 || deep.wh > 1.6 || deep.raid !== 1 || deep.one !== 1 || deep.top !== B_TOP.f || deep.topWh !== B_TOP.c) errors.push("Maxed hubs can't carry 30 floors (v0.49) " + JSON.stringify(deep));
 // one tap = one cycle: a floor builds once and stops; the warehouse ships one trip and stops
 const cyc = await page.evaluate(() => {
   const L = SVT.lab();
@@ -541,11 +542,11 @@ const viking = await page.evaluate(() => { const R = SVT.RAID, L = SVT.lab(); re
 console.log("viking", JSON.stringify(viking));
 if (viking.tokens !== 1 || viking.boats !== 2 || viking.boat !== 2) errors.push("Viking tokens or boats wrong after a clear: " + JSON.stringify(viking));
 // v0.51: a Viking shaft is worth the price step more than the one above (not 6x), shaft n+1 opens for shaft n's
-// Lv 1 -> UNLOCK_LV price, and a stage starts with shaft 1's Lv 1 -> START_LV price
+// Lv 1 -> UNLOCK_LV price. v0.53.7: a stage starts from $10 (the v0.51 stake is gone, user's ask)
 const vpace = await page.evaluate(() => { const R = SVT.RAID, lab = SVT.newLab("raid"); lab.stage = 10; lab.floors.push({ lvl: 1, stock: 0, left: 0 });
   const B = SVT.B, cap = SVT.maxLevel(lab, "floor"), q = (n, to) => B.bulk("floor", n, 1, to - 1, 0, 0, SVT.costScale(lab, "floor", n), cap, SVT.growthOf(lab, "floor")).cost;
   const r = SVT.rates(lab, SVT.now() + 1e9);
-  return { step: +(r.floors[1] / r.floors[0]).toFixed(4), want: +R.shaftStep(10).toFixed(4), unlock: Math.abs(SVT.raidUnlock(lab, 3) / q(2, R.UNLOCK_LV) - 1) < 1e-9, start: Math.abs(SVT.raidStartCash(lab) / q(1, R.START_LV) - 1) < 1e-9, main: SVT.shaftValue(SVT.newLab("garage"), 5) }; });
+  return { step: +(r.floors[1] / r.floors[0]).toFixed(4), want: +R.shaftStep(10).toFixed(4), unlock: Math.abs(SVT.raidUnlock(lab, 3) / q(2, R.UNLOCK_LV) - 1) < 1e-9, start: SVT.raidStartCash === undefined && R.START_LV === undefined, main: SVT.shaftValue(SVT.newLab("garage"), 5) }; });
 if (vpace.step !== vpace.want || !vpace.unlock || !vpace.start || vpace.main !== 1) errors.push("Viking shaft pacing wrong (v0.51) " + JSON.stringify(vpace));
 if (viking.stages !== 250 || viking.shafts50 !== 50 || viking.shafts51 !== 1 || viking.t1 !== 1500 || Math.abs(viking.t50 - 6000) > 1e-6 || Math.abs(viking.t51 - 6000) > 1e-6 || Math.abs(viking.t250 - 1536000) > 1e-6) errors.push("Raid batches or pacing wrong (v0.48: HARDER 5): " + JSON.stringify(viking));
 if (viking.loot !== 50 || viking.tier !== 4 || viking.cost2 < 1 || viking.cost50 !== 750 || viking.svg < 500 || viking.names !== 50) errors.push("Raid loot, tiers or boats wrong: " + JSON.stringify(viking));
@@ -1059,18 +1060,24 @@ const vpre = await page.evaluate(() => {
   S.raid.tokens = Math.max(S.raid.tokens || 0, 5); S.hoard.spent = 1;
   if (!S.labs.raid) SVT.startRaid(1);
   const R = SVT.RAID, caps = [[1, 100], [25, 300], [50, 500], [51, 100], [250, 500]].every(([s, h]) => R.stage(s).max.floor === 100 && R.stage(s).max.freight === h && R.stage(s).max.commercial === h);
-  // v0.46: the hubs can only go as far as the shafts have got
-  const gl = SVT.newLab("raid"); gl.stage = 25; gl.floors[0].lvl = 1; const g1 = SVT.hubGate(gl);
-  for (let i = 1; i < 25; i++) gl.floors.push({ lvl: 100 }); gl.floors[0].lvl = 100; const g2 = SVT.hubGate(gl);
-  gl.floors.length = 1; gl.floors[0].lvl = 100; const g3 = SVT.hubGate(gl);
-  const gateOk = g1 === 10 && g2 === 300 && g3 === 300 && SVT.maxLevel(gl, "freight") === 300 && (gl.floors[0].lvl = 25, SVT.hubGate(gl)) === 75 && SVT.maxLevel(gl, "floor") === 100;
+  // v0.46: the hubs can only go as far as the shafts need. v0.53.7: the gate is the level that carries HUB_GATE x what
+  // the open shafts dig, and a max-level lift and warehouse carry all the stage's maxed shafts with HUB_SPARE to spare.
+  const gl = SVT.newLab("raid"); gl.stage = 25; gl.floors[0].lvl = 1; const g1 = SVT.hubGate(gl, "freight");
+  gl.floors[0].lvl = 50; const gHalf = SVT.hubGate(gl, "freight");
+  for (let i = 1; i < 25; i++) gl.floors.push({ lvl: 100 }); gl.floors[0].lvl = 100; const g2 = SVT.hubGate(gl, "freight"), g2c = SVT.hubGate(gl, "commercial");
+  const B = SVT.B, st = R.stage(25), dig = gl.floors.reduce((a, f, i) => a + B.floorOutput(i + 1, 100) * Math.pow(R.valueStep(25) / 6, i), 0);
+  const spare = [B.freightCap(300, 25, st.hubK) / dig, B.commercialCap(300, st.hubK) / dig].map((x) => +x.toFixed(3));
+  const cap = (L) => B.freightCap(L, 1, st.hubK); gl.floors.length = 1; gl.floors[0].lvl = 50;
+  const atGate = cap(gHalf) >= R.HUB_GATE * B.floorOutput(1, 50) && cap(gHalf - 1) < R.HUB_GATE * B.floorOutput(1, 50);
+  const gateOk = g1 === 10 && g2 === 300 && g2c === 300 && gHalf > 10 && gHalf < 300 && atGate && spare.every((x) => Math.abs(x - R.HUB_SPARE) < 1e-3) && SVT.maxLevel(gl, "freight") === gHalf && SVT.maxLevel(gl, "floor") === 100;
+  const g3 = gHalf;
   const rl = S.labs.raid, hireSame = SVT.hireCost(rl, "floor") === SVT.B.hireCost("floor", rl.hires.floor);
   const step = [R.shaftStep(1), R.shaftStep(250)], bad = [R.stage(51).omens.length, R.stage(250).omens.length];
   // v0.43: Viking Raid managers have Norse names and Viking portraits
   SVT.switchLab("raid"); SVT.setView("lab"); rl.cash = 1e12;
   const vm = SVT.hire("floor"); SVT.assign(vm.id, "floor", 1); SVT.render();
   const vik = { norse: SVT.VIKING_NAMES.includes(vm.name), portraits: document.querySelectorAll(".seat .av.viking").length };
-  return { caps: caps && gateOk, gate: [g1, g2, g3], hireSame, step, bad, vik, garage: S.labs.garage.lifetime, vault: S.vault.items.length };
+  return { caps: caps && gateOk, gate: [g1, g2, g3, spare, atGate], hireSame, step, bad, vik, garage: S.labs.garage.lifetime, vault: S.vault.items.length };
 });
 if (!vpre.vik.norse || !(vpre.vik.portraits >= 1)) errors.push("Viking managers are not drawn as Vikings (v0.43): " + JSON.stringify(vpre.vik));
 await page.evaluate(() => { SVT.closeVault && SVT.closeVault(); SVT.openRaid(); }); await page.waitForTimeout(250);

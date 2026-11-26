@@ -36,7 +36,7 @@ window.SVT = window.SVT || {};
       for (const x of binds) if (row.contains(x.e)) x.off = off;
       if (!off) dirty = true;
     }
-  }, { rootMargin: "200px 0px" }) : null;
+  }, { rootMargin: "40px 0px" }) : null;
   const watchRow = (row) => { if (offRows) offRows.observe(row); return row; };
   const setText = (e, t) => { if (e.textContent !== t) e.textContent = t; };
   // popText: like setText, but a changed value gives a quick pop so you see it change (skipped on first fill).
@@ -410,16 +410,16 @@ window.SVT = window.SVT || {};
       ["Tech unlock bonus", (L) => multText(B.floorMult(L))],
     ];
     if (kind === "freight") return [
-      ["Moves", (L) => "$" + fmt(B.freightCap(L, depth(), inRaid()) * P() * M()) + "/s"],
-      ["Load per trip", (L) => "$" + fmt(B.freightLoad(L, inRaid()) * P() * M())],
+      ["Moves", (L) => "$" + fmt(B.freightCap(L, depth(), SVT.hubRaid(lab())) * P() * M()) + "/s"],
+      ["Load per trip", (L) => "$" + fmt(B.freightLoad(L, SVT.hubRaid(lab())) * P() * M())],
       ["Lift speed", (L) => multText(B.freightSpeed(L))],
-      ["Loading speed", (L) => "$" + fmt(B.freightLoad(L, inRaid()) / B.liftFillTime(L) * P() * M()) + "/s"],
+      ["Loading speed", (L) => "$" + fmt(B.freightLoad(L, SVT.hubRaid(lab())) / B.liftFillTime(L) * P() * M()) + "/s"],
       ["Round trip", (L) => (B.freightTrip(L, depth()) / SVT.speedMult(lab(), kind, n)).toFixed(1) + "s"],
       ["Tech unlock bonus", (L) => multText(B.hubMult(L))],
     ];
     return [
-      ["Ships", (L) => "$" + fmt(B.commercialCap(L, inRaid()) * P() * M()) + "/s"],
-      ["Load per trip", (L) => { const sp = SVT.speedMult(lab(), kind, n); return "$" + fmt(B.commercialCap(L, inRaid()) * P() * M() / sp * B.WH_TRIP) + " / " + +(B.WH_TRIP / sp).toFixed(1) + "s"; }],
+      ["Ships", (L) => "$" + fmt(B.commercialCap(L, SVT.hubRaid(lab())) * P() * M()) + "/s"],
+      ["Load per trip", (L) => { const sp = SVT.speedMult(lab(), kind, n); return "$" + fmt(B.commercialCap(L, SVT.hubRaid(lab())) * P() * M() / sp * B.WH_TRIP) + " / " + +(B.WH_TRIP / sp).toFixed(1) + "s"; }],
       ["Tech unlock bonus", (L) => multText(B.hubMult(L))],
     ];
   }
@@ -896,7 +896,7 @@ window.SVT = window.SVT || {};
   // It is drawn left-to-right and mirrored so products flow toward the crate on the left, like Idle Miner's shafts.
   // The tool and sparks change by tech era (see .tier* in style.css). Everything pauses when nobody is working.
   function productionLine(n) {
-    const sparks = h("div", { class: "sparks" }, [0, 1, 2, 3, 4, 5, 6, 7].map((k) => h("span", { style: "--k:" + k })));
+    const sparks = h("div", { class: "sparks" }, [0, 1, 2, 3, 4].map((k) => h("span", { style: "--k:" + k })));
     const items = [0, 1].map((i) => h("div", { class: "item", style: "--d:" + (-1.6 * i) + "s" }, h("span", { class: "pcb" }), h("span", { class: "box" })));
     return h("div", { class: "line", "aria-hidden": "true" },
       h("div", { class: "bench" }), h("div", { class: "tool" }), h("div", { class: "flash" }), sparks,
@@ -1028,6 +1028,10 @@ window.SVT = window.SVT || {};
   let pageH = 0, pageAt = 0, scrollTop = window.scrollY;
   window.addEventListener("scroll", () => { scrollTop = window.scrollY; }, { passive: true });
   const maxScroll = (fresh) => { const t = performance.now(); if (fresh || t - pageAt > 1000) { pageH = document.documentElement.scrollHeight; pageAt = t; } return pageH - window.innerHeight; };
+  // v0.53.7: the jump-down button only needs to know whether the bottom of the page is in view; an observer on the
+  // footer tells it without measuring the page (that forced a full layout of every floor once a second).
+  let nearBottom = false;
+  const bottomSeen = typeof IntersectionObserver === "function" ? new IntersectionObserver((l) => { for (const en of l) nearBottom = en.isIntersecting; }, { rootMargin: "240px 0px" }) : null;
   function glideTo(target) {
     cancelAnimationFrame(scrollAnim);
     const y0 = window.scrollY, d = target - y0, t0 = performance.now(), dur = Math.min(900, 300 + Math.abs(d) / 4);
@@ -1044,7 +1048,7 @@ window.SVT = window.SVT || {};
     const up = bind(h("button", { class: "jump-btn up", "aria-label": "Back to the top", onclick: () => glideTo(0), text: "⬆" }),
       (e) => toggle(e, "show", scrollTop > 240));
     const down = bind(h("button", { class: "jump-btn down", "aria-label": "Down to the bottom of the mine", onclick: () => glideTo(maxScroll(true)), text: "⬇" }),
-      (e) => toggle(e, "show", maxScroll() - scrollTop > 240));
+      (e) => toggle(e, "show", bottomSeen ? !nearBottom : maxScroll() - scrollTop > 240));
     // v0.39 (user ask): Max all. v0.40.2: each buy goes to whatever is backing up (see SVT.upgradeAll); the toast
     // says where most of the money went.
     const maxAll = bind(h("button", { class: "jump-btn max-all", "aria-label": "Max all upgrades", onclick: () => {
@@ -1065,7 +1069,7 @@ window.SVT = window.SVT || {};
       header(),
       surface(),
       building(),
-      h("footer", { class: "foot", text: "Silicon Valley Tycoon " + buildTag() }),
+      (() => { const f = h("footer", { class: "foot", text: "Silicon Valley Tycoon " + buildTag() }); nearBottom = false; if (bottomSeen) { bottomSeen.disconnect(); bottomSeen.observe(f); } return f; })(),
       bottomNav(),
       jumpBtns());
   }
