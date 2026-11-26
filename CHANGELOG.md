@@ -2,6 +2,11 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.53.7 (2026-11-26)
+- Lift and warehouse stay in line with the floors the whole way. Their extra power used to arrive all at once from Lv 300, sized well past what the floors need, so the last 100 levels were priced for capacity nothing used. It now grows smoothly from Lv 1, prices follow it, and a Lv 400 lift and warehouse carry 30 maxed floors with about 30% to spare. In the simulation they now finish within a few percent of the floors instead of hours later.
+- Viking Raid: every stage starts from $10 (no starting stake). The lift and warehouse are sized to each stage's shafts: their max level carries all the maxed shafts with 30% to spare, they can be levelled up to carry twice what your open shafts dig, and every level in between costs and adds about the same. Before, they outgrew the shafts, mattered little until the end, then the last 100-250 levels cost seconds. All 250 stages are re-timed to their targets (stage 1 about 25 min with boosts running).
+- Less lag: floor rows are isolated from the rest of the page for layout and painting, moving boxes, sparks, tape and shine run on the GPU, fewer sparks per floor, and the jump-down button no longer measures the page height.
+
 ## v0.53.6 (2026-11-25)
 - Less lag, about twice the frame rate on a 30-floor lab in testing. Floors scrolled out of view now pause their animations and skip their per-frame updates (a full lab was running about 150 looping animations and 30 progress bars every frame, mostly off screen). The jump buttons no longer force a full page re-layout several times a second, and the themed floor sprites dropped a costly shadow filter.
 

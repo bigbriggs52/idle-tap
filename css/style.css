@@ -1511,7 +1511,7 @@ body:has(#sheet) #toasts { top: auto; bottom: calc(132px + env(safe-area-inset-b
 .av.themed .tie { display: none; }
 .av.themed .body { background: linear-gradient(90deg, var(--rcol) 0 17%, var(--outfit) 17% 83%, var(--rcol) 83%); box-shadow: inset 0 3px 0 #ffffff40; }
 .av.themed .head { background-image: radial-gradient(circle at 35% 58%, #2b2b2b 0 7%, transparent 8%), radial-gradient(circle at 65% 58%, #2b2b2b 0 7%, transparent 8%), radial-gradient(ellipse 18% 8% at 50% 78%, #b5523b 0 90%, transparent 100%); }
-.av.themed .fx { display: block; left: 50%; bottom: 3%; transform: translateX(-50%); font-size: 11px; line-height: 1; z-index: 2; filter: drop-shadow(0 1px 0 #0003); }
+.av.themed .fx { display: block; left: 50%; bottom: 3%; transform: translateX(-50%); font-size: 11px; line-height: 1; z-index: 2; }
 .portrait .av.themed .fx, .node-card .av.themed .fx { font-size: 14px; }
 .av.themed .hat { display: block; clip-path: none; filter: none; background: var(--hatc); border-radius: 0; box-shadow: none; z-index: 1; }
 .av.themed .hat::before, .av.themed .hat::after { content: ""; position: absolute; }
@@ -1735,3 +1735,32 @@ details.fold.vault-lab-select > summary { color: #8e44ad; }
 
 /* v0.53.6: floors out of view stop animating (see watchRow in ui.js) */
 .floor.off *, .floor.off *::before, .floor.off *::after { animation-play-state: paused !important; }
+/* v0.53.7 (user: "Still laggy"): each floor scene is its own layout and paint island, so a moving spark or worker
+   repaints only its floor instead of the page (about 3x the frame rate on a slow CPU in testing). */
+.floor[data-floor] { contain: layout style; }
+.floor[data-floor] .floor-scene { contain: layout style paint; }
+/* v0.53.7: the product on the line moves with transforms (it animated `left`, `--tape` and `background-position`,
+   which re-laid out or repainted the floor every frame); the ready boost pulses instead of animating its shadow. */
+.item { left: 0; width: 100%; margin-left: 0; animation-name: flow-x; pointer-events: none; }
+.item .pcb, .item .box { right: auto; width: 16px; margin-left: -8px; }
+@keyframes flow-x { 0%, 30% { transform: translateX(18%); } 50%, 76% { transform: translateX(63%); } 100% { transform: translateX(112%); } }
+/* sparks: 5 instead of 8, each pointing its own way (static), with a var-free flight the compositor can run */
+.sparks span { transform: rotate(calc(var(--k) * 45deg - 140deg)); opacity: 1; animation: none; background: none; box-shadow: none; }
+.sparks span::before { content: ""; position: absolute; inset: 0; border-radius: 50%; background: var(--spark, #ffc14d); box-shadow: 0 0 4px var(--spark, #ffc14d); opacity: 0;
+  animation: spark-fly var(--st, .45s) ease-out infinite; animation-delay: calc(var(--k) * -0.09s); }
+.line .sparks span::before { animation-play-state: paused; }
+.run .line .sparks span::before { animation-play-state: running; }
+.sparks span::before { animation-duration: calc(var(--st, .45s) / var(--sp, 1)); }
+@keyframes spark-fly { 0% { opacity: 1; transform: translateX(0); } 100% { opacity: 0; transform: translateX(12px) translateY(6px); } }
+@keyframes wrap { 0%, 52% { opacity: 0; transform: scale(.6); } 60%, 100% { opacity: 1; transform: scale(1); } }
+.item .box::before { transform: scaleX(0); animation: inherit; animation-name: tape; }
+@keyframes tape { 0%, 60% { transform: scaleX(0); } 74%, 100% { transform: scaleX(1); } }
+.item .box::after { inset: 0 auto 0 0; width: 300%; background-size: 100% 100%; animation-name: shine-x; }
+@keyframes shine-x { from { transform: translateX(-66.67%); } to { transform: translateX(0); } }
+.boost.ready { animation-name: ready-pulse; }
+@keyframes ready-pulse { 50% { transform: scale(1.12); } }
+/* v0.53.7: no per-frame repaints from glows: the floor conveyors stop scrolling their stripes (the products moving
+   along show the motion), and Legendary and Super seats keep a steady glow (their rings still spin and pulse). */
+.floor .conveyor { animation: none; }
+.seat.r-legendary { animation: none; box-shadow: 0 0 0 2px #ffffff88, 0 0 10px #ffd24a; }
+.seat.r-super { animation: none; box-shadow: 0 0 12px #4fb3ff, 0 0 3px #fff; }

@@ -56,11 +56,20 @@ export function play(SVT, lab, stop, maxT = 1e7) {
       const score = cost / gain + Math.max(0, cost - lab.cash) / Math.max(base, 1e-9);
       if (!best || score < best.score) best = { cost, act, score };
     };
+    // One node changes per candidate, so its new soft rate comes from rr by swapping that node's number (node
+    // multipliers don't depend on level; same result as re-running SVT.rates, O(floors) faster per candidate).
+    const hr = SVT.hubRaid ? SVT.hubRaid(lab) : SVT.isRaid(lab), depth = lab.floors.length;
+    const softOf = (b, f, c) => Math.pow(Math.pow(b, -8) + Math.pow(f, -8) + Math.pow(c, -8), -1 / 8);
+    const after = (kind, n, L) => {
+      if (kind === "floor") { const o = B.floorOutput(n, L); return softOf(rr.build + (o > 0 ? rr.floors[n - 1] * (B.floorOutput(n, L + 1) / o - 1) : 0), rr.freight, rr.commercial); }
+      if (kind === "freight") return softOf(rr.build, rr.freight * B.freightCap(L + 1, depth, hr) / B.freightCap(L, depth, hr), rr.commercial);
+      return softOf(rr.build, rr.freight, rr.commercial * B.commercialCap(L + 1, hr) / B.commercialCap(L, hr));
+    };
     const tryKind = (kind, n) => {
       const node = SVT.nodeOf(lab, kind, n);
       if (node.lvl >= SVT.maxLevel(lab, kind)) return;
       const q = B.bulk(kind, n, node.lvl, 1, 0, 0, SVT.costScale(lab, kind, n), SVT.maxLevel(lab, kind), SVT.growthOf ? SVT.growthOf(lab, kind) : 0);
-      node.lvl++; const g = soft() - sbase; node.lvl--;
+      const g = after(kind, n, node.lvl) - sbase;
       consider(q.cost, g, () => { lab.cash -= q.cost; node.lvl++; });
     };
     lab.floors.forEach((f, i) => tryKind("floor", i + 1));
