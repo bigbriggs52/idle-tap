@@ -181,6 +181,11 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--copper); outlin
 .map.legends .sea { position: absolute; right: -10%; top: -10%; width: 45%; height: 45%; border-radius: 50%; background: radial-gradient(#4aa3d8, #2f78b3 70%, transparent 71%); opacity: .85; }
 .map.legends .road { background: #7a5a2a88; }
 .map.legends .pin-label { color: #fff; text-shadow: 0 0 3px #000, 0 0 3px #000; }
+/* v0.54: Wonderworld, the fourth map (labs 71-90): a candy-coloured land under a rainbow */
+.map.wonder { background: radial-gradient(circle at 80% 20%, #fff6, transparent 30%), linear-gradient(170deg, #b39ddb, #f48fb1 45%, #80deea 80%, #a5d6a7); }
+.map.wonder .rainbow { position: absolute; left: 10%; top: 8%; width: 80%; height: 60%; border-radius: 50% 50% 0 0; background: radial-gradient(circle at 50% 100%, transparent 55%, #ff525288 56%, #ffab4088 61%, #ffee5888 66%, #69f0ae88 71%, #40c4ff88 76%, #7c4dff88 81%, transparent 82%); pointer-events: none; }
+.map.wonder .road { background: #ffffff66; }
+.map.wonder .pin-label { color: #fff; text-shadow: 0 0 3px #000, 0 0 3px #000; }
 .pin { position: absolute; transform: translate(-50%, -50%); border: 0; background: transparent; padding: 0; display: grid; justify-items: center; gap: 2px; cursor: pointer; width: 66px; }
 .pin-dot { position: relative; width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: var(--surface); border: 2px solid var(--line); font-size: 1.1rem; }
 .pin.open .pin-dot { border-color: var(--copper); background: #fff1e6; box-shadow: 0 0 0 4px #d0702f33; }

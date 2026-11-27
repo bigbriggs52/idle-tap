@@ -2,6 +2,10 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.54.0 (2026-11-27)
+- 20 new labs, 71 to 90, on a fourth map called Wonderworld: Ninja Dojo, Wild West Town, Haunted Manor, Steam Works, Star Observatory, Honey Hive, Pet Paradise, Firework Factory, Coffee Roastery, Beach Resort, Ski Resort, Opera House, Inventors Academy, Robot Arena, Mech Hangar, Fairy Garden, Alien Village, Floating Isles, Giant's Workshop and Infinity Core.
+- Each new lab has 30 products of its own, each with its own Vault picture (2,700 in all), its own manager look and its own scene on the floor walls. Labs you have already beaten open the next ones as soon as you load the game, and each new lab pays its usual wild Vault coins.
+
 ## v0.53.7 (2026-11-26)
 - Lift and warehouse stay in line with the floors the whole way. Their extra power used to arrive all at once from Lv 300, sized well past what the floors need, so the last 100 levels were priced for capacity nothing used. It now grows smoothly from Lv 1, prices follow it, and a Lv 400 lift and warehouse carry 30 maxed floors with about 30% to spare. In the simulation they now finish within a few percent of the floors instead of hours later.
 - Viking Raid: every stage starts from $10 (no starting stake). The lift and warehouse are sized to each stage's shafts: their max level carries all the maxed shafts with 30% to spare, they can be levelled up to carry twice what your open shafts dig, and every level in between costs and adds about the same. Before, they outgrew the shafts, mattered little until the end, then the last 100-250 levels cost seconds. All 250 stages are re-timed to their targets (stage 1 about 25 min with boosts running).
