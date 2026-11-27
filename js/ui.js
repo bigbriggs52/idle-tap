@@ -634,6 +634,14 @@ window.SVT = window.SVT || {};
     harbor: ["beanie", "#0d47a1", "#ff7043", "🚢"], safari: ["straw", "#a1887f", "#c5b358", "🦁"], polar: ["beanie", "#e53935", "#e3f2fd", "🐧"],
     crystal: ["hardhat", "#4dd0e1", "#4a148c", "💎"], racing: ["visor", "#d50000", "#212121", "🏎️"], olympus: ["hood", "#ffd700", "#fafafa", "🏔️"],
     dreams: ["beanie", "#9575cd", "#1a237e", "💤"], multiverse: ["visor", "#00e5ff", "#1b0033", "🌐"],
+    // v0.54: Wonderworld (labs 71-90)
+    ninja: ["hood", "#212121", "#37474f", "🥷"], western: ["straw", "#8d6e63", "#c19a6b", "🤠"], haunted: ["tophat", "#4a148c", "#9e9e9e", "👻"],
+    steam: ["goggles", "#b8860b", "#5d4037", "⚙️"], observatory: ["beret", "#283593", "#0d1440", "🔭"], beehive: ["hood", "#fbc02d", "#212121", "🐝"],
+    pets: ["cap", "#ff7043", "#ffe0b2", "🐶"], fireworks: ["hardhat", "#ff1744", "#ffd600", "🎆"], coffee: ["beret", "#6d4c41", "#d7ccc8", "☕"],
+    beach: ["straw", "#ffca28", "#4fc3f7", "🏖️"], ski: ["beanie", "#1e88e5", "#ffffff", "⛷️"], opera: ["tophat", "#880e4f", "#212121", "🎭"],
+    academy: ["cap", "#1a237e", "#ffd700", "🎓"], arena: ["visor", "#ff6d00", "#263238", "🥊"], mech: ["visor", "#78909c", "#263238", "🦾"],
+    fairy: ["beret", "#f48fb1", "#b2ff59", "🧚"], aliens: ["bubble", "#76ff03", "#1b5e20", "👽"], skyisles: ["conductor", "#4fc3f7", "#ffffff", "☁️"],
+    giant: ["hardhat", "#795548", "#9e9e9e", "🗿"], infinity: ["visor", "#ffd700", "#120024", "♾️"],
   };
   SVT.MANAGER_LOOKS = LOOKS;
   // v0.48.1: the lift car can carry several loads at once; past one load it shows how many (×2.6).
@@ -880,6 +888,26 @@ window.SVT = window.SVT || {};
     olympus: "⚡ blink 10 18|🏛️ none 42 2|🦅 hover 74 16",
     dreams: "🛏️ none 8 2|💤 rise 12 14|🌙 bob 44 16|⭐ blink 74 22",
     multiverse: "🌀 spin 10 8|🪐 orbit 44 14|🌌 none 74 6",
+    ninja: "🥷 hop 12 2|✴️ spin 44 14|🏮 sway 76 14",
+    western: "🤠 bob 10 4|🐎 walk 40 2|🌵 none 76 2",
+    haunted: "👻 hover 12 16|🦇 hover 44 22|🕯️ flicker 76 2",
+    steam: "⚙️ spin 8 16|💨 rise 40 12|⚙️ spinr 74 12",
+    observatory: "🔭 none 10 2|⭐ blink 42 22|☄️ zoom 0 26",
+    beehive: "🐝 hover 12 14|🌻 sway 42 2|🍯 bob 76 2",
+    pets: "🐕 walk 40 2|🐈 bob 10 2|🦴 hop 76 4",
+    fireworks: "🎆 pulse 12 18|🚀 launch 44 2|🎇 blink 76 20",
+    coffee: "☕ bob 10 2|♨️ rise 12 12|🫘 hop 44 4|🥐 none 76 2",
+    beach: "☀️ pulse 10 22|🏄 rock 42 4|🦀 walk 72 2",
+    ski: "⛷️ zoom 0 2|❄️ fall 30 30|🏔️ none 76 2",
+    opera: "🎭 sway 10 10|🎻 wiggle 42 4|🎵 rise 74 10",
+    academy: "📐 wiggle 10 6|🧪 bob 42 4|🎓 flip 74 10",
+    arena: "🤖 hop 12 2|💥 pulse 44 10|🏆 bob 76 4",
+    mech: "🦾 swing 12 8|⚡ blink 44 16|🤖 walk 70 2",
+    fairy: "🧚 hover 12 16|✨ blink 44 20|🍄 bob 76 2",
+    aliens: "🛸 hover 12 18|👽 hop 44 2|✨ blink 76 22",
+    skyisles: "☁️ drift 0 24|🪁 sway 40 14|🎈 rise 74 4",
+    giant: "🗿 none 8 2|🪨 hop 42 2|🔨 swing 74 8",
+    infinity: "♾️ pulse 12 10|✨ blink 44 18|🌀 spin 76 8",
     raid: "⛏️ swing 12 6|🪓 swing 44 6|🛡️ none 76 4"
   };
   const FX_RUN = { drive: 1, zoom: 1, swim: 1, drift: 1 }; // these cross the whole wall, so their x is ignored
@@ -1126,7 +1154,7 @@ window.SVT = window.SVT || {};
         beatenRows.length ? h("details", { class: "fold loc-beaten", open: beatenOpen ? "" : null, ontoggle: (e) => { beatenOpen = e.currentTarget.open; } },
           h("summary", { text: "🏆 Beaten labs (" + beatenRows.length + ")" }), h("p", { class: "muted small", text: "Tap one to replay it for another 🪙." }), ...beatenRows) : null,
         region("isles", "🏝️ Islands (1)", raidCard()),
-        h("p", { class: "muted small", text: "Each lab is its own company with 30 floors and its own cash. Up to 5 labs are open at a time: Seed funding opens labs 2 to 5, and beating a lab (raising its IPO) opens a new one, all the way to lab " + SVT.LABS.length + " in Legends." })),
+        h("p", { class: "muted small", text: "Each lab is its own company with 30 floors and its own cash. Up to 5 labs are open at a time: Seed funding opens labs 2 to 5, and beating a lab (raising its IPO) opens a new one, all the way to lab " + SVT.LABS.length + " in Wonderworld." })),
       h("div", { class: "map-wrap" },
         region(1, regionTitle(1, "🌉 Silicon Valley"), h("div", { class: "map" },
           h("div", { class: "bay", "aria-hidden": "true" }),
@@ -1140,7 +1168,12 @@ window.SVT = window.SVT || {};
         region(3, regionTitle(3, "🏰 Legends"), h("div", { class: "map legends" },
           h("div", { class: "sea", "aria-hidden": "true" }),
           h("div", { class: "road r1", "aria-hidden": "true" }), h("div", { class: "road r2", "aria-hidden": "true" }),
-          pinsOn(3)))),
+          pinsOn(3))),
+        // v0.54: Wonderworld, the fourth map (labs 71-90)
+        region(4, regionTitle(4, "🌈 Wonderworld"), h("div", { class: "map wonder" },
+          h("div", { class: "rainbow", "aria-hidden": "true" }),
+          h("div", { class: "road r1", "aria-hidden": "true" }), h("div", { class: "road r2", "aria-hidden": "true" }),
+          pinsOn(4)))),
       h("footer", { class: "foot", text: "Silicon Valley Tycoon " + buildTag() }));
   }
 
