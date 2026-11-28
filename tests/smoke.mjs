@@ -10,6 +10,9 @@ page.on("console", (m) => { if (m.type() === "error" && !m.text().startsWith("SV
 await page.goto(url);
 await page.waitForTimeout(500);
 await page.screenshot({ path: out + "/01-intro.png" });
+// v0.54.1: the splash goes once the game draws, and the web-font sheet doesn't block the first paint
+const boot = await page.evaluate(() => ({ splash: !!document.getElementById("splash"), fontsAsync: [...document.querySelectorAll('link[rel=stylesheet][href*="fonts.googleapis"]')].every((l) => l.getAttribute("onload")) }));
+if (boot.splash || !boot.fontsAsync) errors.push("Loading splash or font loading wrong (v0.54.1) " + JSON.stringify(boot));
 await page.click("text=Start building");
 // tap all three nodes, then let it run
 await page.click(".floor-scene");
