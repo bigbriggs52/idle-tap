@@ -2,6 +2,10 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.54.2 (2026-11-28)
+- New cheat code: type "grand" in ⚙ Settings for +100,000 Hero coins. Like "money" (+5,000), it works any number of times.
+- Headhunter Slots can spin several at once: pick ×1, ×10, ×50 or Max (as many as your coins allow, up to 100 a press) under "Spins per press". Each spin is a normal spin with the same odds, pity, Hold and Jackpot. The results screen shows a count for each rarity and the best 30 cards; the rest are on the Team tab.
+
 ## v0.54.1 (2026-11-28)
 - Faster, steadier start. On a slow or patchy connection the game waited on the network for every file (and for the web fonts) before it drew anything, which showed as a long blank or black screen. Now the app uses its saved copy of any file the network hasn't sent within 1.5 seconds (the fresh copy is still saved for next time), the fonts no longer hold up the first draw, and a loading screen shows until the game appears. In testing with the network stalled, the game opened in about 3 seconds instead of hanging.
 

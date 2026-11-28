@@ -11,6 +11,8 @@ window.SVT = window.SVT || {};
   const B = SVT.B, RAR = B.VAULT.RARITIES.slice(0, 11), ROLLED = 6;
   const SUPER = {
     START_COINS: 500, ROUND_COINS: 25, IPO_COINS: 100, RAID_COINS: 10, CHEAT: "money", CHEAT_COINS: 5000,
+    // Cheat codes typed in Settings, no limit. v0.54.2 (user): "grand" gives 100,000.
+    CHEATS: { money: 5000, grand: 100000 },
     // Spins: cost and rarity odds Common..Mythic. User: "500 coins a spin or more for higher rarity".
     SPINS: [
       { id: "basic", name: "Basic", cost: 500, odds: [0.40, 0.30, 0.18, 0.09, 0.027, 0.003] },
@@ -221,6 +223,25 @@ window.SVT = window.SVT || {};
   SVT.superCanSpin = () => st().coins >= SUPER.SPINS[0].cost;
   SVT.superPityLeft = () => Math.max(1, SUPER.PITY - st().pity);
   // One spin: returns { m, jackpot, cost } or null.
+  // v0.54.2 (user: "allow me to buy multiple super manager rolls at once"): n spins in one press (each spin is a full
+  // normal spin: same odds, pity, Hold and Jackpot), stopping when the coins run out. MULTI_MAX caps one press.
+  SUPER.MULTI = [1, 10, 50, "max"];
+  SUPER.MULTI_MAX = 100;
+  SVT.superSpinMaxCount = (tier) => {
+    const cost = SVT.superSpinCost(tier);
+    return Math.max(0, Math.min(SUPER.MULTI_MAX, Math.floor(st().coins / cost)));
+  };
+  SVT.superSpinMany = (tier, n) => {
+    const out = [];
+    let jackpots = 0;
+    for (let i = 0; i < Math.min(n, SUPER.MULTI_MAX); i++) {
+      const r = SVT.superSpin(tier);
+      if (!r) break;
+      out.push(r.m);
+      if (r.jackpot) jackpots++;
+    }
+    return { list: out, jackpots };
+  };
   SVT.superSpin = (tier) => {
     const z = st(), sp = SUPER.SPINS[tier], cost = SVT.superSpinCost(tier);
     if (!sp || z.coins < cost) return null;
@@ -270,11 +291,13 @@ window.SVT = window.SVT || {};
   };
 
   // ---------- cheat ----------
+  // Returns the Hero coins added (0 for an unknown code).
   SVT.superCheat = (code) => {
-    if (String(code || "").trim().toLowerCase() !== SUPER.CHEAT) return false;
-    st().coins += SUPER.CHEAT_COINS;
+    const n = SUPER.CHEATS[String(code || "").trim().toLowerCase()] || 0;
+    if (!n) return 0;
+    st().coins += n;
     SVT.save();
-    return true;
+    return n;
   };
 
   // ---------- UI ----------
@@ -299,7 +322,7 @@ window.SVT = window.SVT || {};
   }
   SVT.superCard = heroCard;
 
-  let box = null, busy = false, tab = "spin", tier = 0;
+  let box = null, busy = false, tab = "spin", tier = 0, count = 1;
   function close() { if (box) box.remove(); box = null; busy = false; document.removeEventListener("keydown", onKey); }
   function onKey(e) { if (e.key === "Escape") close(); }
   function shell(...kids) {
@@ -355,6 +378,9 @@ window.SVT = window.SVT || {};
   function spinTab() {
     const { h } = SVT.ui, z = st(), last = z.list[z.last] || null, coins = z.coins;
     const sp = SUPER.SPINS[tier], cost = SVT.superSpinCost(tier);
+    const maxN = SVT.superSpinMaxCount(tier), want = count === "max" ? maxN : count, n = Math.max(1, count === "max" ? maxN : count), total = cost * n;
+    const countBtns = h("div", { class: "vault-stakes hh-counts" }, SUPER.MULTI.map((c) => h("button", { class: "vault-stake" + (c === count ? " on" : ""), onclick: () => { count = c; open(); } },
+      h("b", { text: c === "max" ? "Max" : "×" + c }), h("small", { text: c === "max" ? "×" + maxN : "💠 " + SVT.fmt(cost * c) }))));
     const holdBtns = last ? h("div", { class: "hh-holds" }, h("span", { class: "muted small", text: "Hold from your last spin (+50% a spin):" }),
       REELS.filter((r) => r.hold).map((r) => {
         const on = z.hold[r.hold] !== undefined;
@@ -366,9 +392,25 @@ window.SVT = window.SVT || {};
       h("div", { class: "vault-stakes hh-tiers" }, SUPER.SPINS.map((s, i) => h("button", { class: "vault-stake" + (i === tier ? " on" : ""), onclick: () => { tier = i; open(); } },
         h("b", { text: s.name }), h("small", { text: "💠 " + SVT.fmt(SVT.superSpinCost(i)) })))),
       h("div", { class: "vault-odds" }, RAR.slice(0, ROLLED).map((r, i) => h("div", { class: "vault-odd r-" + r.id }, h("b", { text: r.name }), h("span", { text: pct(sp.odds[i]) })))),
+      h("p", { class: "muted small hh-count-label", text: "Spins per press:" }),
+      countBtns,
       holdBtns,
       h("p", { class: "muted small", text: "Legendary or better guaranteed within " + SVT.superPityLeft() + " more spins. 🎰 Jackpot: a 5-star Rare or better gives the spin back. Three of one rarity merge into the next on the Team tab." })),
-      h("div", { class: "vault-foot" }, h("button", { class: "btn fund-cta big vault-roll hh-pull", disabled: coins < cost, onclick: () => pull(tier), text: coins < cost ? "Need 💠 " + SVT.fmt(cost) : "🎰 Spin " + sp.name + " · 💠 " + SVT.fmt(cost) })));
+      h("div", { class: "vault-foot" }, h("button", { class: "btn fund-cta big vault-roll hh-pull", disabled: coins < total || want < 1,
+        onclick: () => (n > 1 ? pullMany(tier, n) : pull(tier)),
+        text: coins < cost ? "Need 💠 " + SVT.fmt(cost) : coins < total ? "Need 💠 " + SVT.fmt(total) + " for ×" + n : "🎰 Spin " + sp.name + (n > 1 ? " ×" + n : "") + " · 💠 " + SVT.fmt(total) })));
+  }
+  function pullMany(t, n) {
+    if (busy) return;
+    const { h } = SVT.ui;
+    const res = SVT.superSpinMany(t, n);
+    if (!res.list.length) return;
+    busy = true;
+    const mach = machine(null, "spinning");
+    shell(h("div", { class: "vault-body vault-rolling" }, mach, h("p", { class: "vault-lede", text: "Headhunting " + res.list.length + " super managers…" })));
+    const reels = [...mach.querySelectorAll(".hh-reel")];
+    const spin = setInterval(() => reels.forEach((el, i) => { el.lastChild.textContent = randomText(REELS[i].key); }), 70);
+    setTimeout(() => { clearInterval(spin); if (box && box.contains(mach)) reveal(res.list, res.jackpots, true); else busy = false; }, 1400);
   }
   function pull(t) {
     if (busy) return;
@@ -395,14 +437,17 @@ window.SVT = window.SVT || {};
     };
     setTimeout(lock, 600);
   }
-  function reveal(list, jackpot) {
+  function reveal(list, jackpot, spun) {
     const { h, toast } = SVT.ui;
     busy = false;
-    const best = list.slice().sort((a, b) => b.rar - a.rar)[0];
+    const sorted = list.slice().sort((a, b) => b.rar - a.rar || b.stars - a.stars), best = sorted[0], SHOW = 30;
+    const tally = RAR.map((r, i) => list.filter((m) => m.rar === i).length);
     shell(h("div", { class: "vault-body vault-reveal r-" + best.rank },
-      jackpot ? h("p", { class: "hh-jackpot", text: "🎰 JACKPOT! Spin refunded" }) : null,
-      h("p", { class: "vault-got", text: best.rar >= 5 ? "✨ " + RAR[best.rar].name.toUpperCase() + "! ✨" : best.rar >= 4 ? "⭐ Legendary! ⭐" : list.length > 1 ? list.length + " merged" : best.merged ? "Merged into " + RAR[best.rar].name + "!" : "Hired!" }),
-      h("div", { class: "sh-list" }, list.map((m) => heroCard(m))),
+      jackpot ? h("p", { class: "hh-jackpot", text: "🎰 JACKPOT!" + (jackpot > 1 ? " ×" + jackpot : "") + " Spin" + (jackpot > 1 ? "s" : "") + " refunded" }) : null,
+      h("p", { class: "vault-got", text: best.rar >= 5 ? "✨ " + RAR[best.rar].name.toUpperCase() + "! ✨" : best.rar >= 4 ? "⭐ Legendary! ⭐" : list.length > 1 ? list.length + (spun ? " hired" : " merged") : best.merged ? "Merged into " + RAR[best.rar].name + "!" : "Hired!" }),
+      list.length > 1 ? h("div", { class: "vault-tally" }, RAR.map((r, i) => (tally[i] ? h("span", { class: "vault-tally-pill r-" + r.id, text: tally[i] + " " + r.name }) : null)).reverse()) : null,
+      h("div", { class: "sh-list" }, sorted.slice(0, SHOW).map((m) => heroCard(m))),
+      list.length > SHOW ? h("p", { class: "muted small", text: "Showing the best " + SHOW + " of " + list.length + ". The rest are on the Team tab." }) : null,
       h("p", { class: "muted small", text: "Seat it from any manager seat: tap a seat, then pick it under 🦸 Super managers." })),
       h("div", { class: "vault-foot" },
         h("button", { class: "btn fund-cta big", onclick: () => { tab = "spin"; open(); }, text: "Spin again" }),
@@ -458,7 +503,8 @@ window.SVT = window.SVT || {};
     const { h, toast } = SVT.ui;
     const input = h("input", { class: "cheat-input", type: "text", placeholder: "Cheat code", autocomplete: "off", autocapitalize: "off", spellcheck: "false", "aria-label": "Cheat code" });
     const go = () => {
-      if (SVT.superCheat(input.value)) { toast("💠 +" + SVT.fmt(SUPER.CHEAT_COINS) + " Hero coins (" + SVT.fmt(st().coins) + ")", "big"); if (SVT.render) SVT.render(); }
+      const got = SVT.superCheat(input.value);
+      if (got) { toast("💠 +" + SVT.fmt(got) + " Hero coins (" + SVT.fmt(st().coins) + ")", "big"); if (SVT.render) SVT.render(); }
       else toast("Unknown code");
       input.value = "";
     };

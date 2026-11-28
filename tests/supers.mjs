@@ -25,6 +25,10 @@ const r = await page.evaluate(() => {
   out.holdCost = SVT.superSpinCost(0) === 750;
   out.held = SVT.superSpin(0).m.perk === last.perk;
   SVT.superHold("perk", false);
+  // v0.54.2: multi-spin and the "grand" code
+  const c0 = SVT.superCoins(), many = SVT.superSpinMany(0, 10);
+  out.many = many.list.length === 10 && c0 - SVT.superCoins() <= 10 * 500 && SVT.superSpinMaxCount(0) <= SVT.SUPER.MULTI_MAX;
+  const c1 = SVT.superCoins(); out.grand = SVT.superCheat("grand") === 100000 && SVT.superCoins() === c1 + 100000;
   // merge to the top (Ascended), never past it
   const made = SVT.superMergeAll();
   out.merged = made.length > 0;
@@ -44,6 +48,7 @@ console.log(JSON.stringify(r));
 if (r.badCheat || !r.cheat) errors.push("cheat code");
 if (!r.allSpun || r.maxRar > 5) errors.push("spins roll Common..Mythic");
 if (!r.holdCost || !r.held) errors.push("hold");
+if (!r.many || !r.grand) errors.push("multi-spin / grand");
 if (!r.merged || !r.capOk) errors.push("merge stops at Ascended");
 if (!r.seat || !r.wrongSeat || !r.used || !r.unseat) errors.push("seating / power");
 if (r.areas !== "commercial,floor,freight,wild") errors.push("areas " + r.areas);
