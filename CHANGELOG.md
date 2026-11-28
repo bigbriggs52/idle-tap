@@ -2,6 +2,9 @@
 
 Every update gets a version number. The game shows its version in Settings and at the bottom of each screen.
 
+## v0.54.1 (2026-11-28)
+- Faster, steadier start. On a slow or patchy connection the game waited on the network for every file (and for the web fonts) before it drew anything, which showed as a long blank or black screen. Now the app uses its saved copy of any file the network hasn't sent within 1.5 seconds (the fresh copy is still saved for next time), the fonts no longer hold up the first draw, and a loading screen shows until the game appears. In testing with the network stalled, the game opened in about 3 seconds instead of hanging.
+
 ## v0.54.0 (2026-11-27)
 - 20 new labs, 71 to 90, on a fourth map called Wonderworld: Ninja Dojo, Wild West Town, Haunted Manor, Steam Works, Star Observatory, Honey Hive, Pet Paradise, Firework Factory, Coffee Roastery, Beach Resort, Ski Resort, Opera House, Inventors Academy, Robot Arena, Mech Hangar, Fairy Garden, Alien Village, Floating Isles, Giant's Workshop and Infinity Core.
 - Each new lab has 30 products of its own, each with its own Vault picture (2,700 in all), its own manager look and its own scene on the floor walls. Labs you have already beaten open the next ones as soon as you load the game, and each new lab pays its usual wild Vault coins.

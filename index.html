@@ -14,11 +14,15 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="SV Tycoon">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Lilita+One&display=swap">
+<!-- v0.54.1 (user: "Game won't load ... it took a while after a black screen"): the font sheet no longer blocks the
+     first paint (it held the whole page blank on a slow connection), and a splash shows until the game draws. -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Lilita+One&display=swap" media="print" onload="this.media='all'">
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-<div id="app"></div>
+<div id="app"><div id="splash" style="position:fixed;inset:0;display:grid;place-items:center;background:#f1f6f8;color:#24414f;font:600 18px system-ui,sans-serif;text-align:center;z-index:50">
+  <div><img src="icons/icon-192.png" alt="" width="96" height="96" style="border-radius:22px;box-shadow:0 6px 18px #0002"><div style="margin-top:14px">Silicon Valley Tycoon</div><div style="margin-top:6px;font-size:14px;opacity:.7">Loading…</div></div>
+</div></div>
 <div id="toasts" aria-live="polite"></div>
 <script src="js/data.js"></script>
 <script src="js/balance.js"></script>
